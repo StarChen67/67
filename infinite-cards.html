@@ -1,0 +1,4080 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>無限卡牌 — Infinite Cards v1.1</title>
+<style>
+/* ============================================================
+   無限抽牌卡牌對戰遊戲 — 樣式
+   ============================================================ */
+:root{
+  --bg:#0a0c16; --bg2:#111524; --panel:#161b2e; --panel2:#1f2540; --line:#2b3357;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+  /* 稀有度 */
+  --c-common:#8f99b8; --c-rare:#4a9eff; --c-epic:#a76bff;
+  --c-legendary:#ffb430; --c-mythic:#ff3d7f;
+  /* 屬性 */
+  --e-fire:#ff6b3d; --e-water:#4ab8ff; --e-wood:#4ada7a;
+  --e-thunder:#ffd53d; --e-dark:#a06bff; --e-light:#ffe9a3;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#241a42 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding-bottom:74px;overflow-x:hidden;
+}
+#app{max-width:760px;margin:0 auto;padding:12px 12px 20px}
+
+/* ---------- 通用元件 ---------- */
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card-panel h2{font-size:12px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;
+     font-size:13px;padding:7px 0;border-bottom:1px solid #23294560;font-variant-numeric:tabular-nums}
+.row:last-child{border-bottom:none}
+.row>span:first-child{color:var(--dim)}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.75;margin-top:8px}
+.hint b{color:var(--gold)}
+.flex{display:flex;gap:8px;flex-wrap:wrap}
+.grow{flex:1}
+.center{text-align:center}
+.tabular{font-variant-numeric:tabular-nums}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+  padding:11px 18px;font-size:13.5px;color:#fff;transition:transform .12s,filter .12s}
+button:hover:not(:disabled){filter:brightness(1.13);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.35;cursor:not-allowed}
+.b-primary{background:linear-gradient(135deg,#ff4d8d,#a76bff)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,#3ddc97,#22a173);color:#062a1c}
+.b-red{background:linear-gradient(135deg,#ff5d73,#c8324a)}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:7px 13px;font-size:12px;border-radius:8px}
+.b-xs{padding:5px 10px;font-size:11px;border-radius:7px}
+
+input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+  border-radius:9px;padding:10px 12px;font-family:inherit;font-size:14px;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--blue)}
+
+/* ---------- 頂部資訊列 ---------- */
+#topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+#topbar .who{flex:1;min-width:150px}
+#topbar .nm{font-size:16px;font-weight:800}
+#topbar .sub{font-size:11px;color:var(--dim);margin-top:2px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  padding:6px 11px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- 卡牌 ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}
+.gcard{position:relative;border:2px solid var(--line);border-radius:11px;padding:9px 6px 8px;
+  background:var(--panel2);text-align:center;transition:.15s;cursor:pointer;overflow:hidden}
+.gcard:hover{transform:translateY(-3px)}
+.gcard .el{font-size:24px;line-height:1.1}
+.gcard .nm{font-size:11px;font-weight:800;margin-top:4px;line-height:1.25;
+  min-height:28px;display:flex;align-items:center;justify-content:center}
+.gcard .val{font-size:15px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.gcard .rr{font-size:9.5px;font-weight:800;margin-top:2px;letter-spacing:1px}
+.gcard .sk{font-size:9.5px;color:var(--dim);margin-top:3px;min-height:13px}
+.gcard .plus{position:absolute;top:3px;left:4px;font-size:9px;font-weight:800;
+  background:var(--gold);color:#3a2a05;border-radius:4px;padding:0 4px}
+.gcard .lock{position:absolute;top:3px;right:4px;font-size:10px}
+.gcard .team{position:absolute;bottom:3px;right:4px;font-size:8.5px;font-weight:800;
+  background:var(--green);color:#052a1c;border-radius:4px;padding:0 4px}
+.gcard.sel{border-color:#fff;box-shadow:0 0 0 2px #ffffff55}
+
+.r-common   {border-color:#40496b}
+.r-rare     {border-color:var(--c-rare);   background:linear-gradient(165deg,#182c47,#161b2e)}
+.r-epic     {border-color:var(--c-epic);   background:linear-gradient(165deg,#2a1f49,#161b2e)}
+.r-legendary{border-color:var(--c-legendary);background:linear-gradient(165deg,#453213,#161b2e);box-shadow:0 0 14px #ffb43033}
+.r-mythic   {border-color:var(--c-mythic); background:linear-gradient(165deg,#50113a,#241040);box-shadow:0 0 20px #ff3d7f55}
+.r-mythic::before{content:"";position:absolute;inset:-2px;pointer-events:none;
+  background:linear-gradient(115deg,transparent 32%,#ffffff40 50%,transparent 68%);
+  background-size:250% 100%;animation:shine 2.4s linear infinite}
+@keyframes shine{0%{background-position:180% 0}100%{background-position:-80% 0}}
+.t-common{color:var(--c-common)} .t-rare{color:var(--c-rare)} .t-epic{color:var(--c-epic)}
+.t-legendary{color:var(--c-legendary)} .t-mythic{color:var(--c-mythic)}
+
+/* ---------- 抽牌演出 ---------- */
+#drawStage{min-height:330px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.bigcard{width:190px;border:3px solid var(--line);border-radius:16px;padding:18px 12px;
+  background:var(--panel2);text-align:center;position:relative;overflow:hidden}
+.bigcard .el{font-size:52px;line-height:1.1}
+.bigcard .nm{font-size:17px;font-weight:800;margin-top:8px}
+.bigcard .val{font-size:30px;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+.bigcard .rr{font-size:12px;font-weight:800;letter-spacing:3px;margin-top:4px}
+.bigcard .sk{font-size:12px;color:var(--dim);margin-top:7px}
+.bigcard.flip{animation:flipIn .55s cubic-bezier(.2,.8,.3,1) both}
+@keyframes flipIn{0%{transform:rotateY(90deg) scale(.8);opacity:0}100%{transform:none;opacity:1}}
+.bigcard.epicfx{animation:flipIn .55s cubic-bezier(.2,.8,.3,1) both, pulseE 1.6s ease-in-out infinite .55s}
+@keyframes pulseE{0%,100%{box-shadow:0 0 22px #a76bff55}50%{box-shadow:0 0 44px #a76bffaa}}
+.bigcard.legfx{animation:flipIn .55s cubic-bezier(.2,.8,.3,1) both, pulseL 1.4s ease-in-out infinite .55s}
+@keyframes pulseL{0%,100%{box-shadow:0 0 26px #ffb43066}50%{box-shadow:0 0 56px #ffb430cc}}
+.bigcard.mythfx{animation:mythIn .9s cubic-bezier(.2,.9,.3,1) both, pulseM 1.1s ease-in-out infinite .9s}
+@keyframes mythIn{0%{transform:scale(.2) rotate(-25deg);opacity:0}
+  55%{transform:scale(1.18) rotate(6deg);opacity:1}100%{transform:none;opacity:1}}
+@keyframes pulseM{0%,100%{box-shadow:0 0 30px #ff3d7f88}50%{box-shadow:0 0 70px #ff3d7fee}}
+
+#mythBanner{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 50%,#ff3d7f22,#000000aa 72%);pointer-events:none}
+#mythBanner.on{display:flex;animation:fadeOut 2.1s forwards}
+#mythBanner .txt{font-size:min(11vw,54px);font-weight:900;letter-spacing:8px;
+  background:linear-gradient(90deg,#fff,#ffc84a,#ff3d7f,#fff);-webkit-background-clip:text;
+  background-clip:text;color:transparent;animation:zoomTxt .9s cubic-bezier(.2,.9,.3,1) both;
+  text-shadow:0 0 40px #ff3d7f66}
+@keyframes zoomTxt{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes fadeOut{0%,70%{opacity:1}100%{opacity:0}}
+.rays{position:absolute;width:150vmax;height:150vmax;
+  background:repeating-conic-gradient(from 0deg,#ff3d7f12 0deg 6deg,transparent 6deg 12deg);
+  animation:spin 9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- 戰鬥 ---------- */
+.bfield{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.bcard{position:relative;border:2px solid var(--line);border-radius:9px;padding:7px 3px 6px;
+  background:var(--panel2);text-align:center;cursor:pointer;transition:.15s;min-height:104px}
+.bcard .el{font-size:19px;line-height:1.1}
+.bcard .nm{font-size:9px;font-weight:700;margin-top:2px;line-height:1.2;height:22px;overflow:hidden}
+.bcard .val{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+.bcard .sk{font-size:8px;color:var(--dim2);margin-top:1px;height:11px;overflow:hidden}
+.bcard .hpbar{height:4px;background:#2a2f4d;border-radius:3px;overflow:hidden;margin-top:4px}
+.bcard .hpbar i{display:block;height:100%;background:linear-gradient(90deg,#3ddc97,#5ad4ff);transition:width .3s}
+.bcard.enemy .hpbar i{background:linear-gradient(90deg,#ff5d73,#ff9d2e)}
+.bcard.dead{opacity:.28;filter:grayscale(1);cursor:not-allowed}
+.bcard.dead::after{content:"☠";position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-size:26px}
+.bcard.sel{border-color:#fff;box-shadow:0 0 0 2px #ffffff66;transform:translateY(-3px)}
+.bcard.targetable{border-color:var(--red);animation:tgl 1s ease-in-out infinite}
+@keyframes tgl{0%,100%{box-shadow:0 0 0 0 #ff5d7300}50%{box-shadow:0 0 0 3px #ff5d7355}}
+.bcard .buff{position:absolute;top:2px;right:3px;font-size:8.5px}
+.side-label{font-size:11px;color:var(--dim);letter-spacing:2px;margin-bottom:5px;
+  display:flex;justify-content:space-between}
+.turnbar{text-align:center;font-size:13px;font-weight:800;padding:9px;border-radius:10px;
+  background:var(--panel2);margin:10px 0}
+.turnbar.p{color:var(--green)} .turnbar.e{color:var(--red)}
+
+#blog{max-height:210px;overflow-y:auto;font-size:11.5px;line-height:1.75;font-variant-numeric:tabular-nums}
+#blog .ln{padding:2px 0;border-bottom:1px solid #23294555}
+#blog .rd{color:var(--dim);font-weight:800;letter-spacing:1px;margin-top:7px;
+  border-bottom:1px solid var(--line);padding-bottom:2px}
+#blog .crit{color:var(--gold);font-weight:800}
+#blog .eff{color:var(--c-epic);font-weight:700}
+#blog .ko{color:var(--red);font-weight:800}
+#blog .heal{color:var(--green)}
+#blog .win{color:var(--green);font-size:14px;font-weight:800;margin-top:8px}
+#blog .lose{color:var(--red);font-size:14px;font-weight:800;margin-top:8px}
+
+.dmgpop{position:absolute;left:50%;top:26%;transform:translateX(-50%);font-size:16px;
+  font-weight:900;pointer-events:none;animation:pop .95s ease-out forwards;z-index:5;white-space:nowrap}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}
+  25%{opacity:1;transform:translate(-50%,-6px) scale(1.15)}
+  100%{opacity:0;transform:translate(-50%,-30px) scale(1)}}
+
+/* ---------- 底部導航 ---------- */
+#nav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
+  background:#0d1120f2;border-top:1px solid var(--line);backdrop-filter:blur(8px)}
+#nav button{flex:1;background:none;border:none;border-radius:0;padding:9px 2px 10px;
+  color:var(--dim2);font-size:10.5px;font-weight:700;display:flex;flex-direction:column;
+  align-items:center;gap:3px;transform:none!important}
+#nav button .ic{font-size:19px;line-height:1}
+#nav button.on{color:var(--txt)}
+#nav button.on .ic{filter:drop-shadow(0 0 8px #ff4d8daa)}
+
+/* ---------- 彈窗 / 提示 ---------- */
+.modal{position:fixed;inset:0;background:#05070ee8;z-index:70;display:none;
+  align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.mbox{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px;
+  max-width:560px;width:100%;max-height:84vh;overflow-y:auto}
+.mbox h3{font-size:16px;margin-bottom:10px}
+#toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);z-index:90;
+  background:var(--panel2);border:1px solid var(--c-epic);border-radius:10px;padding:10px 18px;
+  font-size:13px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1;bottom:96px}
+
+.page{display:none} .page.on{display:block}
+.bar{height:8px;background:var(--panel2);border-radius:5px;overflow:hidden;margin:5px 0}
+.bar i{display:block;height:100%;border-radius:5px;transition:width .3s}
+.statrow{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid #23294560}
+.statrow .k{flex:1;font-size:13px}
+.statrow .v{font-size:15px;font-weight:800;width:42px;text-align:right;font-variant-numeric:tabular-nums}
+.statrow .d{font-size:10.5px;color:var(--dim2);width:96px;text-align:right}
+.tag{display:inline-block;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:800}
+.filters{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.filters button{background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+  padding:5px 11px;border-radius:7px;font-size:11.5px}
+.filters button.on{background:var(--c-epic);color:#fff;border-color:transparent}
+.soon{opacity:.45}
+/* ---------- v0.2 ---------- */
+.bossbar{display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,#3a1220,#241432);
+  border:2px solid var(--red);border-radius:12px;padding:11px 13px;margin-bottom:10px;cursor:pointer;
+  transition:.15s;position:relative}
+.bossbar:hover{transform:translateY(-2px);box-shadow:0 6px 22px #ff5d7333}
+.bossbar .bicon{font-size:38px;line-height:1}
+.bossbar .brow{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;
+  font-variant-numeric:tabular-nums}
+.small{font-size:11px;color:var(--dim)}
+.bosscard{display:flex;align-items:center;gap:11px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:11px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:.15s}
+.bosscard:hover:not(.lockd){border-color:var(--red)}
+.bosscard.on{border-color:var(--red);background:linear-gradient(135deg,#3a1220,#1f2540)}
+.bosscard.lockd{opacity:.4;cursor:not-allowed}
+.bosscard .bi{font-size:29px;line-height:1}
+.bosscard .bn{font-size:14px;font-weight:800}
+.bosscard .bd{font-size:11px;color:var(--dim);margin-top:2px;font-variant-numeric:tabular-nums}
+.bcard.acted{opacity:.5}
+.bcard.acted::before{content:"✓";position:absolute;top:2px;left:4px;font-size:11px;color:var(--green);font-weight:800}
+/* ---------- v0.3 ---------- */
+:root{--c-super:#00e5ff}
+.r-super_mythic{border-color:var(--c-super);
+  background:linear-gradient(165deg,#08404d,#2a1040);box-shadow:0 0 26px #00e5ff66}
+.r-super_mythic::before{content:"";position:absolute;inset:-2px;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,#ffffff55 50%,transparent 70%);
+  background-size:250% 100%;animation:shine 2.2s linear infinite}
+.t-super_mythic{color:var(--c-super)}
+.menu{display:flex;flex-direction:column;gap:8px}
+.mbtn{display:flex;align-items:center;gap:11px;background:var(--panel2);
+  border:1px solid var(--line);color:var(--txt);border-radius:11px;padding:11px 13px;
+  font-size:13.5px;font-weight:700;text-align:left}
+.mbtn:hover{border-color:var(--c-epic)}
+.mbtn .mi{font-size:21px;line-height:1}
+.dexcell{border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;
+  background:var(--panel2);font-size:10px;line-height:1.3;position:relative}
+.dexcell.got{border-width:2px}
+.dexcell.miss{opacity:.3;color:var(--dim2)}
+.dexcell .cnt{position:absolute;top:2px;right:4px;font-size:8.5px;color:var(--dim)}
+.dexgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+.qrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #23294560}
+.qrow .qi{font-size:19px}
+.qrow .qb{flex:1}
+.qrow .qn{font-size:13px;font-weight:700}
+.qrow .qp{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.achrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #23294560}
+.achrow.done .an{color:var(--gold)}
+.achrow .ai{font-size:19px;width:24px;text-align:center}
+.achrow .ab{flex:1}
+.achrow .an{font-size:13px;font-weight:700}
+.achrow .ad{font-size:11px;color:var(--dim)}
+.achrow .ar{font-size:11px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.floors{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.fl{aspect-ratio:1;border-radius:5px;background:var(--panel2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--dim2)}
+.fl.done{background:#1c4a3a;border-color:var(--green);color:var(--txt)}
+.fl.next{border-color:var(--gold);color:var(--gold);animation:tgl 1.2s ease-in-out infinite}
+.fl.boss{border-color:var(--red)}
+.fl.super{border-color:var(--c-epic)}
+.fl.final{border-color:var(--c-super)}
+.titlechip{display:inline-block;padding:5px 12px;border-radius:8px;margin:0 6px 6px 0;
+  font-size:12px;font-weight:700;background:var(--panel2);border:1px solid var(--line);cursor:pointer}
+.titlechip.on{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05;border-color:transparent}
+</style>
+</head>
+<body>
+
+<div id="mythBanner"><div class="rays"></div><div class="txt">神話降臨！</div></div>
+
+<div id="app">
+  <!-- ===== 頂列 ===== -->
+  <div id="topbar">
+    <div class="who">
+      <div class="nm" id="tb-name">—</div>
+      <div class="sub" id="tb-sub">—</div>
+    </div>
+    <div class="pill">💰 <span id="tb-gold">0</span></div>
+    <div class="pill">🏆 <span id="tb-rating">0</span></div>
+  </div>
+
+  <!-- ===== 首頁 ===== -->
+  <div class="page on" id="pg-home">
+    <div class="card-panel">
+      <h2>角色資訊</h2>
+      <div class="row"><span>玩家 ID</span><span id="hm-id" class="tabular">—</span></div>
+      <div class="row"><span>等級</span><span id="hm-lv">Lv.1</span></div>
+      <div style="margin-top:4px">
+        <div class="bar"><i id="hm-expbar" style="background:linear-gradient(90deg,#5aa9ff,#a76bff)"></i></div>
+        <div class="hint" style="margin-top:2px" id="hm-exp">EXP 0 / 200</div>
+      </div>
+      <div class="row"><span>段位</span><span id="hm-rank">—</span></div>
+      <div class="row"><span>戰績</span><span id="hm-record">0 勝 0 敗</span></div>
+      <div class="row"><span>目前連勝 / 最高連勝</span><span id="hm-streak">0 / 0</span></div>
+      <div class="row"><span>背包</span><span id="hm-bag">0 / 30</span></div>
+      <div class="row"><span>戰鬥隊伍</span><span id="hm-team">0 / 5</span></div>
+      <div class="row"><span>未分配屬性點</span><span id="hm-sp" style="color:var(--gold);font-weight:800">0</span></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>抽牌保底進度</h2>
+      <div class="row"><span>距離傳說保底</span><span id="hm-pityL">0 / 100</span></div>
+      <div class="bar"><i id="hm-pityLbar" style="background:linear-gradient(90deg,#ffb430,#ff9d2e)"></i></div>
+      <div class="row" style="margin-top:6px"><span>距離神話保底</span><span id="hm-pityM">0 / 300</span></div>
+      <div class="bar"><i id="hm-pityMbar" style="background:linear-gradient(90deg,#ff3d7f,#a76bff)"></i></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>快速開始</h2>
+      <div class="flex">
+        <button class="b-primary grow" onclick="go('draw')">🃏 去抽牌</button>
+        <button class="b-gold grow" onclick="go('battle')">⚔️ 去對戰</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 抽牌 ===== -->
+  <div class="page" id="pg-draw">
+    <div class="card-panel">
+      <div class="row" style="border:none;padding-top:0">
+        <span>背包 <b id="dw-bag" style="color:var(--txt)">0 / 30</b></span>
+        <span>累計抽牌 <b id="dw-total" style="color:var(--txt)">0</b> 次</span>
+      </div>
+      <div id="drawStage">
+        <div class="hint center" id="dw-idle">按下按鈕開始抽牌　·　永久免費、次數無限</div>
+      </div>
+      <div class="flex" style="margin-top:12px" id="dw-actions">
+        <button class="b-primary grow" id="dw-btn" onclick="onDraw()">🃏 抽 一 張</button>
+      </div>
+      <div class="hint" id="dw-note"></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>稀有度機率</h2>
+      <div id="dw-rates"></div>
+      <div class="hint">幸運屬性每 <b>10</b> 點提升傳說 +0.05%、神話 +0.01%（神話上限 1%），提升的部分由普通扣除，總和恆為 100%。</div>
+    </div>
+  </div>
+
+  <!-- ===== 對戰 ===== -->
+  <div class="page" id="pg-battle">
+    <!-- 準備畫面 -->
+    <div id="bt-prep">
+      <div class="flex" style="margin-bottom:12px">
+        <button class="b-primary grow b-sm" id="md-ai"   onclick="setBattleMode('ai')">⚔️ AI</button>
+        <button class="b-ghost grow b-sm"   id="md-boss" onclick="setBattleMode('boss')">👹 Boss</button>
+        <button class="b-ghost grow b-sm"   id="md-pvp"  onclick="setBattleMode('pvp')">🌐 真人 PvP</button>
+      </div>
+
+      <!-- 真人 PvP -->
+      <div class="card-panel" id="bt-pvppanel" style="display:none">
+        <h2>真人 PvP　<span class="small" id="pv-season"></span></h2>
+        <div id="pv-status"></div>
+        <div class="row"><span>參戰費用</span><span>💰 <span id="pv-cost">100</span></span></div>
+        <div class="row"><span>勝利</span><span id="pv-win">—</span></div>
+        <div class="row"><span>失敗</span><span id="pv-lose">—</span></div>
+        <div class="row"><span>目前線上</span><span id="pv-online">—</span></div>
+        <div class="flex" style="margin-top:11px">
+          <button class="b-primary grow" id="pv-queue" onclick="pvpQueue()">🔍 開始配對</button>
+          <button class="b-ghost grow" id="pv-cancel" style="display:none" onclick="pvpLeave()">取消配對</button>
+        </div>
+        <div class="hint" id="pv-err"></div>
+      </div>
+      <div class="card-panel">
+        <h2>出戰隊伍</h2>
+        <div class="grid" id="bt-team"></div>
+        <div class="hint" id="bt-teamnote"></div>
+      </div>
+
+      <!-- Boss 挑戰 -->
+      <div class="card-panel" id="bt-bosspanel" style="display:none">
+        <h2>選擇 Boss</h2>
+        <div id="bt-bosslist"></div>
+        <div class="row"><span>挑戰費用</span><span>💰 <span id="bt-bosscost">200</span></span></div>
+        <div class="hint">獎勵依<b>造成的總傷害</b>計算，即使討伐失敗也有收穫。每回合我方每張存活卡各可攻擊一次。</div>
+        <button class="b-red" style="width:100%;margin-top:11px" id="bt-bossstart" onclick="startBossBattle()">
+          👹 開始討伐</button>
+        <div class="hint" id="bt-bosserr"></div>
+      </div>
+
+      <div class="card-panel" id="bt-aipanel">
+        <h2>對戰資訊</h2>
+        <div class="row"><span>參戰費用</span><span>💰 100</span></div>
+        <div class="row"><span>勝利獎勵</span><span>💰 +200　🏆 +25　EXP +100</span></div>
+        <div class="row"><span>失敗獎勵</span><span>💰 +30　🏆 -20　EXP +40</span></div>
+        <div class="row"><span>連勝獎勵</span><span>3 連勝 +100　5 連勝 +300　10 連勝 +1000</span></div>
+        <div class="row"><span>我方隊伍總戰力</span><span id="bt-power" style="color:var(--gold);font-weight:800">0</span></div>
+        <button class="b-primary" style="width:100%;margin-top:11px" id="bt-start" onclick="startBattle()">
+          ⚔️ 開始對戰（-100 金幣）</button>
+        <div class="hint" id="bt-err"></div>
+      </div>
+    </div>
+
+    <!-- 戰鬥畫面 -->
+    <div id="bt-field" style="display:none">
+      <div class="card-panel" style="padding:11px">
+        <!-- Boss 顯示區 -->
+        <div id="bt-bossbox" style="display:none">
+          <div class="bossbar" onclick="attackBoss()">
+            <div class="bicon" id="bs-icon">👹</div>
+            <div class="grow">
+              <div class="brow"><b id="bs-name">Boss</b><span id="bs-hp" class="tabular">0 / 0</span></div>
+              <div class="bar" style="height:12px"><i id="bs-bar" style="background:linear-gradient(90deg,#ff5d73,#ff9d2e)"></i></div>
+              <div class="small" id="bs-state"></div>
+            </div>
+          </div>
+        </div>
+        <div id="bt-enemybox">
+          <div class="side-label"><span>🤖 敵方（AI）</span><span id="bt-ealive">5 / 5 存活</span></div>
+          <div class="bfield" id="bt-enemy"></div>
+        </div>
+        <div class="turnbar" id="bt-turn">—</div>
+        <div class="side-label"><span>🧑 我方</span><span id="bt-palive">5 / 5 存活</span></div>
+        <div class="bfield" id="bt-player"></div>
+      </div>
+      <div class="card-panel">
+        <h2>戰鬥紀錄</h2>
+        <div id="blog"></div>
+      </div>
+      <div class="flex">
+        <button class="b-ghost grow" id="bt-endround" style="display:none" onclick="endBossRoundEarly()">⏭️ 結束回合</button>
+        <button class="b-ghost grow" onclick="forfeit()">🏳️ 認輸</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 卡牌（背包） ===== -->
+  <div class="page" id="pg-bag">
+    <div class="card-panel">
+      <h2>⚒️ 工坊</h2>
+      <div class="flex">
+        <button class="b-primary grow b-sm" onclick="openWorkshop('fusion')">🔮 合成<br><span style="font-size:10px;opacity:.85">3 張 → 1 張</span></button>
+        <button class="b-gold grow b-sm" onclick="openWorkshop('evolve')">🧬 進化<br><span style="font-size:10px;opacity:.85">同稀有度 3 張</span></button>
+        <button class="b-ghost grow b-sm" onclick="expandBag()">🎒 擴充背包<br><span style="font-size:10px;opacity:.85" id="bg-nexttier">—</span></button>
+      </div>
+      <div class="hint">卡牌<b>強化</b>請點選卡牌後在詳情中操作。已鎖定或在隊伍中的卡牌不能作為合成／進化素材。</div>
+    </div>
+    <div class="card-panel">
+      <div class="row" style="border:none;padding-top:0">
+        <span>背包 <b id="bg-count" style="color:var(--txt)">0 / 30</b></span>
+        <span>隊伍 <b id="bg-team" style="color:var(--txt)">0 / 5</b></span>
+      </div>
+      <div class="filters" id="bg-filters"></div>
+      <div class="grid" id="bg-grid"></div>
+      <div class="hint" id="bg-empty"></div>
+    </div>
+  </div>
+
+  <!-- ===== 圖鑑 ===== -->
+  <div class="page" id="pg-dex">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('more')">← 返回</button>
+    <div class="card-panel">
+      <div class="rhead"><div class="t">📖 圖鑑收集進度</div>
+        <div class="small" id="dx-total">0 / 0</div></div>
+      <div class="bar" style="height:11px"><i id="dx-bar" style="background:linear-gradient(90deg,#4a9eff,#ff3d7f)"></i></div>
+      <div id="dx-rows" style="margin-top:10px"></div>
+    </div>
+    <div class="card-panel">
+      <h2>收集獎勵</h2>
+      <div id="dx-miles"></div>
+    </div>
+    <div class="card-panel">
+      <div class="filters" id="dx-filters"></div>
+      <div class="grid" id="dx-grid"></div>
+      <div class="hint">灰色為尚未取得的種類。<b>抽到就會登錄</b>，即使當下放棄該卡也會留下紀錄。</div>
+    </div>
+  </div>
+
+  <!-- ===== 成就 ===== -->
+  <div class="page" id="pg-ach">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('more')">← 返回</button>
+    <div class="card-panel">
+      <div class="rhead"><div class="t">🏆 成就</div><div class="small" id="ac-count">0 / 0</div></div>
+      <div class="bar" style="height:11px"><i id="ac-bar" style="background:linear-gradient(90deg,#ffb430,#3ddc97)"></i></div>
+    </div>
+    <div class="card-panel">
+      <h2>稱號</h2>
+      <div id="ac-titles"></div>
+    </div>
+    <div class="card-panel">
+      <h2>成就列表</h2>
+      <div id="ac-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== 每日任務 ===== -->
+  <div class="page" id="pg-daily">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('more')">← 返回</button>
+    <div class="card-panel">
+      <div class="rhead"><div class="t">📋 每日任務</div><div class="small" id="dq-date">—</div></div>
+      <div id="dq-list"></div>
+    </div>
+    <div class="card-panel">
+      <h2>每日終極寶箱</h2>
+      <div class="row"><span>條件</span><span>完成並領取全部任務</span></div>
+      <div class="row"><span>內容</span><span id="dq-chest">—</span></div>
+      <button class="b-gold" style="width:100%;margin-top:11px" id="dq-chestbtn" onclick="claimDailyChest()">
+        🎁 開啟寶箱</button>
+      <div class="hint">任務每日 00:00 依裝置日期重置，並重新隨機挑選 4 個。</div>
+    </div>
+  </div>
+
+  <!-- ===== 神之試煉 ===== -->
+  <div class="page" id="pg-trial">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('more')">← 返回</button>
+    <div class="card-panel">
+      <div class="rhead"><div class="t">🗼 神之試煉</div><div class="small" id="tr-prog">0 / 100</div></div>
+      <div class="bar" style="height:11px"><i id="tr-bar" style="background:linear-gradient(90deg,#a76bff,#00e5ff)"></i></div>
+      <div id="tr-info" style="margin-top:10px"></div>
+      <button class="b-primary" style="width:100%;margin-top:11px" id="tr-start" onclick="startTrial()">
+        ⚔️ 挑戰下一層</button>
+      <div class="hint" id="tr-err"></div>
+    </div>
+    <div class="card-panel">
+      <h2>樓層構成</h2>
+      <div class="row"><span>一般層</span><span>5v5 卡牌戰，敵方戰力隨層數線性成長</span></div>
+      <div class="row"><span>每 10 層</span><span>🗿 Boss，獎勵 ×2</span></div>
+      <div class="row"><span>第 50 層</span><span>🌀 超級 Boss，獎勵 ×5</span></div>
+      <div class="row"><span>第 100 層</span><span>👁️ 最終 Boss → <b style="color:var(--c-super)">超神話卡</b></span></div>
+      <div class="hint">失敗不會損失進度，可以無限次重試。通過的層數會永久保存。</div>
+    </div>
+    <div class="card-panel">
+      <h2>樓層一覽</h2>
+      <div id="tr-floors"></div>
+    </div>
+  </div>
+
+  <!-- ===== 線上大廳 ===== -->
+  <div class="page" id="pg-online">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('more')">← 返回</button>
+    <div class="card-panel">
+      <div class="rhead"><div class="t">🌐 線上</div><div class="small" id="on-status">未連線</div></div>
+      <div id="on-account"></div>
+    </div>
+    <div class="card-panel" id="on-menu-panel">
+      <h2>線上功能</h2>
+      <div class="menu">
+        <button class="mbtn" onclick="go('rank')"><span class="mi">🏆</span>
+          <span class="grow" style="text-align:left">全球排行榜<br><span class="small">排位・財富・收藏・連勝・試煉・Boss</span></span><span>›</span></button>
+        <button class="mbtn" onclick="go('market')"><span class="mi">🏪</span>
+          <span class="grow" style="text-align:left">市場<br><span class="small" id="on-mk">買賣卡牌，手續費 5%</span></span><span>›</span></button>
+        <button class="mbtn" onclick="go('trade')"><span class="mi">🤝</span>
+          <span class="grow" style="text-align:left">玩家交易<br><span class="small" id="on-tr">卡牌 ＋ 金幣互換</span></span><span>›</span></button>
+        <button class="mbtn" onclick="go('faction')"><span class="mi">🛡️</span>
+          <span class="grow" style="text-align:left">陣營<br><span class="small" id="on-fc">—</span></span><span>›</span></button>
+      </div>
+    </div>
+    <div class="card-panel" id="on-mail-panel" style="display:none">
+      <h2>信箱</h2><div id="on-mail"></div>
+    </div>
+  </div>
+
+  <!-- ===== 排行榜 ===== -->
+  <div class="page" id="pg-rank">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('online')">← 返回</button>
+    <div class="card-panel">
+      <div class="rhead"><div class="t">🏆 全球排行榜</div><div class="small" id="rk-season"></div></div>
+      <div class="filters" id="rk-tabs"></div>
+      <div id="rk-mine"></div>
+      <div id="rk-rows" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ===== 市場 ===== -->
+  <div class="page" id="pg-market">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('online')">← 返回</button>
+    <div class="card-panel">
+      <div class="rhead"><div class="t">🏪 市場</div><div class="small" id="mk-info">—</div></div>
+      <div class="flex" style="margin-bottom:9px">
+        <input id="mk-name" placeholder="卡牌名稱" style="flex:2">
+        <select id="mk-sort" style="flex:1">
+          <option value="price_asc">最低價</option>
+          <option value="price_desc">最高價</option>
+          <option value="value_desc">最高數值</option>
+          <option value="newest">最新上架</option>
+        </select>
+      </div>
+      <div class="filters" id="mk-rar"></div>
+      <button class="b-primary b-sm" style="width:100%" onclick="marketSearch()">🔍 搜尋</button>
+      <div id="mk-rows" style="margin-top:11px"></div>
+    </div>
+    <div class="card-panel">
+      <h2>我的上架</h2>
+      <div id="mk-mine"></div>
+      <div class="hint">點擊背包卡牌 →「上架」即可販售。已鎖定或在隊伍中的卡牌無法上架。</div>
+    </div>
+  </div>
+
+  <!-- ===== 交易 ===== -->
+  <div class="page" id="pg-trade">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('online')">← 返回</button>
+    <div class="card-panel">
+      <h2>🤝 發起交易</h2>
+      <input id="tr-to" placeholder="對方玩家名稱" style="margin-bottom:8px">
+      <div class="row"><span>我方付出卡牌</span><span id="tr-mycards">0 張</span></div>
+      <div class="grid" id="tr-pick" style="margin:8px 0"></div>
+      <div class="flex">
+        <input id="tr-mygold" type="number" min="0" value="0" placeholder="我方付出金幣">
+        <input id="tr-hisgold" type="number" min="0" value="0" placeholder="要求對方金幣">
+      </div>
+      <div class="hint">左：我方付出的金幣　右：要求對方支付的金幣</div>
+      <button class="b-primary" style="width:100%;margin-top:9px" onclick="tradeSend()">送出交易邀請</button>
+      <div class="hint" id="tr-err"></div>
+    </div>
+    <div class="card-panel">
+      <h2>進行中的交易</h2>
+      <div id="tr-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== 陣營 ===== -->
+  <div class="page" id="pg-faction">
+    <button class="b-ghost b-sm" style="margin-bottom:11px" onclick="go('online')">← 返回</button>
+    <div class="filters" id="fc-tabs" style="display:none"></div>
+    <div id="fc-body"></div>
+  </div>
+
+  <!-- ===== 更多 ===== -->
+  <div class="page" id="pg-more">
+    <div class="card-panel">
+      <h2>線上</h2>
+      <div class="menu">
+        <button class="mbtn" onclick="go('online')"><span class="mi">🌐</span>
+          <span class="grow" style="text-align:left">線上大廳<br><span class="small" id="mn-online">—</span></span><span>›</span></button>
+      </div>
+    </div>
+
+    <div class="card-panel">
+      <h2>系統</h2>
+      <div class="menu">
+        <button class="mbtn" onclick="go('dex')"><span class="mi">📖</span>
+          <span class="grow" style="text-align:left">圖鑑<br><span class="small" id="mn-dex">—</span></span><span>›</span></button>
+        <button class="mbtn" onclick="go('ach')"><span class="mi">🏆</span>
+          <span class="grow" style="text-align:left">成就<br><span class="small" id="mn-ach">—</span></span><span>›</span></button>
+        <button class="mbtn" onclick="go('daily')"><span class="mi">📋</span>
+          <span class="grow" style="text-align:left">每日任務<br><span class="small" id="mn-daily">—</span></span><span>›</span></button>
+        <button class="mbtn" onclick="go('trial')"><span class="mi">🗼</span>
+          <span class="grow" style="text-align:left">神之試煉<br><span class="small" id="mn-trial">—</span></span><span>›</span></button>
+      </div>
+    </div>
+
+    <div class="card-panel">
+      <h2>角色屬性　<span id="mr-sp" style="color:var(--gold)"></span></h2>
+      <div id="mr-stats"></div>
+      <div class="hint">升級可獲得 <b>3</b> 點自由屬性點。角色 HP 公式（保留供 Boss / 冒險模式）：1000 + 體質 × 50 = <b id="mr-hp">1000</b></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>段位與排行</h2>
+      <div class="row"><span>目前排位積分</span><span id="mr-rating" class="tabular">1000</span></div>
+      <div class="row"><span>目前段位</span><span id="mr-rank">白銀</span></div>
+      <div id="mr-ranks"></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>Boss 討伐紀錄</h2>
+      <div id="mr-boss"></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>背包容量</h2>
+      <div id="mr-bag"></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>版本進度</h2>
+      <div class="row"><span>v0.1</span><span style="color:var(--green)">✅ 抽牌・背包・隊伍・AI 對戰・屬性剋制・技能・升級</span></div>
+      <div class="row"><span>v0.2</span><span style="color:var(--green)">✅ 強化・合成・進化・Boss・背包擴充</span></div>
+      <div class="row"><span>v0.3</span><span style="color:var(--green)">✅ 圖鑑・成就・每日任務・神之試煉</span></div>
+      <div class="row"><span>v1.0</span><span style="color:var(--green)">✅ 帳號・雲端存檔・真人 PvP・排行榜・市場・交易・陣營・賽季</span></div>
+      <div class="row"><span>v1.1</span><span style="color:var(--green)">✅ 陣營基地・陣營戰・多人 Boss・陣營商店・每日寶箱</span></div>
+    </div>
+
+    <div class="card-panel">
+      <h2>存檔</h2>
+      <div class="row"><span>版本</span><span id="mr-ver">v0.1.0</span></div>
+      <div class="row"><span>存檔大小</span><span id="mr-size">—</span></div>
+      <div class="row"><span>最後儲存</span><span id="mr-saved">—</span></div>
+      <div class="flex" style="margin-top:10px">
+        <button class="b-ghost grow" onclick="saveGame(true)">💾 手動儲存</button>
+        <button class="b-red grow" onclick="resetGame()">🗑️ 重置存檔</button>
+      </div>
+      <div class="hint">存檔採用 LocalStorage，關閉瀏覽器後仍會保留。重置需二次確認。</div>
+    </div>
+
+    <div class="card-panel">
+      <h2>自我檢查</h2>
+      <div id="mr-check"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 底部導航 ===== -->
+<div id="nav">
+  <button class="on" data-pg="home"><span class="ic">🏠</span>首頁</button>
+  <button data-pg="draw"><span class="ic">🃏</span>抽牌</button>
+  <button data-pg="battle"><span class="ic">⚔️</span>對戰</button>
+  <button data-pg="bag"><span class="ic">🎒</span>卡牌</button>
+  <button data-pg="more"><span class="ic">☰</span>更多</button>
+</div>
+
+<!-- ===== 彈窗 ===== -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="mbox" id="modalBox"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   無限抽牌卡牌對戰遊戲  Infinite Cards
+   Version 0.1.0 — 單機 HTML / CSS / Vanilla JS
+   ----------------------------------------------------------------------------
+   結構：
+     1. CONFIG        所有可調數值集中於此
+     2. DATA          稀有度 / 屬性 / 技能 / 名稱素材
+     3. UTIL          共用工具
+     4. STATE + 存檔  player 資料物件、saveGame / loadGame
+     5. 抽牌系統      rollRarity / generateCard / drawCard
+     6. 背包與隊伍    addToBag / deleteCard / toggleTeam / toggleLock
+     7. 戰鬥系統      startBattle / calculateDamage / playerAttack / enemyTurn ...
+     8. 成長系統      gainExp / levelUp / upgradeStat / applyBattleResult
+     9. 畫面繪製      renderHome / renderDraw / renderBag / renderBattle ...
+    10. 啟動
+   ========================================================================== */
+
+/* ==========================================================================
+   1. CONFIG — 所有重要數值集中管理
+   ========================================================================== */
+const CONFIG = {
+  version: '1.1.0',
+  saveKey: 'infinite_cards_save_v1',
+
+  player: {
+    startGold: 1500,
+    startRating: 1000,
+    startBagSize: 30,
+    statPointsPerLevel: 3,
+    expPerLevel: 200,          // 升級所需 EXP = expPerLevel × 等級
+    startStats: { atk:0, hp:0, def:0, mdef:0, spd:0, con:0, luck:0 },
+    baseHpFormula: { base:1000, perCon:50 },   // 角色 HP = 1000 + 體質 × 50（保留給 Boss 模式）
+  },
+
+  // 背包容量擴充（v0.2 開放購買，資料先備妥）
+  bagTiers: [
+    { cap:30,  cost:0 },     { cap:40,  cost:1000 },
+    { cap:50,  cost:3000 },  { cap:75,  cost:8000 },
+    { cap:100, cost:20000 },
+  ],
+
+  draw: {
+    // 稀有度基礎機率（%）—— 總和必須為 100
+    rates: { common:65, rare:23, epic:9, legendary:2.5, mythic:0.5 },
+    pity: { legendary:100, mythic:300 },       // N 抽未出即保底
+    luck: { per:10, legendary:0.05, mythic:0.01, mythicCap:1.0 },
+  },
+
+  // 稀有度定義：數值範圍、可用技能、顯示
+  rarities: {
+    common:    { key:'common',    name:'普通', range:[50,300],     order:1, color:'var(--c-common)'    },
+    rare:      { key:'rare',      name:'稀有', range:[301,700],    order:2, color:'var(--c-rare)'      },
+    epic:      { key:'epic',      name:'史詩', range:[701,1500],   order:3, color:'var(--c-epic)'      },
+    legendary: { key:'legendary', name:'傳說', range:[1501,3000],  order:4, color:'var(--c-legendary)' },
+    mythic:    { key:'mythic',    name:'神話', range:[3001,5000],  order:5, color:'var(--c-mythic)'    },
+    // v0.3：超神話僅能由「神之試煉」取得，不會從抽牌產出
+    super_mythic:{ key:'super_mythic', name:'超神話', range:[5001,8000], order:6, color:'var(--c-super)', special:true },
+  },
+  rarityOrder: ['common','rare','epic','legendary','mythic'],   // 可抽到的稀有度
+  dexOrder:    ['common','rare','epic','legendary','mythic','super_mythic'],
+
+  battle: {
+    teamSize: 5,
+    maxMythicInTeam: 1,
+    cost: 100,
+    win:  { gold:200, rating:25,  exp:100 },
+    lose: { gold:30,  rating:-20, exp:40  },
+    streakBonus: { 3:100, 5:300, 10:1000 },
+    minRating: 0,
+    atkPerPoint: 0.01,      // 角色攻擊倍率 = 1 + 攻擊 × 0.01
+    defConstant: 500,       // 減傷率 = 防禦 /（防禦 + 500）
+    elementMult: 1.2,       // 屬性剋制倍率
+    critMult: 2.0,          // 爆擊倍率
+    maxRounds: 60,          // 安全上限，避免卡死
+    aiPowerRange: [0.85, 1.15],   // AI 隊伍總戰力相對玩家的比例
+    aiStatScale: 0.8,       // AI 角色屬性 ≈ 玩家等級 × 此係數
+  },
+
+  /* ---------- v0.2：強化 ---------- */
+  upgrade: {
+    maxLevel: 20,
+    gainRatio: 0.08,          // 每 +1 增加「基礎數值」的 8%
+    baseCost: 50,
+    rarityCost: { common:1, rare:2, epic:4, legendary:8, mythic:16 },
+    // rates[目標等級-1] = 成功率；+1~+5 必成功，之後逐步下降
+    rates: [1,1,1,1,1,  .90,.80,.70,.60,.50,  .40,.35,.30,.25,.20,  .15,.12,.10,.08,.05],
+  },
+
+  /* ---------- v0.2：合成 ---------- */
+  fusion: {
+    materials: 3,
+    ratio: [0.73, 0.87],      // 結果 = 素材數值總和 × 此區間（永遠小於總和）
+    quality: [
+      { key:'normal',  name:'普通合成', mult:1.00, chance:0.70, color:'var(--c-common)' },
+      { key:'good',    name:'優良合成', mult:1.10, chance:0.25, color:'var(--c-rare)'   },
+      { key:'perfect', name:'完美合成', mult:1.25, chance:0.05, color:'var(--c-legendary)' },
+    ],
+    costBase: 200, costRatio: 0.30,   // 費用 = 200 + 素材總數值 × 0.3
+    // 硬上限：完美合成 0.87×1.25 = 1.0875 會超過素材總和，
+    // 這裡夾住讓「合成結果永遠小於總和」的規則不被破壞
+    maxRatio: 0.98,
+  },
+
+  /* ---------- v0.2：進化 ---------- */
+  evolve: {
+    materials: 3,             // 3 張「同稀有度」卡牌 + 金幣 → 1 張更高稀有度
+    next: { common:'rare', rare:'epic', epic:'legendary', legendary:'mythic' },
+    cost: { common:200, rare:500, epic:2000, legendary:8000 },
+  },
+
+  /* ---------- v0.2：Boss ---------- */
+  boss: {
+    cost: 200,
+    maxRounds: 50,
+    goldPerDamage: 1/20,      // 依造成的傷害給獎勵，就算戰敗也有收穫
+    expPerDamage: 1/50,
+    list: [
+      { key:'forest_giant',   name:'森林巨人',   icon:'🌳', hp:20000,     atk:1400,  unlockLv:1,
+        firstClear:{ gold:5000,    exp:1200  } },
+      { key:'ancient_dragon', name:'遠古魔龍',   icon:'🐲', hp:500000,    atk:9000,  unlockLv:20,
+        firstClear:{ gold:40000,   exp:8000  } },
+      { key:'world_eater',    name:'世界吞噬者', icon:'🌌', hp:5000000,   atk:45000, unlockLv:50,
+        firstClear:{ gold:300000,  exp:50000 } },
+      { key:'void_god',       name:'虛空之神',   icon:'👁️', hp:100000000, atk:250000,unlockLv:100,
+        firstClear:{ gold:3000000, exp:500000} },
+    ],
+    skills: [
+      { key:'storm',   name:'毀滅風暴', weight:30, desc:'隨機攻擊一張卡牌，傷害 ×1.5' },
+      { key:'inferno', name:'地獄烈焰', weight:22, desc:'對所有卡牌造成 ×0.6 傷害'   },
+      { key:'regen',   name:'再生',     weight:14, desc:'回復自身最大生命 5%'        },
+      { key:'barrier', name:'神之屏障', weight:12, desc:'下一次受到的攻擊無效'       },
+      { key:'doom',    name:'末日倒數', weight:12, desc:'3 回合後對全體造成 ×3 傷害' },
+      { key:'rewind',  name:'時間逆轉', weight:10, desc:'恢復上一回合受到的傷害'     },
+    ],
+    infernoMult:0.6, stormMult:1.5, regenRatio:0.05, doomTurns:3, doomMult:3.0,
+  },
+
+  /* ---------- v0.3：圖鑑 ---------- */
+  dex: {
+    // n = 累計收集「種類」數，'all' 代表全圖鑑（不含超神話）
+    milestones: [
+      { n:50,    gold:500,   label:'500 金幣' },
+      { n:100,   pack:'rare',      gold:0, label:'稀有卡包（3 張稀有以上）' },
+      { n:200,   pack:'legendary', gold:0, label:'傳說卡 ×1' },
+      { n:'all', pack:'mythic',    gold:0, label:'限定神話卡 ×1' },
+    ],
+    packs: {                       // 卡包內容：抽 n 張，最低稀有度
+      rare:      { count:3, min:'rare' },
+      legendary: { count:1, min:'legendary' },
+      mythic:    { count:1, min:'mythic' },
+    },
+  },
+
+  /* ---------- v0.3：每日任務 ---------- */
+  daily: {
+    count: 4,                      // 每天隨機挑幾個
+    pool: [
+      { key:'draw',    name:'抽牌 20 次',        target:20, gold:100, counter:'draws'         },
+      { key:'battle',  name:'完成 3 場對戰',     target:3,  gold:200, counter:'battles'       },
+      { key:'kill',    name:'擊敗 10 張敵方卡牌', target:10, gold:300, counter:'kills'        },
+      { key:'fuse',    name:'完成 1 次合成',     target:1,  gold:100, counter:'fusions'       },
+      { key:'boss',    name:'參加 1 次 Boss 討伐',target:1, gold:500, counter:'bossAttempts'  },
+      { key:'win',     name:'對戰勝利 2 場',     target:2,  gold:250, counter:'wins2'         },
+      { key:'upgrade', name:'強化成功 3 次',     target:3,  gold:150, counter:'upgrades'      },
+      { key:'evolve',  name:'完成 1 次進化',     target:1,  gold:200, counter:'evolves'       },
+    ],
+    chest: { gold:1000, exp:500, cardMin:'epic' },   // 全部完成的終極寶箱
+  },
+
+  /* ---------- v0.3：成就 ---------- */
+  achievements: [
+    { key:'first_draw',  name:'初次召喚',   desc:'進行第 1 次抽牌',        gold:100,   check:()=>P.drawCount>=1 },
+    { key:'draw_100',    name:'手感發燙',   desc:'累計抽牌 100 次',        gold:500,   check:()=>P.drawCount>=100 },
+    { key:'draw_1000',   name:'無限抽牌者', desc:'累計抽牌 1000 次',       gold:3000,  title:'無限抽牌者', check:()=>P.drawCount>=1000 },
+    { key:'first_myth',  name:'神話降臨',   desc:'抽到第 1 張神話卡',      gold:1000,  title:'神話持有者', check:()=>P.counters.mythicDrawn>=1 },
+    { key:'myth_5',      name:'神話收藏家', desc:'收集 5 種不同的神話卡',  gold:5000,  check:()=>dexCount('mythic')>=5 },
+    { key:'first_win',   name:'初戰告捷',   desc:'贏得第 1 場對戰',        gold:200,   check:()=>P.wins>=1 },
+    { key:'win_100',     name:'百勝將軍',   desc:'累計勝場 100',           gold:5000,  title:'百勝將軍', check:()=>P.wins>=100 },
+    { key:'streak_10',   name:'十連勝',     desc:'達成 10 連勝',           gold:3000,  check:()=>P.bestStreak>=10 },
+    { key:'streak_20',   name:'不敗傳說',   desc:'達成 20 連勝',           gold:10000, title:'不敗傳說', check:()=>P.bestStreak>=20 },
+    { key:'rank_gold',   name:'黃金段位',   desc:'排位積分達到 1500',      gold:1000,  check:()=>P.rating>=1500 },
+    { key:'rank_master', name:'大師之路',   desc:'排位積分達到 2500',      gold:8000,  title:'大師', check:()=>P.rating>=2500 },
+    { key:'rank_legend', name:'傳奇',       desc:'排位積分達到 3000',      gold:20000, title:'傳奇', check:()=>P.rating>=3000 },
+    { key:'plus_10',     name:'強化大師',   desc:'將一張卡強化到 +10',     gold:3000,  check:()=>P.cards.some(c=>c.plus>=10) },
+    { key:'plus_20',     name:'極限強化',   desc:'將一張卡強化到 +20',     gold:20000, title:'鍛造之神', check:()=>P.cards.some(c=>c.plus>=20) },
+    { key:'fuse_1',      name:'合成新手',   desc:'完成 1 次合成',          gold:200,   check:()=>P.counters.fusions>=1 },
+    { key:'evolve_10',   name:'進化達人',   desc:'完成 10 次進化',         gold:3000,  check:()=>P.counters.evolves>=10 },
+    { key:'boss_1',      name:'巨人獵手',   desc:'討伐森林巨人',           gold:2000,  check:()=>(P.bossRecords.forest_giant||{}).clears>=1 },
+    { key:'boss_2',      name:'屠龍者',     desc:'討伐遠古魔龍',           gold:10000, title:'屠龍者', check:()=>(P.bossRecords.ancient_dragon||{}).clears>=1 },
+    { key:'dex_100',     name:'圖鑑收藏家', desc:'圖鑑收集 100 種',        gold:5000,  check:()=>dexCount()>=100 },
+    { key:'dex_all',     name:'圖鑑大師',   desc:'完成全圖鑑',             gold:50000, title:'圖鑑大師', pack:'mythic', check:()=>dexCount()>=DEX_TOTAL },
+    { key:'trial_50',    name:'半神',       desc:'通過神之試煉第 50 層',   gold:20000, title:'半神', check:()=>P.trial.maxFloor>=50 },
+    { key:'trial_100',   name:'弒神者',     desc:'通過神之試煉第 100 層',  gold:100000,title:'弒神者', check:()=>P.trial.maxFloor>=100 },
+  ],
+
+  /* ---------- v0.3：神之試煉 ---------- */
+  trial: {
+    unlockLv: 100,
+    floors: 100,
+    bossEvery: 10,       // 每 10 層是 Boss
+    superBossAt: 50,
+    finalBossAt: 100,
+    // 敵方強度：線性成長，錨定在玩家「合法隊伍」的實際天花板。
+    // 隊伍只能帶 1 張神話級（上限 8000），其餘 4 張最高是傳說（3000）：
+    //   未強化 ≈ 8,000 + 4×3,000        = 20,000
+    //   全 +10 ≈ 14,400 + 4×5,400       = 36,000
+    //   全 +20 ≈ 20,800 + 4×7,800       = 52,000
+    // 第 99 層設計在 ~33,000，讓「全 +10 隊伍」剛好能推到頂。
+    powerBase: 8000, powerPerFloor: 0.032,     // power = base × (1 + f × perFloor)
+    bossHpMult: 8, superHpMult: 25, finalHpMult: 60,
+    bossAtkMult: 1.4, superAtkMult: 2.0, finalAtkMult: 3.0,
+    bossAtkScale: 0.06,                        // Boss 攻擊 = power × atkMult × 此係數
+    aiAtkPerFloor: 1.2, aiDefPerFloor: 6,      // 一般層 AI 的角色屬性
+    goldPerFloor: 300, expPerFloor: 120,       // 首次通過的獎勵 × 層數
+    maxRounds: 40,
+  },
+
+  ranks: [
+    { name:'青銅', min:0,    color:'#c98a5a' },
+    { name:'白銀', min:1000, color:'#c9d2e0' },
+    { name:'黃金', min:1500, color:'#ffc84a' },
+    { name:'鑽石', min:2000, color:'#5ad4ff' },
+    { name:'大師', min:2500, color:'#a76bff' },
+    { name:'傳奇', min:3000, color:'#ff3d7f' },
+  ],
+
+  skills: {
+    crit:      { key:'crit',      name:'爆擊',     desc:'20% 機率造成 2 倍傷害',                     chance:0.20 },
+    shield:    { key:'shield',    name:'盾牌',     desc:'第一次受到攻擊時只受到 50% 傷害',           reduce:0.50 },
+    lifesteal: { key:'lifesteal', name:'吸血',     desc:'攻擊後恢復自身最大數值的 20%',              ratio:0.20 },
+    revive:    { key:'revive',    name:'復活',     desc:'第一次死亡時以最大數值 30% 復活',           ratio:0.30 },
+    combo:     { key:'combo',     name:'連擊',     desc:'30% 機率同回合再次攻擊',                    chance:0.30, maxChain:2 },
+    timestop:  { key:'timestop',  name:'時間停止', desc:'每場戰鬥一次，使對手跳過下一次行動',        once:true },
+    // v0.2 預留：burn / divine_revive / devour
+  },
+  // 各稀有度可抽到的技能池（含「無技能」）
+  skillPool: {
+    common:    [null, null, null, 'crit'],
+    rare:      [null, 'crit', 'crit', 'shield'],
+    epic:      ['crit', 'shield', 'lifesteal', 'combo'],
+    legendary: ['crit', 'shield', 'lifesteal', 'combo', 'revive'],
+    mythic:    ['shield', 'lifesteal', 'combo', 'revive', 'timestop', 'timestop'],
+    super_mythic: ['revive', 'timestop', 'timestop', 'lifesteal', 'combo'],
+  },
+
+  // 玩家卡牌數值上限（規格：超過 8000 的數值保留給 Boss）
+  // 合成會夾在此上限內，避免「3 張神話合成」產出超越超神話的數值
+  cardValueCap: 8000,
+};
+
+/* ==========================================================================
+   2. DATA — 屬性、名稱素材
+   ========================================================================== */
+const ELEMENTS = {
+  fire:    { key:'fire',    name:'火', icon:'🔥', color:'var(--e-fire)'    },
+  water:   { key:'water',   name:'水', icon:'💧', color:'var(--e-water)'   },
+  wood:    { key:'wood',    name:'木', icon:'🌿', color:'var(--e-wood)'    },
+  thunder: { key:'thunder', name:'雷', icon:'⚡', color:'var(--e-thunder)' },
+  dark:    { key:'dark',    name:'暗', icon:'🌑', color:'var(--e-dark)'    },
+  light:   { key:'light',   name:'光', icon:'☀️', color:'var(--e-light)'   },
+};
+const ELEMENT_KEYS = Object.keys(ELEMENTS);
+// 剋制表：火剋木、木剋水、水剋火（雷/暗/光 v0.1 無剋制，v0.2 擴充）
+const COUNTERS = { fire:'wood', wood:'water', water:'fire' };
+
+/* 名稱＝前綴 × 核心。組合數即為「圖鑑總數」，
+   對齊規格範例：普通 50 / 稀有 60 / 史詩 70 / 傳說 70 / 神話 50 = 300 種
+  （超神話 30 種為試煉專屬，不列入里程碑計算）。 */
+const NAME_PARTS = {
+  prefix: {
+    common:      ['破舊的','生鏽的','流浪的','無名的','見習'],                        // 5 × 10 = 50
+    rare:        ['精良的','銳利的','堅毅的','疾風','鐵血','磐石'],                   // 6 × 10 = 60
+    epic:        ['烈焰','寒霜','雷鳴','暗影','聖光','風暴','幽冥'],                  // 7 × 10 = 70
+    legendary:   ['龍魂','神威','天啟','滅世','永夜','曦光','裁決'],                  // 7 × 10 = 70
+    mythic:      ['創世','終焉','虛空','萬象','無限'],                                // 5 × 10 = 50
+    super_mythic:['超越','神格','太初'],                                              // 3 × 10 = 30
+  },
+  core: ['劍士','法師','弓手','騎士','刺客','守衛','術士','戰將','祭司','龍裔'],
+};
+// 圖鑑目錄：所有可能的卡牌名稱
+const DEX_CATALOG = {};                    // rarity -> [name, ...]
+let DEX_TOTAL = 0;                         // 不含超神話的總數（里程碑以此計算）
+(function buildCatalog(){
+  for(const r of CONFIG.dexOrder){
+    DEX_CATALOG[r] = [];
+    for(const p of NAME_PARTS.prefix[r])
+      for(const c of NAME_PARTS.core) DEX_CATALOG[r].push(p + c);
+    if(!CONFIG.rarities[r].special) DEX_TOTAL += DEX_CATALOG[r].length;
+  }
+})();
+const dexKey = (rarity, name) => rarity + ':' + name;
+
+/* ==========================================================================
+   3. UTIL — 共用工具
+   ========================================================================== */
+const $  = id => document.getElementById(id);
+const rnd      = arr => arr[Math.floor(Math.random()*arr.length)];
+const randInt  = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const clamp    = (v,a,b) => Math.max(a,Math.min(b,v));
+const fmt      = n => Math.round(n).toLocaleString('en-US');
+const esc      = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid      = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast');
+  t.innerHTML = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('on'), 2200);
+}
+function openModal(html){ $('modalBox').innerHTML = html; $('modal').classList.add('on'); }
+function closeModal(){ $('modal').classList.remove('on'); }
+
+let audioCtx = null;
+function sfx(freq, dur, type='sine', vol=0.05){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  }catch(e){}
+}
+function fanfare(notes=[523,659,784,1046], gap=95){
+  notes.forEach((f,i)=>setTimeout(()=>sfx(f,.35,'triangle',.06), i*gap));
+}
+
+/* ==========================================================================
+   4. STATE + 存檔
+   資料結構刻意扁平、可序列化，方便日後改成後端資料庫
+   ========================================================================== */
+function newPlayer(name){
+  return {
+    // 身分
+    name: name,
+    playerId: 'P' + Date.now().toString(36).toUpperCase().slice(-8),
+    createdAt: Date.now(),
+    // 成長
+    level: 1, exp: 0, statPoints: 0,
+    stats: { ...CONFIG.player.startStats },
+    // 資源
+    gold: CONFIG.player.startGold,
+    bagSize: CONFIG.player.startBagSize,
+    // 戰績
+    rating: CONFIG.player.startRating,
+    wins: 0, losses: 0, streak: 0, bestStreak: 0,
+    // 卡牌
+    cards: [],           // Card[]
+    team: [],            // cardId[]
+    // 抽牌
+    drawCount: 0,
+    pity: { legendary:0, mythic:0 },
+    // v0.3
+    dex: {},                 // "rarity:name" -> 取得次數
+    dexClaimed: [],          // 已領取的圖鑑里程碑
+    achievements: {},        // key -> true（已領取）
+    titles: [], title: null, // 已解鎖稱號 / 目前配戴
+    daily: { date:'', quests:[], chestClaimed:false, base:{} },
+    trial: { maxFloor:0 },
+    counters: { draws:0, battles:0, wins2:0, kills:0, fusions:0, evolves:0,
+                upgrades:0, bossAttempts:0, mythicDrawn:0 },
+    // 預留（v1.0）
+    bossRecords: {}, faction: null,
+    // 中繼
+    savedAt: 0, version: CONFIG.version,
+  };
+}
+let P = null;              // 玩家資料
+let pendingCard = null;    // 抽到但尚未決定去留的卡
+let B = null;              // 戰鬥狀態
+
+function saveGame(manual){
+  if(!P) return;
+  P.savedAt = Date.now();
+  try{
+    localStorage.setItem(CONFIG.saveKey, JSON.stringify(P));
+    if(manual) toast('💾 已儲存');
+  }catch(e){
+    toast('⚠️ 儲存失敗：' + e.message);
+  }
+  if(typeof NET !== 'undefined') NET.sync();      // 已登入時順便同步到雲端
+}
+function loadGame(){
+  try{
+    const raw = localStorage.getItem(CONFIG.saveKey);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    // 版本遷移：補上新版才有的欄位，舊存檔不會壞
+    const base = newPlayer(data.name || '玩家');
+    const merged = Object.assign(base, data);
+    merged.stats = Object.assign({ ...CONFIG.player.startStats }, data.stats || {});
+    merged.pity  = Object.assign({ legendary:0, mythic:0 }, data.pity || {});
+    merged.cards = Array.isArray(data.cards) ? data.cards : [];
+    merged.team  = Array.isArray(data.team)  ? data.team  : [];
+    // v0.1 → v0.2 遷移：補上強化基準值，舊卡不會壞
+    merged.cards.forEach(c=>{
+      if(c.plus == null) c.plus = 0;
+      if(c.baseValue == null) c.baseValue = Math.round(c.maxValue / (1 + CONFIG.upgrade.gainRatio * c.plus));
+    });
+    merged.bossRecords = data.bossRecords || {};
+    // v0.2 → v0.3 遷移
+    merged.dex        = data.dex && !Array.isArray(data.dex) ? data.dex : {};
+    merged.dexClaimed = Array.isArray(data.dexClaimed) ? data.dexClaimed : [];
+    merged.achievements = (data.achievements && typeof data.achievements==='object') ? data.achievements : {};
+    merged.titles     = Array.isArray(data.titles) ? data.titles : [];
+    merged.title      = data.title || null;
+    merged.daily      = Object.assign({date:'',quests:[],chestClaimed:false,base:{}}, data.daily||{});
+    merged.trial      = Object.assign({maxFloor:0}, data.trial||{});
+    merged.counters   = Object.assign(
+      {draws:0,battles:0,wins2:0,kills:0,fusions:0,evolves:0,upgrades:0,bossAttempts:0,mythicDrawn:0},
+      data.counters||{});
+    // 舊存檔沒有圖鑑紀錄：把手上現有卡牌補登進圖鑑
+    merged.cards.forEach(c=>{
+      const k = dexKey(c.rarity, c.name);
+      if((DEX_CATALOG[c.rarity]||[]).includes(c.name) && !merged.dex[k]) merged.dex[k] = 1;
+    });
+    return merged;
+  }catch(e){
+    console.error('讀檔失敗', e);
+    return null;
+  }
+}
+function resetGame(){
+  openModal(`
+    <h3>⚠️ 重置存檔</h3>
+    <div class="hint" style="margin-bottom:14px">
+      這會刪除<b>所有</b>卡牌、等級、金幣與戰績，且無法復原。<br>
+      確定要重新開始嗎？
+    </div>
+    <div class="flex">
+      <button class="b-ghost grow" onclick="closeModal()">取消</button>
+      <button class="b-red grow" onclick="resetGameConfirm2()">我確定，繼續</button>
+    </div>`);
+}
+function resetGameConfirm2(){
+  openModal(`
+    <h3>🗑️ 最後確認</h3>
+    <div class="hint" style="margin-bottom:14px">
+      再次確認：<b>真的要清除全部進度嗎？</b>此操作不可逆。
+    </div>
+    <div class="flex">
+      <button class="b-ghost grow" onclick="closeModal()">我再想想</button>
+      <button class="b-red grow" onclick="doReset()">確定刪除</button>
+    </div>`);
+}
+function doReset(){
+  localStorage.removeItem(CONFIG.saveKey);
+  closeModal();
+  location.reload();
+}
+
+/* ==========================================================================
+   5. 抽牌系統
+   ========================================================================== */
+// 依幸運調整後的即時機率（總和恆為 100）
+function getDrawRates(){
+  const base = CONFIG.draw.rates, L = CONFIG.draw.luck;
+  const steps = Math.floor((P ? P.stats.luck : 0) / L.per);
+  const r = { ...base };
+  // 神話加成（有上限）
+  r.mythic = Math.min(L.mythicCap, base.mythic + steps * L.mythic);
+  const mythGain = r.mythic - base.mythic;
+  // 傳說加成
+  const legGain = Math.min(steps * L.legendary, Math.max(0, base.common - mythGain - 1));
+  r.legendary = base.legendary + legGain;
+  // 全部由普通扣除，維持總和 100
+  r.common = base.common - mythGain - legGain;
+  return r;
+}
+function rollRarity(){
+  // 保底優先
+  if(P.pity.mythic + 1 >= CONFIG.draw.pity.mythic)       return 'mythic';
+  if(P.pity.legendary + 1 >= CONFIG.draw.pity.legendary) return rnd(['legendary','legendary','legendary','mythic']);
+
+  const rates = getDrawRates();
+  let x = Math.random() * 100;
+  for(const key of CONFIG.rarityOrder){
+    if(x < rates[key]) return key;
+    x -= rates[key];
+  }
+  return 'common';
+}
+function generateName(rarity){
+  return rnd(NAME_PARTS.prefix[rarity]) + rnd(NAME_PARTS.core);
+}
+function generateCard(forceRarity){
+  const rarity = forceRarity || rollRarity();
+  const [min,max] = CONFIG.rarities[rarity].range;
+  const value = randInt(min, max);
+  const skillKey = rnd(CONFIG.skillPool[rarity]);
+  return {
+    id: uid(),
+    name: generateName(rarity),
+    rarity,
+    value,                 // 目前數值（同時是 HP 與攻擊力來源）
+    maxValue: value,       // 最大數值
+    baseValue: value,      // 強化前的原始數值（強化以此為基準計算加成）
+    element: rnd(ELEMENT_KEYS),
+    skill: skillKey,       // null 或 CONFIG.skills 的 key
+    plus: 0,               // 強化等級（v0.2）
+    locked: false,
+    obtainedAt: Date.now(),
+  };
+}
+function drawCard(){
+  P.drawCount++;
+  P.counters.draws++;
+  const card = generateCard();
+  // 保底計數
+  const order = CONFIG.rarities[card.rarity].order;
+  P.pity.legendary = order >= CONFIG.rarities.legendary.order ? 0 : P.pity.legendary + 1;
+  P.pity.mythic    = order >= CONFIG.rarities.mythic.order    ? 0 : P.pity.mythic + 1;
+  if(card.rarity === 'mythic') P.counters.mythicDrawn++;
+  // 圖鑑：抽到就算「獲得」，即使之後放棄也會留下紀錄
+  card.isNewDex = registerDex(card);
+  checkAchievements();
+  return card;
+}
+function onDraw(){
+  if(pendingCard){ toast('請先處理上一張卡牌'); return; }
+  const card = drawCard();
+  pendingCard = card;
+  showDrawResult(card);
+  saveGame();
+  renderTop(); renderDraw();
+}
+function showDrawResult(card){
+  const R = CONFIG.rarities[card.rarity];
+  let fx = 'flip';
+  if(card.rarity === 'epic')      fx = 'epicfx';
+  if(card.rarity === 'legendary') fx = 'legfx';
+  if(card.rarity === 'mythic')    fx = 'mythfx';
+
+  $('drawStage').innerHTML = `<div class="bigcard r-${card.rarity} ${fx}">${bigCardInner(card)}</div>`;
+
+  // 演出
+  if(card.rarity === 'mythic'){
+    const bn = $('mythBanner');
+    bn.classList.remove('on'); void bn.offsetWidth; bn.classList.add('on');
+    setTimeout(()=>bn.classList.remove('on'), 2100);
+    fanfare([523,784,1046,1318,1568], 110);
+  } else if(card.rarity === 'legendary'){
+    fanfare([523,659,880], 90);
+  } else if(card.rarity === 'epic'){
+    sfx(880,.25,'triangle',.06);
+  } else {
+    sfx(440,.1,'sine',.04);
+  }
+
+  const bagFull = P.cards.length >= P.bagSize;
+  $('dw-actions').innerHTML = `
+    <button class="b-green grow" ${bagFull?'disabled':''} onclick="keepPending()">✅ 加入背包</button>
+    <button class="b-ghost grow" onclick="discardPending()">🗑️ 放棄</button>
+    ${bagFull ? `<button class="b-gold" style="width:100%" onclick="go('bag')">🎒 去背包刪卡</button>` : ''}`;
+  const newTag = card.isNewDex
+    ? `<span class="tag" style="background:var(--gold);color:#3a2a05">NEW 圖鑑新種類</span>　` : '';
+  $('dw-note').innerHTML = newTag + (bagFull
+    ? `<span style="color:var(--red)">背包已滿（${P.cards.length} / ${P.bagSize}）</span>　必須先刪除舊卡，或放棄這張新卡。`
+    : `目前 ${P.cards.length} / ${P.bagSize}　·　技能：${skillText(card.skill)}　·　圖鑑 ${dexCount()} / ${DEX_TOTAL}`);
+  if(card.isNewDex) sfx(1046,.18,'triangle',.05);
+}
+function bigCardInner(card){
+  const R = CONFIG.rarities[card.rarity], E = ELEMENTS[card.element];
+  return `
+    <div class="el">${E.icon}</div>
+    <div class="nm">${esc(card.name)}</div>
+    <div class="val">${fmt(card.value)}</div>
+    <div class="rr t-${card.rarity}">${R.name}</div>
+    <div class="sk">${E.name}屬性　${skillText(card.skill)}</div>`;
+}
+function skillText(key){
+  if(!key) return '無技能';
+  return CONFIG.skills[key].name;
+}
+function keepPending(){
+  if(!pendingCard) return;
+  if(P.cards.length >= P.bagSize){ toast('🎒 背包已滿'); return; }
+  P.cards.push(pendingCard);
+  toast(`已收入「${esc(pendingCard.name)}」`);
+  pendingCard = null;
+  clearDrawStage();
+  saveGame(); renderAll();
+}
+function discardPending(){
+  if(!pendingCard) return;
+  pendingCard = null;
+  clearDrawStage();
+  saveGame(); renderAll();
+}
+function clearDrawStage(){
+  $('drawStage').innerHTML = `<div class="hint center" id="dw-idle">按下按鈕開始抽牌　·　永久免費、次數無限</div>`;
+  $('dw-actions').innerHTML = `<button class="b-primary grow" id="dw-btn" onclick="onDraw()">🃏 抽 一 張</button>`;
+  $('dw-note').innerHTML = '';
+}
+
+/* ==========================================================================
+   6. 背包與隊伍
+   ========================================================================== */
+const findCard = id => P.cards.find(c => c.id === id);
+const teamCards = () => P.team.map(findCard).filter(Boolean);
+// 神話與超神話共用同一個隊伍上限
+const isMythTier = c => CONFIG.rarities[c.rarity].order >= CONFIG.rarities.mythic.order;
+
+function toggleLock(id){
+  const c = findCard(id); if(!c) return;
+  c.locked = !c.locked;
+  toast(c.locked ? '🔒 已鎖定' : '🔓 已解鎖');
+  saveGame(); renderBag(); refreshDetail(id);
+}
+function deleteCard(id){
+  const c = findCard(id); if(!c) return;
+  if(c.locked){ toast('🔒 已鎖定的卡牌無法刪除'); return; }
+  openModal(`
+    <h3>刪除卡牌</h3>
+    <div class="center" style="margin:12px 0">
+      <div class="bigcard r-${c.rarity}" style="margin:0 auto">${bigCardInner(c)}</div>
+    </div>
+    <div class="hint" style="margin-bottom:12px">刪除後無法復原。</div>
+    <div class="flex">
+      <button class="b-ghost grow" onclick="closeModal()">取消</button>
+      <button class="b-red grow" onclick="doDelete('${c.id}')">確定刪除</button>
+    </div>`);
+}
+function doDelete(id){
+  const i = P.cards.findIndex(c => c.id === id);
+  if(i < 0) return;
+  P.team = P.team.filter(t => t !== id);
+  P.cards.splice(i,1);
+  closeModal(); toast('已刪除');
+  saveGame(); renderAll();
+}
+function toggleTeam(id){
+  const c = findCard(id); if(!c) return;
+  const idx = P.team.indexOf(id);
+  if(idx >= 0){
+    P.team.splice(idx,1);
+    toast('已移出隊伍');
+  }else{
+    if(P.team.length >= CONFIG.battle.teamSize){ toast(`隊伍最多 ${CONFIG.battle.teamSize} 張`); return; }
+    if(isMythTier(c)){
+      const n = teamCards().filter(isMythTier).length;
+      if(n >= CONFIG.battle.maxMythicInTeam){ toast(`隊伍最多只能帶 ${CONFIG.battle.maxMythicInTeam} 張神話／超神話卡`); return; }
+    }
+    P.team.push(id);
+    toast('已編入隊伍');
+  }
+  saveGame(); renderAll(); refreshDetail(id);
+}
+function refreshDetail(id){
+  if($('modal').classList.contains('on') && $('modalBox').dataset.cardId === id) showCardDetail(id);
+}
+function showCardDetail(id){
+  const c = findCard(id); if(!c) return;
+  const R = CONFIG.rarities[c.rarity], E = ELEMENTS[c.element];
+  const inTeam = P.team.includes(id);
+  const sk = c.skill ? CONFIG.skills[c.skill] : null;
+  const box = $('modalBox');
+  box.dataset.cardId = id;
+  box.innerHTML = `
+    <div class="center"><div class="bigcard r-${c.rarity}" style="margin:0 auto">${bigCardInner(c)}</div></div>
+    <div style="margin-top:14px">
+      <div class="row"><span>稀有度</span><span class="t-${c.rarity}" style="font-weight:800">${R.name}</span></div>
+      <div class="row"><span>數值</span><span class="tabular">${fmt(c.value)} / ${fmt(c.maxValue)}</span></div>
+      <div class="row"><span>屬性</span><span>${E.icon} ${E.name}</span></div>
+      <div class="row"><span>技能</span><span>${sk ? esc(sk.name) : '無'}</span></div>
+      ${sk ? `<div class="hint" style="margin-top:0">${esc(sk.desc)}</div>` : ''}
+      <div class="row"><span>強化等級</span><span style="color:${c.plus?'var(--gold)':'var(--txt)'};font-weight:800">+${c.plus}
+        ${c.plus?`<span class="hint" style="margin:0 0 0 6px">基礎 ${fmt(c.baseValue)} → ${fmt(c.maxValue)}</span>`:''}</span></div>
+      <div class="row"><span>狀態</span><span>${c.locked?'🔒 已鎖定':'未鎖定'}${inTeam?'　⚔️ 隊伍中':''}</span></div>
+    </div>
+    <div class="flex" style="margin-top:14px">
+      <button class="b-gold grow b-sm" onclick="showUpgradeUI('${id}')">⚒️ 強化</button>
+      <button class="${inTeam?'b-ghost':'b-green'} grow b-sm" onclick="toggleTeam('${id}')">
+        ${inTeam?'移出隊伍':'編入隊伍'}</button>
+    </div>
+    <div class="flex" style="margin-top:8px">
+      <button class="b-ghost grow b-sm" onclick="toggleLock('${id}')">${c.locked?'🔓 解鎖':'🔒 鎖定'}</button>
+      <button class="b-red grow b-sm" ${c.locked?'disabled':''} onclick="deleteCard('${id}')">🗑️ 刪除</button>
+    </div>
+    ${isOnline() ? `<button class="b-gold" style="width:100%;margin-top:8px"
+      ${(c.locked||inTeam)?'disabled':''} onclick="showSellDialog('${id}')">🏪 上架到市場</button>` : ''}
+    <button class="b-ghost" style="width:100%;margin-top:9px" onclick="closeModal()">關閉</button>`;
+  $('modal').classList.add('on');
+}
+
+/* ==========================================================================
+   5b. 圖鑑 / 成就 / 每日任務（v0.3）
+   ========================================================================== */
+/* --- 圖鑑 --- */
+function dexCount(rarity){                  // 已收集「種類」數
+  const keys = Object.keys(P.dex);
+  if(rarity) return keys.filter(k => k.startsWith(rarity + ':')).length;
+  // 不含超神話（里程碑以可抽到的 5 種稀有度計算）
+  return keys.filter(k => !k.startsWith('super_mythic:')).length;
+}
+function registerDex(card){                 // 回傳是否為圖鑑新種類
+  const k = dexKey(card.rarity, card.name);
+  const isNew = !P.dex[k];
+  P.dex[k] = (P.dex[k] || 0) + 1;
+  if(isNew) checkDexMilestones();
+  return isNew;
+}
+function checkDexMilestones(){
+  const n = dexCount();
+  CONFIG.dex.milestones.forEach(m=>{
+    const need = m.n === 'all' ? DEX_TOTAL : m.n;
+    if(n >= need && !P.dexClaimed.includes(String(m.n))){
+      P.dexClaimed.push(String(m.n));
+      if(m.gold) P.gold += m.gold;
+      const got = m.pack ? openPack(m.pack) : [];
+      setTimeout(()=>toast(`📖 圖鑑達成 ${m.n==='all'?'全圖鑑':m.n+' 種'}！獲得 ${m.label}`), 600);
+      if(got.length) setTimeout(()=>showPackResult(m.label, got), 1000);
+      fanfare([659,880,1046],90);
+    }
+  });
+}
+// 卡包：直接發到背包（滿了就轉成金幣補償）
+function openPack(packKey){
+  const pk = CONFIG.dex.packs[packKey]; if(!pk) return [];
+  const minOrder = CONFIG.rarities[pk.min].order;
+  const pool = CONFIG.rarityOrder.filter(r => CONFIG.rarities[r].order >= minOrder);
+  const out = [];
+  for(let i=0;i<pk.count;i++){
+    const card = generateCard(rnd(pool));
+    registerDex(card);
+    if(P.cards.length < P.bagSize){ P.cards.push(card); out.push(card); }
+    else { P.gold += 500; out.push({...card, overflow:true}); }
+  }
+  return out;
+}
+function showPackResult(title, cards){
+  openModal(`
+    <h3 class="center">🎁 ${esc(title)}</h3>
+    <div class="grid" style="margin:12px 0">
+      ${cards.map(c=>cardHTML(c,{onclick:'void 0'})).join('')}
+    </div>
+    ${cards.some(c=>c.overflow) ? `<div class="hint" style="color:var(--red)">背包已滿，溢出的卡牌已折算為每張 500 金幣。</div>` : ''}
+    <button class="b-primary" style="width:100%;margin-top:10px" onclick="closeModal();renderAll()">確定</button>`);
+}
+
+/* --- 成就 --- */
+function checkAchievements(silent){
+  let got = 0;
+  CONFIG.achievements.forEach(a=>{
+    if(P.achievements[a.key]) return;
+    let ok = false;
+    try{ ok = a.check(); }catch(e){ ok = false; }
+    if(!ok) return;
+    P.achievements[a.key] = true;
+    if(a.gold) P.gold += a.gold;
+    if(a.title && !P.titles.includes(a.title)){
+      P.titles.push(a.title);
+      if(!P.title) P.title = a.title;
+    }
+    if(a.pack) openPack(a.pack);
+    got++;
+    if(!silent){
+      setTimeout(()=>toast(`🏆 成就達成「${a.name}」　💰 +${fmt(a.gold)}${a.title?`　稱號：${a.title}`:''}`), 400*got);
+      fanfare([784,988],80);
+    }
+  });
+  return got;
+}
+function setTitle(t){
+  P.title = (P.title === t) ? null : t;
+  saveGame(); renderAll(); renderTitles();
+  toast(P.title ? `稱號已配戴：${esc(P.title)}` : '已取消稱號');
+}
+
+/* --- 每日任務 --- */
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+function counterValue(key){
+  if(key === 'wins2') return P.wins;         // 勝場用玩家總勝場
+  return P.counters[key] || 0;
+}
+function rollDailyQuests(){
+  const pool = [...CONFIG.daily.pool];
+  const picked = [];
+  for(let i=0;i<CONFIG.daily.count && pool.length;i++)
+    picked.push(...pool.splice(Math.floor(Math.random()*pool.length),1));
+  P.daily = {
+    date: todayStr(),
+    quests: picked.map(q => ({ key:q.key, claimed:false })),
+    chestClaimed: false,
+    base: {},                                 // 記錄今日起始計數，進度用差值算
+  };
+  picked.forEach(q => P.daily.base[q.counter] = counterValue(q.counter));
+}
+function ensureDaily(){
+  if(P.daily.date !== todayStr()) { rollDailyQuests(); saveGame(); }
+}
+const questDef = key => CONFIG.daily.pool.find(q => q.key === key);
+function questProgress(q){
+  const def = questDef(q.key);
+  const base = P.daily.base[def.counter] ?? 0;
+  return clamp(counterValue(def.counter) - base, 0, def.target);
+}
+const questDone = q => questProgress(q) >= questDef(q.key).target;
+const allQuestsClaimed = () => P.daily.quests.length > 0 && P.daily.quests.every(q => q.claimed);
+
+function claimQuest(key){
+  const q = P.daily.quests.find(x => x.key === key);
+  if(!q || q.claimed) return;
+  if(!questDone(q)){ toast('任務尚未完成'); return; }
+  const def = questDef(key);
+  q.claimed = true;
+  P.gold += def.gold;
+  sfx(880,.2,'triangle',.05);
+  toast(`📋 任務完成「${def.name}」　💰 +${fmt(def.gold)}`);
+  saveGame(); renderAll();
+}
+function claimDailyChest(){
+  if(P.daily.chestClaimed){ toast('今日寶箱已領取'); return; }
+  if(!allQuestsClaimed()){ toast('需要先完成並領取全部任務'); return; }
+  const C = CONFIG.daily.chest;
+  P.daily.chestClaimed = true;
+  P.gold += C.gold;
+  gainExp(C.exp);
+  const minOrder = CONFIG.rarities[C.cardMin].order;
+  const pool = CONFIG.rarityOrder.filter(r => CONFIG.rarities[r].order >= minOrder);
+  const card = generateCard(rnd(pool));
+  registerDex(card);
+  let note = '';
+  if(P.cards.length < P.bagSize) P.cards.push(card);
+  else { P.gold += 500; note = '<div class="hint" style="color:var(--red)">背包已滿，卡牌折算為 500 金幣。</div>'; }
+  fanfare([523,659,784,1046]);
+  checkAchievements();
+  saveGame();
+  openModal(`
+    <h3 class="center">🎁 每日終極寶箱</h3>
+    <div class="center" style="margin:12px 0">
+      <div class="bigcard r-${card.rarity}" style="margin:0 auto">${bigCardInner(card)}</div>
+    </div>
+    <div class="row"><span>金幣</span><span>+${fmt(C.gold)}</span></div>
+    <div class="row"><span>經驗值</span><span>+${fmt(C.exp)}</span></div>
+    ${note}
+    <button class="b-primary" style="width:100%;margin-top:12px" onclick="closeModal();renderAll()">確定</button>`);
+  renderAll();
+}
+
+/* ==========================================================================
+   6b. 工坊（v0.2）：強化 / 合成 / 進化 / 背包擴充
+   ========================================================================== */
+/* --- 強化 --- */
+const upgradeRate = lv => CONFIG.upgrade.rates[lv-1] ?? 0;          // 升到 lv 的成功率
+const upgradeCost = (card, lv) => Math.round(
+  CONFIG.upgrade.baseCost * CONFIG.upgrade.rarityCost[card.rarity] * Math.pow(lv, 1.5));
+const upgradeGain = card => Math.max(1, Math.round(card.baseValue * CONFIG.upgrade.gainRatio));
+function applyPlus(card){                                            // 依 plus 重算數值
+  card.maxValue = card.baseValue + upgradeGain(card) * card.plus;
+  card.value = card.maxValue;
+}
+function upgradeCard(id){
+  const c = findCard(id); if(!c) return;
+  const next = c.plus + 1;
+  if(next > CONFIG.upgrade.maxLevel){ toast('已達強化上限 +' + CONFIG.upgrade.maxLevel); return; }
+  const cost = upgradeCost(c, next);
+  if(P.gold < cost){ toast(`💰 金幣不足，需要 ${fmt(cost)}`); return; }
+
+  P.gold -= cost;
+  const rate = upgradeRate(next);
+  const ok = Math.random() < rate;
+  if(ok){
+    c.plus = next;
+    applyPlus(c);
+    P.counters.upgrades++;
+    checkAchievements();
+    sfx(900,.25,'triangle',.06);
+    toast(`✨ 強化成功！<b>+${c.plus}</b>　數值 ${fmt(c.maxValue)}`);
+  }else{
+    sfx(200,.3,'sawtooth',.05);
+    toast(`💥 強化失敗（成功率 ${(rate*100).toFixed(0)}%）　卡牌保留、等級不變`);
+  }
+  saveGame(); renderAll(); showUpgradeUI(id);
+}
+function showUpgradeUI(id){
+  const c = findCard(id); if(!c) return;
+  const next = c.plus + 1, maxed = next > CONFIG.upgrade.maxLevel;
+  const cost = maxed ? 0 : upgradeCost(c, next);
+  const rate = maxed ? 0 : upgradeRate(next);
+  const gain = upgradeGain(c);
+  const box = $('modalBox');
+  box.dataset.cardId = id;
+  box.innerHTML = `
+    <h3>⚒️ 卡牌強化</h3>
+    <div class="center" style="margin:10px 0">
+      <div class="bigcard r-${c.rarity}" style="margin:0 auto">${bigCardInner(c)}</div>
+    </div>
+    <div class="row"><span>目前強化等級</span><span style="color:var(--gold);font-weight:800">+${c.plus}</span></div>
+    <div class="row"><span>基礎數值</span><span class="tabular">${fmt(c.baseValue)}</span></div>
+    <div class="row"><span>目前數值</span><span class="tabular">${fmt(c.maxValue)}
+      ${c.plus>0?`<span style="color:var(--green)">（+${fmt(c.maxValue-c.baseValue)}）</span>`:''}</span></div>
+    ${maxed ? `<div class="hint" style="color:var(--gold)">已達強化上限 +${CONFIG.upgrade.maxLevel}</div>` : `
+    <div class="row"><span>下一級 → +${next}</span><span class="tabular">數值 +${fmt(gain)}</span></div>
+    <div class="row"><span>成功率</span>
+      <span style="color:${rate>=1?'var(--green)':rate>=0.5?'var(--gold)':'var(--red)'};font-weight:800">
+        ${(rate*100).toFixed(0)}%</span></div>
+    <div class="row"><span>費用</span>
+      <span style="color:${P.gold>=cost?'var(--txt)':'var(--red)'}">💰 ${fmt(cost)}</span></div>
+    <div class="hint">強化失敗只會扣除金幣，<b>卡牌不會消失，等級也不會下降</b>。</div>
+    <button class="b-gold" style="width:100%;margin-top:10px" ${P.gold<cost?'disabled':''}
+      onclick="upgradeCard('${id}')">⚒️ 強化到 +${next}（💰 ${fmt(cost)}）</button>`}
+    <div class="flex" style="margin-top:9px">
+      <button class="b-ghost grow b-sm" onclick="showCardDetail('${id}')">← 卡牌資訊</button>
+      <button class="b-ghost grow b-sm" onclick="closeModal()">關閉</button>
+    </div>
+    <div class="card-panel" style="margin:12px 0 0;padding:11px">
+      <h2>成功率表</h2>
+      <div style="font-size:11.5px;line-height:1.9;color:var(--dim)">
+        +1 ~ +5：<b style="color:var(--green)">100%</b>　·
+        +6 ~ +10：90% → 50%　·
+        +11 ~ +15：40% → 20%　·
+        +16 ~ +20：15% → 5%
+      </div>
+    </div>`;
+  $('modal').classList.add('on');
+}
+
+/* --- 素材選擇（合成 / 進化共用） --- */
+let wsMode = 'fusion';          // 'fusion' | 'evolve'
+let wsPicked = [];              // 已選素材的 cardId
+const wsNeeded = () => wsMode === 'fusion' ? CONFIG.fusion.materials : CONFIG.evolve.materials;
+// 可作為素材：未鎖定、且不在出戰隊伍中
+const isMaterialOK = c => !c.locked && !P.team.includes(c.id);
+
+function openWorkshop(mode){
+  wsMode = mode; wsPicked = [];
+  renderWorkshop();
+  $('modal').classList.add('on');
+}
+function wsToggle(id){
+  const i = wsPicked.indexOf(id);
+  if(i >= 0) wsPicked.splice(i,1);
+  else{
+    if(wsPicked.length >= wsNeeded()){ toast(`最多選擇 ${wsNeeded()} 張`); return; }
+    if(wsMode === 'evolve' && wsPicked.length){
+      const r = findCard(wsPicked[0]).rarity;
+      if(findCard(id).rarity !== r){ toast('進化素材必須是同一種稀有度'); return; }
+    }
+    wsPicked.push(id);
+  }
+  sfx(600,.05,'square',.03);
+  renderWorkshop();
+}
+function renderWorkshop(){
+  const need = wsNeeded();
+  const mats = wsPicked.map(findCard).filter(Boolean);
+  const pool = P.cards.filter(isMaterialOK)
+    .sort((a,b)=> CONFIG.rarities[b.rarity].order - CONFIG.rarities[a.rarity].order || b.value - a.value);
+
+  let preview = '', canDo = false, cost = 0;
+  if(wsMode === 'fusion'){
+    const total = mats.reduce((s,c)=>s+c.value,0);
+    const F = CONFIG.fusion;
+    cost = Math.round(F.costBase + total * F.costRatio);
+    canDo = mats.length === need && P.gold >= cost;
+    const lo = Math.min(Math.round(total*F.ratio[0]), CONFIG.cardValueCap);
+    const hi = Math.min(Math.round(total*F.ratio[1]*F.quality[2].mult),
+                        Math.floor(total*F.maxRatio), CONFIG.cardValueCap);
+    preview = mats.length === need ? `
+      <div class="row"><span>素材數值總和</span><span class="tabular">${fmt(total)}</span></div>
+      <div class="row"><span>預估結果</span><span class="tabular">${fmt(lo)} ~ ${fmt(hi)}</span></div>
+      <div class="row"><span>費用</span><span style="color:${P.gold>=cost?'var(--txt)':'var(--red)'}">💰 ${fmt(cost)}</span></div>
+      <div class="hint">結果數值<b>永遠小於</b>素材總和（${(F.ratio[0]*100)|0}% ~ ${(F.ratio[1]*100)|0}%），
+        再依合成品質加成：${F.quality.map(q=>`<span style="color:${q.color}">${q.name} +${((q.mult-1)*100)|0}%（${(q.chance*100)|0}%）</span>`).join('　')}</div>`
+      : `<div class="hint">請選擇 ${need} 張素材卡牌。</div>`;
+  }else{
+    const E = CONFIG.evolve;
+    const r = mats.length ? mats[0].rarity : null;
+    const nextR = r ? E.next[r] : null;
+    cost = r ? (E.cost[r] ?? 0) : 0;
+    canDo = mats.length === need && !!nextR && P.gold >= cost;
+    preview = mats.length === need ? (nextR ? `
+      <div class="row"><span>素材稀有度</span><span class="t-${r}" style="font-weight:800">${CONFIG.rarities[r].name} ×3</span></div>
+      <div class="row"><span>進化結果</span><span class="t-${nextR}" style="font-weight:800">${CONFIG.rarities[nextR].name} ×1</span></div>
+      <div class="row"><span>結果數值範圍</span><span class="tabular">${fmt(CONFIG.rarities[nextR].range[0])} ~ ${fmt(CONFIG.rarities[nextR].range[1])}</span></div>
+      <div class="row"><span>費用</span><span style="color:${P.gold>=cost?'var(--txt)':'var(--red)'}">💰 ${fmt(cost)}</span></div>
+      <div class="hint">進化會產生一張<b>全新的高稀有度卡牌</b>，屬性與技能重新隨機——有機會得到更強的技能。</div>`
+      : `<div class="hint" style="color:var(--red)">神話已是最高稀有度，無法再進化。</div>`)
+      : `<div class="hint">請選擇 ${need} 張<b>同稀有度</b>的卡牌。</div>`;
+  }
+
+  $('modalBox').dataset.cardId = '';
+  $('modalBox').innerHTML = `
+    <h3>${wsMode==='fusion' ? '🔮 卡牌合成' : '🧬 卡牌進化'}</h3>
+    <div class="flex" style="margin:8px 0 12px">
+      <button class="${wsMode==='fusion'?'b-primary':'b-ghost'} grow b-sm" onclick="openWorkshop('fusion')">🔮 合成</button>
+      <button class="${wsMode==='evolve'?'b-primary':'b-ghost'} grow b-sm" onclick="openWorkshop('evolve')">🧬 進化</button>
+    </div>
+    <div class="row"><span>已選素材</span><span>${mats.length} / ${need}</span></div>
+    <div class="grid" style="margin:9px 0">
+      ${Array.from({length:need}).map((_,i)=> mats[i]
+        ? `<div class="gcard r-${mats[i].rarity} sel" onclick="wsToggle('${mats[i].id}')">
+             <div class="el">${ELEMENTS[mats[i].element].icon}</div>
+             <div class="nm">${esc(mats[i].name)}</div>
+             <div class="val">${fmt(mats[i].value)}</div>
+             <div class="rr t-${mats[i].rarity}">${CONFIG.rarities[mats[i].rarity].name}</div></div>`
+        : `<div class="gcard" style="border-style:dashed;cursor:default">
+             <div class="el">＋</div><div class="nm">選擇素材</div><div class="val">—</div><div class="rr"></div></div>`
+      ).join('')}
+    </div>
+    ${preview}
+    <button class="${wsMode==='fusion'?'b-primary':'b-gold'}" style="width:100%;margin-top:10px"
+      ${canDo?'':'disabled'} onclick="${wsMode==='fusion'?'doFusion()':'doEvolve()'}">
+      ${wsMode==='fusion'?'🔮 開始合成':'🧬 開始進化'}${cost?`（💰 ${fmt(cost)}）`:''}</button>
+    <div class="card-panel" style="margin:12px 0 0;padding:11px">
+      <h2>選擇素材（${pool.length} 張可用）</h2>
+      <div class="hint" style="margin:0 0 8px">已鎖定 🔒 或在出戰隊伍中的卡牌不能作為素材。</div>
+      <div class="grid">
+        ${pool.length ? pool.map(c=>`
+          <div class="gcard r-${c.rarity} ${wsPicked.includes(c.id)?'sel':''}" onclick="wsToggle('${c.id}')">
+            ${c.plus>0?`<div class="plus">+${c.plus}</div>`:''}
+            <div class="el">${ELEMENTS[c.element].icon}</div>
+            <div class="nm">${esc(c.name)}</div>
+            <div class="val">${fmt(c.value)}</div>
+            <div class="rr t-${c.rarity}">${CONFIG.rarities[c.rarity].name}</div>
+          </div>`).join('')
+          : `<div class="hint" style="grid-column:1/-1">沒有可用素材（卡牌都被鎖定或正在隊伍中）。</div>`}
+      </div>
+    </div>
+    <button class="b-ghost" style="width:100%;margin-top:10px" onclick="closeModal()">關閉</button>`;
+}
+function consumeMaterials(){
+  wsPicked.forEach(id=>{
+    P.team = P.team.filter(t => t !== id);
+    const i = P.cards.findIndex(c => c.id === id);
+    if(i >= 0) P.cards.splice(i,1);
+  });
+  wsPicked = [];
+}
+function rollQuality(){
+  let x = Math.random();
+  for(const q of CONFIG.fusion.quality){ if(x < q.chance) return q; x -= q.chance; }
+  return CONFIG.fusion.quality[0];
+}
+function rarityOfValue(v){
+  let r = 'common';
+  for(const k of CONFIG.rarityOrder) if(v >= CONFIG.rarities[k].range[0]) r = k;
+  return r;
+}
+function doFusion(){
+  const mats = wsPicked.map(findCard).filter(Boolean);
+  if(mats.length !== CONFIG.fusion.materials){ toast('素材不足'); return; }
+  const F = CONFIG.fusion;
+  const total = mats.reduce((s,c)=>s+c.value,0);
+  const cost = Math.round(F.costBase + total * F.costRatio);
+  if(P.gold < cost){ toast('💰 金幣不足'); return; }
+
+  const q = rollQuality();
+  const raw = total * (F.ratio[0] + Math.random()*(F.ratio[1]-F.ratio[0]));
+  const value = clamp(Math.round(raw * q.mult), 1,
+                      Math.min(Math.floor(total * F.maxRatio), CONFIG.cardValueCap));
+  const rarity = rarityOfValue(value);
+  // 屬性繼承自隨機一張素材；技能依結果稀有度重抽
+  const card = generateCard(rarity);
+  card.value = card.maxValue = card.baseValue = value;
+  card.element = rnd(mats).element;
+
+  P.gold -= cost;
+  consumeMaterials();
+  P.cards.push(card);
+  P.counters.fusions++;
+  registerDex(card); checkAchievements();
+  saveGame();
+
+  q.key === 'perfect' ? fanfare([659,880,1046],90) : sfx(880,.22,'triangle',.06);
+  openModal(`
+    <h3 class="center">🔮 合成完成</h3>
+    <div class="center" style="margin:12px 0">
+      <div class="tag" style="background:${q.color}33;color:${q.color}">${q.name} ×${q.mult.toFixed(2)}</div>
+      <div class="bigcard r-${card.rarity}" style="margin:10px auto 0">${bigCardInner(card)}</div>
+    </div>
+    <div class="row"><span>素材總和</span><span class="tabular">${fmt(total)}</span></div>
+    <div class="row"><span>合成結果</span><span class="tabular" style="color:var(--gold)">${fmt(value)}</span></div>
+    <div class="row"><span>轉換率</span><span>${(value/total*100).toFixed(1)}%</span></div>
+    <div class="row"><span>花費</span><span>💰 ${fmt(cost)}</span></div>
+    <button class="b-primary" style="width:100%;margin-top:12px" onclick="closeModal();renderAll()">確定</button>`);
+  renderAll();
+}
+function doEvolve(){
+  const mats = wsPicked.map(findCard).filter(Boolean);
+  const E = CONFIG.evolve;
+  if(mats.length !== E.materials){ toast('素材不足'); return; }
+  const r = mats[0].rarity;
+  if(!mats.every(c => c.rarity === r)){ toast('素材必須為同一種稀有度'); return; }
+  const nextR = E.next[r];
+  if(!nextR){ toast('神話無法再進化'); return; }
+  const cost = E.cost[r] ?? 0;
+  if(P.gold < cost){ toast('💰 金幣不足'); return; }
+
+  const card = generateCard(nextR);
+  P.gold -= cost;
+  consumeMaterials();
+  P.cards.push(card);
+  P.counters.evolves++;
+  registerDex(card); checkAchievements();
+  saveGame();
+
+  nextR === 'mythic' ? fanfare([523,784,1046,1318],110) : fanfare([659,880],90);
+  openModal(`
+    <h3 class="center">🧬 進化成功</h3>
+    <div class="center" style="margin:12px 0">
+      <div class="tag" style="background:#ffffff18">
+        <span class="t-${r}">${CONFIG.rarities[r].name} ×3</span> → <span class="t-${nextR}">${CONFIG.rarities[nextR].name}</span>
+      </div>
+      <div class="bigcard r-${card.rarity}" style="margin:10px auto 0">${bigCardInner(card)}</div>
+    </div>
+    <div class="row"><span>新技能</span><span>${card.skill ? esc(CONFIG.skills[card.skill].name) : '無'}</span></div>
+    <div class="row"><span>花費</span><span>💰 ${fmt(cost)}</span></div>
+    <button class="b-primary" style="width:100%;margin-top:12px" onclick="closeModal();renderAll()">確定</button>`);
+  renderAll();
+}
+
+/* --- 背包擴充 --- */
+function nextBagTier(){
+  return CONFIG.bagTiers.find(t => t.cap > P.bagSize) || null;
+}
+function expandBag(){
+  const t = nextBagTier();
+  if(!t){ toast('背包已達最大容量'); return; }
+  if(P.gold < t.cost){ toast(`💰 金幣不足，需要 ${fmt(t.cost)}`); return; }
+  openModal(`
+    <h3>🎒 擴充背包</h3>
+    <div class="row"><span>目前容量</span><span>${P.bagSize} 格</span></div>
+    <div class="row"><span>擴充後</span><span style="color:var(--green);font-weight:800">${t.cap} 格</span></div>
+    <div class="row"><span>費用</span><span>💰 ${fmt(t.cost)}</span></div>
+    <div class="flex" style="margin-top:12px">
+      <button class="b-ghost grow" onclick="closeModal()">取消</button>
+      <button class="b-gold grow" onclick="doExpandBag(${t.cap},${t.cost})">確定擴充</button>
+    </div>`);
+}
+function doExpandBag(cap, cost){
+  if(P.gold < cost){ toast('💰 金幣不足'); closeModal(); return; }
+  P.gold -= cost; P.bagSize = cap;
+  closeModal(); sfx(880,.25,'triangle',.06);
+  toast(`🎒 背包已擴充至 ${cap} 格`);
+  saveGame(); renderAll();
+}
+
+/* ==========================================================================
+   7. 戰鬥系統
+   ========================================================================== */
+// 把一張背包卡轉成戰鬥單位（複製，不動原始資料）
+function toUnit(card, side){
+  return {
+    ...card,
+    side,
+    hp: card.value,          // 目前數值 = HP
+    maxHp: card.maxValue,
+    alive: true,
+    used: { shield:false, revive:false, timestop:false },   // 一次性技能狀態
+  };
+}
+// AI 隊伍：總戰力貼近玩家
+/* opts.exact：不把數值夾在稀有度區間內（神之試煉用，讓高樓層真的更強）
+   opts.mythicLimit：是否比照玩家的「1 張神話」限制（一般 AI 對戰用） */
+function generateAITeam(targetPower, opts={}){
+  const { exact = false, mythicLimit = true } = opts;
+  const order = exact ? CONFIG.dexOrder : CONFIG.rarityOrder;
+  const ratio = CONFIG.battle.aiPowerRange[0] +
+                Math.random() * (CONFIG.battle.aiPowerRange[1] - CONFIG.battle.aiPowerRange[0]);
+  const goal = Math.max(250, targetPower * ratio);
+  const per  = goal / CONFIG.battle.teamSize;
+  const team = [];
+  for(let i=0;i<CONFIG.battle.teamSize;i++){
+    const val = Math.round(per * (0.85 + Math.random()*0.3));
+    // 依單卡數值挑一個合適的稀有度
+    let rarity = order[0];
+    for(const k of order) if(val >= CONFIG.rarities[k].range[0]) rarity = k;
+    if(mythicLimit && rarity === 'mythic' &&
+       team.filter(c=>c.rarity==='mythic').length >= CONFIG.battle.maxMythicInTeam) rarity = 'legendary';
+    const c = generateCard(rarity);
+    const [mn,mx] = CONFIG.rarities[rarity].range;
+    c.value = c.maxValue = c.baseValue = exact ? Math.max(1,val) : clamp(val, mn, mx);
+    team.push(c);
+  }
+  return team;
+}
+function teamPower(cards){ return cards.reduce((s,c)=>s + c.value, 0); }
+
+// AI 的「角色屬性」隨玩家等級成長，讓對戰維持張力
+function makeAIStats(){
+  const s = Math.round(P.level * CONFIG.battle.aiStatScale);
+  return { atk:s, def:s, mdef:s, spd:randInt(0, Math.max(1, P.stats.spd + 2)), luck:0, con:0, hp:0 };
+}
+
+function validateTeam(){
+  const t = teamCards();
+  if(t.length !== CONFIG.battle.teamSize)
+    return `隊伍必須剛好 ${CONFIG.battle.teamSize} 張卡牌（目前 ${t.length} 張）`;
+  const myth = t.filter(isMythTier).length;
+  if(myth > CONFIG.battle.maxMythicInTeam)
+    return `隊伍最多只能帶 ${CONFIG.battle.maxMythicInTeam} 張神話／超神話卡（目前 ${myth} 張）`;
+  return null;
+}
+
+function startBattle(){
+  const err = validateTeam();
+  if(err){ toast('⚠️ ' + err); return; }
+  if(P.gold < CONFIG.battle.cost){ toast(`💰 金幣不足，需要 ${CONFIG.battle.cost}`); return; }
+
+  P.gold -= CONFIG.battle.cost;
+
+  const mine = teamCards();
+  const aiCards = generateAITeam(teamPower(mine));
+  const aiStats = makeAIStats();
+
+  B = {
+    player: mine.map(c => toUnit(c,'player')),
+    enemy:  aiCards.map(c => toUnit(c,'enemy')),
+    playerStats: P.stats,
+    enemyStats: aiStats,
+    turn: P.stats.spd >= aiStats.spd ? 'player' : 'enemy',
+    selected: null,
+    round: 1,
+    skip: { player:false, enemy:false },
+    over: false,
+    log: [],
+  };
+  pushLog(`<div class="rd">戰鬥開始　·　速度 ${P.stats.spd} vs ${aiStats.spd} → ${B.turn==='player'?'我方':'敵方'}先攻</div>`);
+
+  $('bt-prep').style.display = 'none';
+  $('bt-field').style.display = 'block';
+  sfx(660,.15,'square');
+  saveGame(); renderTop(); renderBattle();
+
+  if(B.turn === 'enemy') setTimeout(enemyTurn, 700);
+}
+
+/* --- 傷害計算 ---
+   傷害 = 卡牌目前數值 × 角色攻擊倍率 × 屬性倍率 × 爆擊倍率 × 防禦減傷倍率 */
+function calculateDamage(attacker, defender, atkStats, defStats){
+  const C = CONFIG.battle;
+  const base = attacker.hp;                                  // 卡牌目前數值
+  const atkMult = 1 + (atkStats.atk || 0) * C.atkPerPoint;   // 角色攻擊倍率
+  const elemMult = COUNTERS[attacker.element] === defender.element ? C.elementMult : 1.0;
+  const isCrit = attacker.skill === 'crit' && Math.random() < CONFIG.skills.crit.chance;
+  const critMult = isCrit ? C.critMult : 1.0;
+  const def = defStats.def || 0;
+  const reduction = def / (def + C.defConstant);              // 減傷率，永遠 < 1
+  const defMult = 1 - reduction;
+
+  let dmg = base * atkMult * elemMult * critMult * defMult;
+
+  // 盾牌：第一次被攻擊只受 50%
+  let shielded = false;
+  if(defender.skill === 'shield' && !defender.used.shield){
+    defender.used.shield = true;
+    shielded = true;
+    dmg *= CONFIG.skills.shield.reduce;
+  }
+  return { dmg: Math.max(1, Math.round(dmg)), isCrit, elemMult, shielded, reduction };
+}
+
+// 執行一次攻擊（雙方共用）
+function doAttack(attacker, defender, atkSide){
+  const atkStats = atkSide === 'player' ? B.playerStats : B.enemyStats;
+  const defStats = atkSide === 'player' ? B.enemyStats  : B.playerStats;
+  const r = calculateDamage(attacker, defender, atkStats, defStats);
+
+  defender.hp -= r.dmg;
+
+  const tags = [];
+  if(r.isCrit)        tags.push('<span class="crit">💥爆擊</span>');
+  if(r.elemMult > 1)  tags.push('<span class="eff">🌀剋制 ×1.2</span>');
+  if(r.shielded)      tags.push('<span class="eff">🛡️盾牌 -50%</span>');
+  pushLog(`<div class="ln">${unitTag(attacker)} → ${unitTag(defender)}　<b>${fmt(r.dmg)}</b> 傷害 ${tags.join(' ')}</div>`);
+  popDamage(defender, `-${fmt(r.dmg)}`, r.isCrit ? 'var(--gold)' : '#fff');
+  sfx(r.isCrit ? 760 : 320, r.isCrit ? .12 : .06, r.isCrit ? 'square' : 'sine', .04);
+
+  // 吸血：攻擊後恢復自身最大數值的 20%
+  if(attacker.skill === 'lifesteal'){
+    const heal = Math.round(attacker.maxHp * CONFIG.skills.lifesteal.ratio);
+    const real = Math.min(heal, attacker.maxHp - attacker.hp);
+    if(real > 0){
+      attacker.hp += real;
+      pushLog(`<div class="ln"><span class="heal">🩸 ${esc(attacker.name)} 吸血回復 ${fmt(real)}</span></div>`);
+      popDamage(attacker, `+${fmt(real)}`, 'var(--green)');
+    }
+  }
+  // 死亡判定 → 復活
+  if(defender.hp <= 0) resolveDeath(defender);
+
+  // 時間停止：每場一次，讓對手跳過下一次行動
+  if(attacker.skill === 'timestop' && !attacker.used.timestop){
+    attacker.used.timestop = true;
+    const other = atkSide === 'player' ? 'enemy' : 'player';
+    B.skip[other] = true;
+    pushLog(`<div class="ln"><span class="eff">⏳ ${esc(attacker.name)} 發動「時間停止」——對手跳過下一次行動</span></div>`);
+    sfx(1200,.3,'triangle',.05);
+  }
+  return r;
+}
+function resolveDeath(u){
+  if(u.skill === 'revive' && !u.used.revive){
+    u.used.revive = true;
+    u.hp = Math.round(u.maxHp * CONFIG.skills.revive.ratio);
+    pushLog(`<div class="ln"><span class="heal">✨ ${esc(u.name)} 觸發「復活」，以 ${fmt(u.hp)} 數值重生</span></div>`);
+    fanfare([659,880],80);
+    return;
+  }
+  u.hp = 0; u.alive = false;
+  if(u.side === 'enemy') P.counters.kills++;      // 每日任務：擊敗敵方卡牌
+  pushLog(`<div class="ln"><span class="ko">☠ ${esc(u.name)} 倒下</span></div>`);
+  sfx(150,.3,'sawtooth',.05);
+}
+
+/* --- 玩家操作 --- */
+function selectMyCard(i){
+  if(!B || B.over || B.turn !== 'player') return;
+  const u = B.player[i];
+  if(!u.alive){ toast('☠ 這張卡牌已陣亡'); return; }
+  if(B.mode === 'boss' && B.acted.has(i)){ toast('✓ 這張卡本回合已行動過'); return; }
+  B.selected = (B.selected === i) ? null : i;
+  renderBattle();
+}
+function playerAttack(j){
+  if(!B || B.over || B.turn !== 'player') return;
+  if(B.selected === null){ toast('請先點選一張我方卡牌'); return; }
+  const attacker = B.player[B.selected];
+  const target = B.enemy[j];
+  if(!attacker || !attacker.alive){ B.selected = null; renderBattle(); return; }
+  if(!target.alive){ toast('☠ 目標已陣亡，請選擇其他目標'); return; }
+
+  doAttack(attacker, target, 'player');
+
+  // 連擊
+  let chain = 0;
+  while(attacker.alive && attacker.skill === 'combo' &&
+        chain < CONFIG.skills.combo.maxChain - 1 &&
+        Math.random() < CONFIG.skills.combo.chance){
+    const alive = B.enemy.filter(e => e.alive);
+    if(!alive.length) break;
+    chain++;
+    pushLog(`<div class="ln"><span class="eff">⚡ ${esc(attacker.name)} 觸發「連擊」</span></div>`);
+    doAttack(attacker, rnd(alive), 'player');
+  }
+
+  B.selected = null;
+  renderBattle();
+  if(checkBattleEnd()) return;
+  endPlayerTurn();
+}
+function endPlayerTurn(){
+  B.turn = 'enemy';
+  renderBattle();
+  setTimeout(enemyTurn, 750);
+}
+
+/* --- AI 行動 --- */
+function enemyTurn(){
+  if(!B || B.over) return;
+  if(B.turn !== 'enemy') return;
+
+  // 時間停止：跳過本次行動
+  if(B.skip.enemy){
+    B.skip.enemy = false;
+    pushLog(`<div class="ln"><span class="eff">⏳ 敵方被時間停止，跳過這次行動</span></div>`);
+    return startPlayerTurn();
+  }
+
+  const mine = B.enemy.filter(u => u.alive);
+  const foes = B.player.filter(u => u.alive);
+  if(!mine.length || !foes.length){ checkBattleEnd(); return; }
+
+  // AI 策略：用最強的卡，優先打「能一擊打死」的目標，否則打最弱的
+  const attacker = mine.reduce((a,b)=> b.hp > a.hp ? b : a);
+  let target = null;
+  for(const f of foes){
+    const est = calculateDamage(attacker, f, B.enemyStats, B.playerStats).dmg;
+    if(est >= f.hp){ target = f; break; }
+  }
+  if(!target) target = foes.reduce((a,b)=> b.hp < a.hp ? b : a);
+
+  doAttack(attacker, target, 'enemy');
+
+  let chain = 0;
+  while(attacker.alive && attacker.skill === 'combo' &&
+        chain < CONFIG.skills.combo.maxChain - 1 &&
+        Math.random() < CONFIG.skills.combo.chance){
+    const alive = B.player.filter(u => u.alive);
+    if(!alive.length) break;
+    chain++;
+    pushLog(`<div class="ln"><span class="eff">⚡ ${esc(attacker.name)} 觸發「連擊」</span></div>`);
+    doAttack(attacker, rnd(alive), 'enemy');
+  }
+
+  renderBattle();
+  if(checkBattleEnd()) return;
+  startPlayerTurn();
+}
+function startPlayerTurn(){
+  if(!B || B.over) return;
+  // 時間停止：玩家被跳過
+  if(B.skip.player){
+    B.skip.player = false;
+    pushLog(`<div class="ln"><span class="eff">⏳ 我方被時間停止，跳過這次行動</span></div>`);
+    B.turn = 'enemy';
+    renderBattle();
+    setTimeout(enemyTurn, 750);
+    return;
+  }
+  B.round++;
+  if(B.round > CONFIG.battle.maxRounds){    // 安全閥：避免無限迴圈卡死
+    const pw = B.player.reduce((s,u)=>s+Math.max(0,u.hp),0);
+    const ew = B.enemy.reduce((s,u)=>s+Math.max(0,u.hp),0);
+    return finishBattle(pw >= ew, true);
+  }
+  pushLog(`<div class="rd">— 第 ${B.round} 回合 —</div>`);
+  B.turn = 'player';
+  B.selected = null;
+  renderBattle();
+}
+function checkBattleEnd(){
+  if(!B || B.over) return false;
+  const pAlive = B.player.some(u => u.alive);
+  const eAlive = B.enemy.some(u => u.alive);
+  if(pAlive && eAlive) return false;
+  finishBattle(pAlive && !eAlive, false);
+  return true;
+}
+function forfeit(){
+  if(PV) return pvpForfeit();
+  if(!B || B.over) return;
+  openModal(`
+    <h3>認輸</h3>
+    <div class="hint" style="margin-bottom:12px">認輸將直接判定失敗，並結算失敗獎勵。</div>
+    <div class="flex">
+      <button class="b-ghost grow" onclick="closeModal()">取消</button>
+      <button class="b-red grow" onclick="closeModal();B&&B.mode==='boss'?finishBossBattle(false,false):finishBattle(false,false)">確定認輸</button>
+    </div>`);
+}
+
+/* --- 結算 --- */
+function finishBattle(win, timeout){
+  if(!B || B.over) return;
+  B.over = true;
+
+  // 神之試煉的一般層走自己的結算
+  if(B.mode === 'trial'){
+    pushLog(win ? `<div class="win">🏆 通過第 ${B.trialFloor} 層</div>`
+                : `<div class="lose">💀 第 ${B.trialFloor} 層失敗</div>`);
+    renderBattle();
+    return finishTrialFloor(win);
+  }
+
+  const C = CONFIG.battle;
+  P.counters.battles++;
+  const res = win ? C.win : C.lose;
+  let goldGain = res.gold, bonusText = '';
+
+  P.rating = Math.max(C.minRating, P.rating + res.rating);
+  gainExp(res.exp);
+
+  if(win){
+    P.wins++; P.streak++;
+    P.bestStreak = Math.max(P.bestStreak, P.streak);
+    const bonus = C.streakBonus[P.streak];
+    if(bonus){ goldGain += bonus; bonusText = `　🔥 ${P.streak} 連勝額外 +${fmt(bonus)}`; }
+  }else{
+    P.losses++; P.streak = 0;
+  }
+  P.gold += goldGain;
+
+  pushLog(win
+    ? `<div class="win">🏆 戰鬥勝利！${timeout?'（回合上限，依殘餘數值判定）':''}</div>
+       <div class="ln">💰 +${fmt(goldGain)}${bonusText}　🏆 ${res.rating>0?'+':''}${res.rating}　EXP +${res.exp}</div>`
+    : `<div class="lose">💀 戰鬥失敗　${timeout?'（回合上限判定）':''}</div>
+       <div class="ln">💰 +${fmt(goldGain)}　🏆 ${res.rating}　EXP +${res.exp}</div>`);
+
+  win ? fanfare() : sfx(160,.5,'sawtooth',.06);
+  checkAchievements();
+  saveGame(); renderTop(); renderBattle();
+
+  setTimeout(()=>{
+    openModal(`
+      <h3 class="center" style="color:${win?'var(--green)':'var(--red)'}">${win?'🏆 勝利':'💀 失敗'}</h3>
+      <div style="margin-top:10px">
+        <div class="row"><span>金幣</span><span style="color:var(--gold)">+${fmt(goldGain)}${bonusText}</span></div>
+        <div class="row"><span>排位積分</span><span>${res.rating>0?'+':''}${res.rating} → ${fmt(P.rating)}（${getRank().name}）</span></div>
+        <div class="row"><span>經驗值</span><span>+${res.exp}</span></div>
+        <div class="row"><span>戰績</span><span>${P.wins} 勝 ${P.losses} 敗</span></div>
+        <div class="row"><span>目前連勝</span><span>${P.streak}（最高 ${P.bestStreak}）</span></div>
+      </div>
+      <button class="b-primary" style="width:100%;margin-top:14px" onclick="closeModal();exitBattle()">返回</button>`);
+  }, 900);
+}
+function exitBattle(){
+  B = null;
+  $('bt-prep').style.display = 'block';
+  $('bt-field').style.display = 'none';
+  renderAll();
+}
+
+/* ==========================================================================
+   7b. Boss 系統（v0.2）
+   1 隻 Boss vs 玩家 5 張卡牌。每回合我方每張存活卡各可攻擊一次，
+   全部行動完畢後由 Boss 反擊。獎勵依「造成的總傷害」計算，戰敗也有收穫。
+   ========================================================================== */
+let bossIndex = 0;
+const bossUnlocked = b => P.level >= b.unlockLv;
+
+function startBossBattle(){
+  const def = CONFIG.boss.list[bossIndex];
+  if(!bossUnlocked(def)){ toast(`🔒 需要 Lv.${def.unlockLv} 才能挑戰`); return; }
+  const err = validateTeam();
+  if(err){ toast('⚠️ ' + err); return; }
+  if(P.gold < CONFIG.boss.cost){ toast(`💰 金幣不足，需要 ${CONFIG.boss.cost}`); return; }
+
+  P.gold -= CONFIG.boss.cost;
+  P.counters.bossAttempts++;
+  B = {
+    mode: 'boss',
+    player: teamCards().map(c => toUnit(c,'player')),
+    playerStats: P.stats,
+    enemyStats: { atk:0, def:0 },      // Boss 走自己的公式，不吃角色屬性
+    boss: {
+      ...def, hp: def.hp, maxHp: def.hp,
+      barrier:false, doom:0, lastRoundDamage:0,
+    },
+    acted: new Set(),
+    totalDamage: 0,
+    round: 1, turn:'player', selected:null, over:false, log:[],
+  };
+  pushLog(`<div class="rd">👹 ${def.name} 出現！　HP ${fmt(def.hp)}</div>`);
+  $('bt-prep').style.display='none';
+  $('bt-field').style.display='block';
+  sfx(180,.5,'sawtooth',.06);
+  saveGame(); renderTop(); renderBattle();
+}
+
+// 我方卡牌攻擊 Boss
+function attackBoss(){
+  if(!B || B.mode!=='boss' || B.over || B.turn!=='player') return;
+  if(B.selected === null){ toast('請先點選一張我方卡牌'); return; }
+  const u = B.player[B.selected];
+  if(!u || !u.alive){ B.selected=null; renderBattle(); return; }
+  if(B.acted.has(B.selected)){ toast('這張卡本回合已行動過'); return; }
+
+  bossHit(u);
+  // 連擊
+  let chain = 0;
+  while(u.alive && u.skill==='combo' && chain < CONFIG.skills.combo.maxChain-1 &&
+        Math.random() < CONFIG.skills.combo.chance && B.boss.hp > 0){
+    chain++;
+    pushLog(`<div class="ln"><span class="eff">⚡ ${esc(u.name)} 觸發「連擊」</span></div>`);
+    bossHit(u);
+  }
+  B.acted.add(B.selected);
+  B.selected = null;
+  renderBattle();
+  if(checkBossEnd()) return;
+  // 全員行動完畢 → Boss 回合
+  const aliveIdx = B.player.map((x,i)=>x.alive?i:-1).filter(i=>i>=0);
+  if(aliveIdx.every(i => B.acted.has(i))){
+    B.turn = 'enemy'; renderBattle();
+    setTimeout(bossTurn, 700);
+  }
+}
+function bossHit(u){
+  const C = CONFIG.battle;
+  // 神之屏障：下一次攻擊無效
+  if(B.boss.barrier){
+    B.boss.barrier = false;
+    pushLog(`<div class="ln"><span class="eff">🛡️ 神之屏障擋下了 ${esc(u.name)} 的攻擊</span></div>`);
+    sfx(300,.2,'square',.04);
+    return;
+  }
+  const atkMult = 1 + (P.stats.atk||0) * C.atkPerPoint;
+  const isCrit = u.skill==='crit' && Math.random() < CONFIG.skills.crit.chance;
+  let dmg = u.hp * atkMult * (isCrit ? C.critMult : 1);
+  dmg = Math.max(1, Math.round(dmg));
+  B.boss.hp -= dmg;
+  B.boss.lastRoundDamage += dmg;
+  B.totalDamage += dmg;
+  pushLog(`<div class="ln">${unitTag(u)} → <b>👹${esc(B.boss.name)}</b>　<b>${fmt(dmg)}</b> 傷害
+    ${isCrit?'<span class="crit">💥爆擊</span>':''}</div>`);
+  popDamage(u, `-${fmt(dmg)}`, isCrit?'var(--gold)':'#fff');
+  sfx(isCrit?760:340, isCrit?.12:.06, isCrit?'square':'sine', .04);
+
+  if(u.skill==='lifesteal'){
+    const heal = Math.min(Math.round(u.maxHp*CONFIG.skills.lifesteal.ratio), u.maxHp-u.hp);
+    if(heal>0){ u.hp+=heal;
+      pushLog(`<div class="ln"><span class="heal">🩸 ${esc(u.name)} 吸血回復 ${fmt(heal)}</span></div>`); }
+  }
+  if(u.skill==='timestop' && !u.used.timestop){
+    u.used.timestop = true; B.skipBoss = true;
+    pushLog(`<div class="ln"><span class="eff">⏳ ${esc(u.name)} 發動「時間停止」——Boss 跳過下一次行動</span></div>`);
+    sfx(1200,.3,'triangle',.05);
+  }
+}
+function pickBossSkill(){
+  const list = CONFIG.boss.skills;
+  const total = list.reduce((s,x)=>s+x.weight,0);
+  let x = Math.random()*total;
+  for(const s of list){ if(x < s.weight) return s; x -= s.weight; }
+  return list[0];
+}
+function bossTurn(){
+  if(!B || B.mode!=='boss' || B.over) return;
+  const C = CONFIG.boss, bs = B.boss;
+
+  // 末日倒數結算
+  if(bs.doom > 0){
+    bs.doom--;
+    if(bs.doom === 0){
+      pushLog(`<div class="ln"><span class="ko">☄️ 末日降臨！全體承受 ×${C.doomMult} 傷害</span></div>`);
+      B.player.filter(u=>u.alive).forEach(u => bossDamage(u, bs.atk * C.doomMult));
+      sfx(120,.7,'sawtooth',.08);
+      renderBattle();
+      if(checkBossEnd()) return;
+    }else{
+      pushLog(`<div class="ln"><span class="eff">⏰ 末日倒數：還有 ${bs.doom} 回合</span></div>`);
+    }
+  }
+  // 時間停止
+  if(B.skipBoss){
+    B.skipBoss = false;
+    pushLog(`<div class="ln"><span class="eff">⏳ Boss 被時間停止，跳過這次行動</span></div>`);
+    return nextBossRound();
+  }
+
+  const sk = pickBossSkill();
+  const alive = B.player.filter(u=>u.alive);
+  if(!alive.length){ checkBossEnd(); return; }
+  pushLog(`<div class="ln"><span class="eff">👹 ${esc(bs.name)} 使用「${sk.name}」</span></div>`);
+
+  switch(sk.key){
+    case 'storm':
+      bossDamage(rnd(alive), bs.atk * C.stormMult); break;
+    case 'inferno':
+      alive.forEach(u => bossDamage(u, bs.atk * C.infernoMult)); break;
+    case 'regen': {
+      const h = Math.min(Math.round(bs.maxHp * C.regenRatio), bs.maxHp - bs.hp);
+      bs.hp += h;
+      pushLog(`<div class="ln"><span class="heal">💚 Boss 回復 ${fmt(h)} 生命</span></div>`);
+      break; }
+    case 'barrier':
+      bs.barrier = true;
+      pushLog(`<div class="ln"><span class="eff">🛡️ 下一次攻擊將被完全擋下</span></div>`);
+      break;
+    case 'rewind': {
+      const back = Math.min(bs.lastRoundDamage, bs.maxHp - bs.hp);
+      bs.hp += back;
+      pushLog(`<div class="ln"><span class="heal">⏪ 時間逆轉，恢復上回合受到的 ${fmt(back)} 傷害</span></div>`);
+      break; }
+    case 'doom':
+      if(bs.doom === 0){
+        bs.doom = C.doomTurns;
+        pushLog(`<div class="ln"><span class="ko">☠ 末日倒數啟動：${C.doomTurns} 回合後全體承受巨大傷害</span></div>`);
+      }else{
+        bossDamage(rnd(alive), bs.atk * C.stormMult);
+      }
+      break;
+  }
+  sfx(220,.25,'sawtooth',.05);
+  renderBattle();
+  if(checkBossEnd()) return;
+  nextBossRound();
+}
+function bossDamage(u, raw){
+  const C = CONFIG.battle;
+  let dmg = raw * (1 - (P.stats.def||0) / ((P.stats.def||0) + C.defConstant));
+  if(u.skill === 'shield' && !u.used.shield){
+    u.used.shield = true; dmg *= CONFIG.skills.shield.reduce;
+    pushLog(`<div class="ln"><span class="eff">🛡️ ${esc(u.name)} 的盾牌減免 50%</span></div>`);
+  }
+  dmg = Math.max(1, Math.round(dmg));
+  u.hp -= dmg;
+  pushLog(`<div class="ln">👹 → ${unitTag(u)}　<b>${fmt(dmg)}</b> 傷害</div>`);
+  popDamage(u, `-${fmt(dmg)}`, 'var(--red)');
+  if(u.hp <= 0) resolveDeath(u);
+}
+function nextBossRound(){
+  if(!B || B.over) return;
+  B.round++;
+  if(B.round > CONFIG.boss.maxRounds) return finishBossBattle(false, true);
+  B.boss.lastRoundDamage = 0;
+  B.acted = new Set();
+  B.turn = 'player'; B.selected = null;
+  pushLog(`<div class="rd">— 第 ${B.round} 回合 —</div>`);
+  renderBattle();
+}
+function checkBossEnd(){
+  if(!B || B.over) return false;
+  if(B.boss.hp <= 0){ finishBossBattle(true,false); return true; }
+  if(!B.player.some(u=>u.alive)){ finishBossBattle(false,false); return true; }
+  return false;
+}
+function endBossRoundEarly(){          // 「結束回合」：放棄尚未行動的卡牌
+  if(!B || B.mode!=='boss' || B.over || B.turn!=='player') return;
+  B.turn='enemy'; B.selected=null; renderBattle();
+  setTimeout(bossTurn, 500);
+}
+function finishBossBattle(win, timeout){
+  if(!B || B.over) return;
+  B.over = true;
+
+  // 神之試煉的 Boss 層走試煉結算
+  if(B.isTrial){
+    pushLog(win ? `<div class="win">🏆 擊倒 ${esc(B.boss.name)}</div>`
+                : `<div class="lose">💀 第 ${B.trialFloor} 層失敗</div>`);
+    renderBattle();
+    return finishTrialFloor(win);
+  }
+
+  const C = CONFIG.boss, bs = B.boss;
+  let gold = Math.round(B.totalDamage * C.goldPerDamage);
+  let exp  = Math.round(B.totalDamage * C.expPerDamage);
+  let firstText = '';
+  const rec = P.bossRecords[bs.key] || { best:0, clears:0 };
+  const isFirst = win && rec.clears === 0;
+  if(isFirst){
+    gold += bs.firstClear.gold; exp += bs.firstClear.exp;
+    firstText = `　<b style="color:var(--gold)">首次討伐獎勵 +💰${fmt(bs.firstClear.gold)} / EXP +${fmt(bs.firstClear.exp)}</b>`;
+  }
+  rec.best = Math.max(rec.best, B.totalDamage);
+  if(win) rec.clears++;
+  P.bossRecords[bs.key] = rec;
+
+  P.gold += gold;
+  gainExp(exp);
+
+  pushLog(win
+    ? `<div class="win">🏆 討伐成功！${esc(bs.name)} 被擊倒</div>
+       <div class="ln">總傷害 ${fmt(B.totalDamage)}　💰 +${fmt(gold)}　EXP +${fmt(exp)}${firstText}</div>`
+    : `<div class="lose">💀 討伐失敗　${timeout?'（回合上限）':''}</div>
+       <div class="ln">總傷害 ${fmt(B.totalDamage)}　💰 +${fmt(gold)}　EXP +${fmt(exp)}</div>`);
+  win ? fanfare([523,659,784,1046]) : sfx(160,.5,'sawtooth',.06);
+  saveGame(); renderTop(); renderBattle();
+
+  setTimeout(()=>{
+    openModal(`
+      <h3 class="center" style="color:${win?'var(--green)':'var(--red)'}">${win?'🏆 討伐成功':'💀 討伐失敗'}</h3>
+      <div class="center" style="font-size:44px;margin:6px 0">${bs.icon}</div>
+      <div class="row"><span>Boss</span><span>${esc(bs.name)}</span></div>
+      <div class="row"><span>造成總傷害</span><span class="tabular" style="color:var(--gold)">${fmt(B.totalDamage)}</span></div>
+      <div class="row"><span>剩餘 HP</span><span class="tabular">${fmt(Math.max(0,bs.hp))} / ${fmt(bs.maxHp)}</span></div>
+      <div class="row"><span>金幣</span><span>+${fmt(gold)}</span></div>
+      <div class="row"><span>經驗值</span><span>+${fmt(exp)}</span></div>
+      <div class="row"><span>個人最佳傷害</span><span class="tabular">${fmt(rec.best)}</span></div>
+      <div class="row"><span>累計討伐次數</span><span>${rec.clears}</span></div>
+      <button class="b-primary" style="width:100%;margin-top:14px" onclick="closeModal();exitBattle()">返回</button>`);
+  }, 900);
+}
+
+/* ==========================================================================
+   7c. 神之試煉（v0.3）
+   100 層。每 10 層為 Boss，第 50 層超級 Boss，第 100 層最終 Boss。
+   一般層是 5v5 卡牌戰，Boss 層沿用 Boss 戰流程。
+   ========================================================================== */
+const trialFloorType = f =>
+  f === CONFIG.trial.finalBossAt ? 'final'
+  : f === CONFIG.trial.superBossAt ? 'super'
+  : (f % CONFIG.trial.bossEvery === 0) ? 'boss' : 'normal';
+const trialUnlocked = () => P.level >= CONFIG.trial.unlockLv;
+const trialNextFloor = () => Math.min(CONFIG.trial.floors, P.trial.maxFloor + 1);
+function trialPower(f){
+  const T = CONFIG.trial;
+  return Math.round(T.powerBase * (1 + f * T.powerPerFloor));
+}
+const TRIAL_BOSS_NAME = {
+  boss:  ['守關魔像','試煉巨像','天階守衛','聖殿判官','時空看守','裁決之影','終末之獸','黎明審判者','萬象魔神'],
+  super: '超級守護者・混沌',
+  final: '最終試煉・虛空之神',
+};
+function trialBossDef(f){
+  const T = CONFIG.trial, t = trialFloorType(f), pw = trialPower(f);
+  const mk = (key,name,icon,hpM,atkM) => ({ key, name, icon,
+    hp:Math.round(pw*hpM), atk:Math.round(pw*atkM*T.bossAtkScale), firstClear:{gold:0,exp:0} });
+  if(t === 'final') return mk('trial_final', TRIAL_BOSS_NAME.final, '👁️', T.finalHpMult, T.finalAtkMult);
+  if(t === 'super') return mk('trial_super', TRIAL_BOSS_NAME.super, '🌀', T.superHpMult, T.superAtkMult);
+  const i = Math.floor(f/T.bossEvery) - 1;
+  return mk('trial_boss_'+f, TRIAL_BOSS_NAME.boss[clamp(i,0,TRIAL_BOSS_NAME.boss.length-1)], '🗿',
+            T.bossHpMult, T.bossAtkMult);
+}
+function startTrial(){
+  if(!trialUnlocked()){ toast(`🔒 需要 Lv.${CONFIG.trial.unlockLv} 才能進入神之試煉`); return; }
+  const err = validateTeam();
+  if(err){ toast('⚠️ ' + err); return; }
+  if(P.trial.maxFloor >= CONFIG.trial.floors){ toast('🏆 你已通關全部 100 層'); return; }
+
+  const f = trialNextFloor(), type = trialFloorType(f);
+  if(type === 'normal'){
+    const foes = generateAITeam(trialPower(f), { exact:true, mythicLimit:false });
+    B = {
+      mode:'trial', trialFloor:f, trialType:type,
+      player: teamCards().map(c=>toUnit(c,'player')),
+      enemy: foes.map(c=>toUnit(c,'enemy')),
+      playerStats: P.stats,
+      enemyStats: { atk:Math.round(f*CONFIG.trial.aiAtkPerFloor),
+                    def:Math.round(f*CONFIG.trial.aiDefPerFloor), mdef:0, spd:0 },
+      turn: 'player', selected:null, round:1,
+      skip:{player:false,enemy:false}, over:false, log:[],
+    };
+    pushLog(`<div class="rd">🗼 神之試煉 第 ${f} 層　敵方戰力 ${fmt(trialPower(f))}</div>`);
+  }else{
+    const def = trialBossDef(f);
+    B = {
+      mode:'boss', isTrial:true, trialFloor:f, trialType:type,
+      player: teamCards().map(c=>toUnit(c,'player')),
+      playerStats: P.stats, enemyStats:{atk:0,def:0},
+      boss:{ ...def, hp:def.hp, maxHp:def.hp, barrier:false, doom:0, lastRoundDamage:0 },
+      acted:new Set(), totalDamage:0,
+      round:1, turn:'player', selected:null, over:false, log:[],
+    };
+    const label = type==='final' ? '最終 Boss' : type==='super' ? '超級 Boss' : 'Boss';
+    pushLog(`<div class="rd">🗼 第 ${f} 層 · ${label}　${def.name}　HP ${fmt(def.hp)}</div>`);
+  }
+  $('bt-prep').style.display='none';
+  $('bt-field').style.display='block';
+  sfx(520,.3,'triangle',.05);
+  renderTop(); renderBattle();
+}
+function finishTrialFloor(win){
+  const T = CONFIG.trial, f = B.trialFloor;
+  let gold = 0, exp = 0, extra = '';
+  if(win){
+    const isNew = f > P.trial.maxFloor;
+    if(isNew){
+      P.trial.maxFloor = f;
+      gold = T.goldPerFloor * f; exp = T.expPerFloor * f;
+      const t = trialFloorType(f);
+      if(t==='boss')  { gold*=2; exp*=2; extra='　<b style="color:var(--gold)">Boss 層獎勵 ×2</b>'; }
+      if(t==='super') { gold*=5; exp*=5; extra='　<b style="color:var(--gold)">超級 Boss 獎勵 ×5</b>'; }
+      P.gold += gold; gainExp(exp);
+    }
+  }
+  // 第 100 層：超神話卡
+  let superCard = null;
+  if(win && f === T.finalBossAt){
+    superCard = generateCard('super_mythic');
+    registerDex(superCard);
+    if(P.cards.length < P.bagSize) P.cards.push(superCard);
+    else { P.gold += 50000; superCard.overflow = true; }
+  }
+  checkAchievements();
+  saveGame();
+  setTimeout(()=>{
+    openModal(`
+      <h3 class="center" style="color:${win?'var(--green)':'var(--red)'}">
+        ${win?'🏆 通過第 '+f+' 層':'💀 第 '+f+' 層失敗'}</h3>
+      ${superCard ? `
+        <div class="center" style="margin:12px 0">
+          <div class="tag" style="background:#00e5ff33;color:var(--c-super)">🌟 超神話卡</div>
+          <div class="bigcard r-super_mythic" style="margin:10px auto 0">${bigCardInner(superCard)}</div>
+        </div>
+        ${superCard.overflow?'<div class="hint" style="color:var(--red)">背包已滿，折算為 50,000 金幣。</div>':''}` : ''}
+      <div class="row"><span>目前進度</span><span>第 ${P.trial.maxFloor} / ${T.floors} 層</span></div>
+      <div class="row"><span>金幣</span><span>+${fmt(gold)}${extra}</span></div>
+      <div class="row"><span>經驗值</span><span>+${fmt(exp)}</span></div>
+      ${!win?`<div class="hint">失敗不會損失進度，強化隊伍後再挑戰一次。</div>`:''}
+      <button class="b-primary" style="width:100%;margin-top:12px" onclick="closeModal();exitBattle()">返回</button>`);
+  }, 900);
+  win ? fanfare() : sfx(160,.5,'sawtooth',.06);
+}
+
+/* ==========================================================================
+   8. 成長系統
+   ========================================================================== */
+const expNeeded = lv => CONFIG.player.expPerLevel * lv;
+
+function gainExp(amount){
+  P.exp += amount;
+  let ups = 0;
+  while(P.exp >= expNeeded(P.level)){
+    P.exp -= expNeeded(P.level);
+    levelUp();
+    ups++;
+    if(ups > 100) break;    // 安全閥
+  }
+}
+function levelUp(){
+  P.level++;
+  P.statPoints += CONFIG.player.statPointsPerLevel;
+  toast(`🎉 升級！Lv.${P.level}　+${CONFIG.player.statPointsPerLevel} 屬性點`);
+  fanfare([659,784,1046],85);
+}
+function upgradeStat(key){
+  if(P.statPoints <= 0){ toast('沒有可分配的屬性點'); return; }
+  if(!(key in P.stats)){ return; }
+  P.stats[key]++;
+  P.statPoints--;
+  sfx(700,.08,'square',.04);
+  saveGame(); renderAll();
+}
+function getRank(){
+  let r = CONFIG.ranks[0];
+  for(const x of CONFIG.ranks) if(P.rating >= x.min) r = x;
+  return r;
+}
+
+/* ==========================================================================
+   8b. 線上模式（v1.0）
+   伺服器：cards-server.js（Node + ws）。未連線時本檔仍可完全單機遊玩。
+   ========================================================================== */
+const NET = {
+  ws:null, url:null, connected:false, reqId:0, waiters:new Map(),
+  server:null, season:null, onlineCount:0,
+  account:null,            // { id, name, token, rev, ... }
+  reconnectTimer:null, syncTimer:null, pendingSync:false,
+  retries:0, maxRetries:6, gaveUp:false,
+
+  defaultUrl(){
+    if(location.protocol === 'http:' || location.protocol === 'https:'){
+      const p = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${p}//${location.host}`;
+    }
+    return 'ws://localhost:3100';           // 直接開啟 HTML 時的預設位址
+  },
+  connect(url){
+    if(url){ this.retries = 0; this.gaveUp = false; }     // 手動連線重置退避
+    this.url = url || this.url || localStorage.getItem('ic_server') || this.defaultUrl();
+    localStorage.setItem('ic_server', this.url);
+    try{ this.ws && this.ws.close(); }catch(e){}
+    let ws;
+    try{ ws = new WebSocket(this.url); }
+    catch(e){ toast('⚠️ 無法連線：' + e.message); return; }
+    this.ws = ws;
+    ws.onopen = () => {
+      this.connected = true;
+      this.retries = 0;
+      renderOnline();
+      const tok = localStorage.getItem('ic_token');
+      if(tok) this.req('resume', { token:tok })
+        .then(r => this.adopt(r.self))
+        .catch(() => { localStorage.removeItem('ic_token'); renderOnline(); });
+    };
+    ws.onclose = () => {
+      this.connected = false; this.account = null;
+      renderOnline(); renderAll();
+      if(this.manualClose) return;
+      // 指數退避並設上限：純單機玩家不會被無止盡的重連錯誤洗版
+      this.retries = (this.retries || 0) + 1;
+      if(this.retries > this.maxRetries){ this.gaveUp = true; renderOnline(); return; }
+      const delay = Math.min(60000, 3000 * Math.pow(1.8, this.retries - 1));
+      this.reconnectTimer = setTimeout(()=>this.connect(), delay);
+    };
+    ws.onerror = () => {};
+    ws.onmessage = ev => {
+      let m; try{ m = JSON.parse(ev.data); }catch(e){ return; }
+      if(m.id && this.waiters.has(m.id)){
+        const w = this.waiters.get(m.id); this.waiters.delete(m.id);
+        m.t === 'error' ? w.reject(new Error(m.message)) : w.resolve(m);
+        if(m.t === 'error') return;
+      }
+      this.handle(m);
+    };
+  },
+  disconnect(){
+    this.manualClose = true;
+    clearTimeout(this.reconnectTimer);
+    try{ this.ws && this.ws.close(); }catch(e){}
+    this.connected = false; this.account = null;
+    setTimeout(()=>this.manualClose=false, 100);
+    renderOnline(); renderAll();
+  },
+  req(t, data={}){
+    return new Promise((resolve, reject) => {
+      if(!this.connected) return reject(new Error('尚未連線到伺服器'));
+      const id = 'q' + (++this.reqId);
+      this.waiters.set(id, {resolve, reject});
+      this.ws.send(JSON.stringify({ t, id, ...data }));
+      setTimeout(()=>{ if(this.waiters.has(id)){ this.waiters.delete(id); reject(new Error('伺服器逾時')); } }, 12000);
+    });
+  },
+  handle(m){
+    switch(m.t){
+      // 沒有對應 waiter 的錯誤（例如用 ws.send 直送的指令）必須浮出來，
+      // 否則像「排隊被拒」這種情況會完全沒有回饋
+      case 'error':
+        toast('⚠️ ' + esc(m.message));
+        if($('pv-err')){
+          $('pv-err').innerHTML = `<span style="color:var(--red)">⚠️ ${esc(m.message)}</span>`;
+          $('pv-queue').style.display='block'; $('pv-cancel').style.display='none';
+        }
+        break;
+      case 'hello':
+        this.server = m.config; this.season = m.season; this.onlineCount = m.online;
+        renderOnline(); break;
+      case 'self':
+        this.adopt(m.self, true); break;
+      case 'kicked':
+        toast('⚠️ ' + m.reason); this.account = null;
+        localStorage.removeItem('ic_token'); renderOnline(); break;
+      case 'queue':
+        pvpQueueState(m); break;
+      case 'match_start': pvpStart(m); break;
+      case 'match_state': pvpUpdate(m); break;
+      case 'match_end':   pvpEnd(m); break;
+      case 'trade_incoming':
+        toast(`🤝 ${esc(m.offer.fromName)} 送來一筆交易邀請`); renderTrade(); break;
+      case 'trade_result':
+        toast(m.status === 'accepted' ? '🤝 對方接受了你的交易' : '交易被拒絕'); renderTrade(); break;
+      case 'market_dirty': if($('pg-market').classList.contains('on')) marketSearch(); break;
+      case 'war_declared':
+        toast(`⚔️ ${esc(m.war.aName)} 向你的陣營宣戰了！`);
+        fanfare([392,330,262],110);
+        if($('pg-faction').classList.contains('on')) renderFaction();
+        break;
+      case 'war_update':
+        if($('pg-faction').classList.contains('on') && fcTab==='war') renderWar($('fc-body'));
+        break;
+      case 'war_end':
+        toast(m.win ? '🏆 陣營戰勝利！' : '💀 陣營戰失敗');
+        m.win ? fanfare() : sfx(160,.5,'sawtooth',.06);
+        if($('pg-faction').classList.contains('on')) renderFaction();
+        break;
+      case 'fboss_update':
+        if($('pg-faction').classList.contains('on') && fcTab==='boss') renderFBoss($('fc-body'));
+        break;
+      case 'season_end':
+        toast(`🏁 賽季 ${m.season} 結束，新賽季開始`); this.season = m.next; break;
+    }
+  },
+  // 把伺服器狀態套進本地 P
+  adopt(self, partial){
+    if(!self) return;
+    this.account = self;
+    if(self.token) localStorage.setItem('ic_token', self.token);
+    if(self.season) this.season = self.season;
+    P.name = self.name;
+    // 全新帳號（雲端還沒有任何進度）→ 保留本地存檔並推上去，
+    // 否則離線玩很久才註冊的玩家會被伺服器的初始值清空
+    const cloudEmpty = !self.cards || !self.cards.length;
+    const firstUpload = !partial && cloudEmpty;
+    if(firstUpload){
+      this.account.rev = self.rev;
+      saveGame();
+      this.doSync();                      // 立刻把本地進度上傳
+      toast('☁️ 已將本機進度上傳到新帳號');
+      renderOnline(); renderAll(); this.refreshActivePage();
+      return;
+    }
+    // 伺服器權威欄位覆蓋本地
+    P.gold    = self.gold;
+    P.rating  = self.rating;
+    P.wins    = self.wins;   P.losses = self.losses;
+    P.streak  = self.streak; P.bestStreak = self.bestStreak;
+    // 伺服器主動推送（partial）只發生在「卡牌所有權被伺服器改動」之後
+    // ——市場成交、交易完成、上架到期退回——所以這時卡牌清單以伺服器為準，
+    // 否則買到的卡不會出現在背包裡。
+    if(partial && Array.isArray(self.cards)){
+      P.cards = self.cards;
+      P.team  = (self.team || []).filter(id => P.cards.some(c => c.id === id));
+    }
+    // 背包容量也可能被伺服器改動（陣營商店的擴充券），要跟著更新
+    if(partial && self.profile && self.profile.bagSize) P.bagSize = self.profile.bagSize;
+    // 首次登入（非 partial）才把雲端存檔整包拉回來
+    if(!partial && self.cards && self.cards.length){
+      P.cards = self.cards; P.team = self.team || [];
+      const pr = self.profile || {};
+      P.level = pr.level || P.level; P.exp = pr.exp || 0;
+      P.statPoints = pr.statPoints || 0;
+      if(pr.stats) P.stats = Object.assign({...CONFIG.player.startStats}, pr.stats);
+      P.bagSize = pr.bagSize || P.bagSize;
+      P.drawCount = pr.drawCount || 0;
+      P.title = pr.title || null;
+      if(self.blob){
+        P.dex = self.blob.dex || P.dex;
+        P.dexClaimed = self.blob.dexClaimed || P.dexClaimed;
+        P.achievements = self.blob.achievements || P.achievements;
+        P.titles = self.blob.titles || P.titles;
+        P.daily = self.blob.daily || P.daily;
+        P.trial = self.blob.trial || P.trial;
+        P.counters = Object.assign(P.counters, self.blob.counters || {});
+        P.bossRecords = self.blob.bossRecords || P.bossRecords;
+        P.pity = self.blob.pity || P.pity;
+      }
+      ensureDaily();
+    }
+    saveGame(); renderOnline(); renderAll();
+    if(!partial) this.refreshActivePage();
+  },
+  // 登入／重連完成後，重繪目前停留的線上頁面（否則會停在「請先登入」）
+  refreshActivePage(){
+    const active = [...document.querySelectorAll('.page')].find(p => p.classList.contains('on'));
+    if(!active) return;
+    const key = active.id.replace('pg-','');
+    if(PAGE_RENDER[key]) PAGE_RENDER[key]();
+  },
+  // 把本地進度推上雲端（去抖動）
+  sync(){
+    if(!this.connected || !this.account) return;
+    clearTimeout(this.syncTimer);
+    this.syncTimer = setTimeout(()=>this.doSync(), 1200);
+  },
+  doSync(){
+    if(!this.connected || !this.account) return;
+    const payload = {
+      rev: this.account.rev,
+      gold: P.gold,
+      bossBest: Math.max(...Object.values(P.bossRecords||{}).map(r=>r.best||0), 0),
+      profile: {
+        level:P.level, exp:P.exp, statPoints:P.statPoints, stats:P.stats,
+        bagSize:P.bagSize, drawCount:P.drawCount,
+        dexCount:dexCount(), achCount:Object.keys(P.achievements).length,
+        trialFloor:P.trial.maxFloor, title:P.title,
+      },
+      cards:P.cards, team:P.team,
+      blob:{ dex:P.dex, dexClaimed:P.dexClaimed, achievements:P.achievements,
+             titles:P.titles, daily:P.daily, trial:P.trial, counters:P.counters,
+             bossRecords:P.bossRecords, pity:P.pity },
+    };
+    this.req('sync', payload).then(r => {
+      this.account.rev = r.rev;
+      P.gold = r.gold; P.rating = r.rating;
+      P.wins = r.wins; P.losses = r.losses;
+      P.streak = r.streak; P.bestStreak = r.bestStreak;
+      if(r.goldCapped) toast('⚠️ 金幣同步被伺服器速率上限夾住');
+      saveGame(); renderTop();
+    }).catch(e => {
+      if(/STALE_REV/.test(e.message)){
+        // 伺服器有更新的狀態（例如剛賣出卡牌）→ 先拉回再重試
+        this.req('resume', { token: localStorage.getItem('ic_token') })
+          .then(r => { this.adopt(r.self); this.sync(); }).catch(()=>{});
+      }
+    });
+  },
+};
+const isOnline = () => NET.connected && !!NET.account;
+
+/* --- 登入 / 註冊 --- */
+function showLogin(){
+  const url = NET.url || NET.defaultUrl();
+  openModal(`
+    <h3>🌐 連線到伺服器</h3>
+    <div class="hint" style="margin-bottom:10px">
+      登入後可使用真人 PvP、全球排行榜、市場、交易與陣營，進度會存到雲端。<br>
+      不登入也能完全單機遊玩。
+    </div>
+    <input id="lg-url" value="${esc(url)}" placeholder="ws://localhost:3100" style="margin-bottom:8px">
+    <input id="lg-name" maxlength="12" placeholder="玩家名稱（2~12 字）" value="${esc(P.name||'')}" style="margin-bottom:8px">
+    <input id="lg-pass" type="password" maxlength="64" placeholder="密碼（至少 4 字）">
+    <div class="flex" style="margin-top:12px">
+      <button class="b-primary grow" onclick="doAuth('login')">登入</button>
+      <button class="b-green grow" onclick="doAuth('register')">註冊新帳號</button>
+    </div>
+    <button class="b-ghost" style="width:100%;margin-top:8px" onclick="closeModal()">稍後再說</button>
+    <div class="hint" id="lg-err"></div>
+    <div class="hint">伺服器啟動方式：在專案資料夾執行 <b>node cards-server.js</b></div>`);
+}
+function doAuth(mode){
+  const url  = $('lg-url').value.trim();
+  const name = $('lg-name').value.trim();
+  const pass = $('lg-pass').value;
+  $('lg-err').innerHTML = '連線中…';
+  const go2 = () => NET.req(mode, { name, pass })
+    .then(r => { NET.adopt(r.self); closeModal(); toast(`✅ ${mode==='login'?'登入':'註冊'}成功，歡迎 ${esc(r.self.name)}`); })
+    .catch(e => { $('lg-err').innerHTML = `<span style="color:var(--red)">⚠️ ${esc(e.message)}</span>`; });
+  if(!NET.connected || url !== NET.url){
+    NET.connect(url);
+    let tries = 0;
+    const wait = setInterval(()=>{
+      if(NET.connected){ clearInterval(wait); go2(); }
+      else if(++tries > 30){ clearInterval(wait);
+        $('lg-err').innerHTML = `<span style="color:var(--red)">⚠️ 無法連線到 ${esc(url)}，請確認伺服器已啟動</span>`; }
+    }, 200);
+  } else go2();
+}
+function doLogout(){
+  NET.req('logout').catch(()=>{});
+  localStorage.removeItem('ic_token');
+  NET.account = null;
+  toast('已登出，回到單機模式');
+  renderOnline(); renderAll();
+}
+
+/* --- 真人 PvP --- */
+let PV = null;      // { matchId, you, players, state }
+function pvpQueue(){
+  if(!isOnline()){ toast('請先登入'); return showLogin(); }
+  const err = validateTeam();
+  if(err){ toast('⚠️ ' + err); return; }
+  NET.ws.send(JSON.stringify({ t:'queue_join' }));
+  $('pv-queue').style.display='none'; $('pv-cancel').style.display='block';
+  $('pv-err').innerHTML = '配對中…請稍候';
+}
+function pvpLeave(){
+  NET.ws.send(JSON.stringify({ t:'queue_leave' }));
+  $('pv-queue').style.display='block'; $('pv-cancel').style.display='none';
+  $('pv-err').innerHTML = '';
+}
+function pvpQueueState(m){
+  if(m.state === 'waiting') $('pv-err').innerHTML = `配對中…（佇列 ${m.size} 人）`;
+  if(m.state === 'left'){ $('pv-queue').style.display='block'; $('pv-cancel').style.display='none'; $('pv-err').innerHTML=''; }
+}
+function pvpStart(m){
+  PV = { matchId:m.matchId, you:m.you, players:m.players, state:m.state };
+  B = null;
+  $('bt-prep').style.display='none'; $('bt-field').style.display='block';
+  $('blog').innerHTML = '';
+  go('battle');
+  sfx(660,.15,'square');
+  toast(`⚔️ 對上 ${esc(m.players[1-m.you].name)}（${m.players[1-m.you].rating} 分）`);
+  renderPvp();
+}
+function pvpUpdate(m){
+  if(!PV) return;
+  PV.state = m.state;
+  if(m.log) $('blog').innerHTML = m.log.map(l=>`<div class="ln">${l}</div>`).join('');
+  $('blog').scrollTop = $('blog').scrollHeight;
+  renderPvp();
+}
+function pvpEnd(m){
+  const me = PV ? PV.you : 0;
+  if(m.log) $('blog').innerHTML = m.log.map(l=>`<div class="ln">${l}</div>`).join('');
+  $('blog').insertAdjacentHTML('beforeend', m.win
+    ? `<div class="win">🏆 勝利！擊敗 ${esc(m.opponent)}</div>`
+    : `<div class="lose">💀 敗北　對手：${esc(m.opponent)}</div>`);
+  m.win ? fanfare() : sfx(160,.5,'sawtooth',.06);
+  openModal(`
+    <h3 class="center" style="color:${m.win?'var(--green)':'var(--red)'}">${m.win?'🏆 PvP 勝利':'💀 PvP 敗北'}</h3>
+    <div class="row"><span>對手</span><span>${esc(m.opponent)}</span></div>
+    <div class="row"><span>結果</span><span>${({ko:'擊倒全隊',forfeit:'對手認輸',timeout:'回合上限判定'})[m.reason]||m.reason}</span></div>
+    <div class="row"><span>金幣</span><span>+${fmt(m.reward.gold)}</span></div>
+    <div class="row"><span>排位積分</span><span>${m.reward.rating>0?'+':''}${m.reward.rating} → ${fmt(m.rating)}</span></div>
+    <div class="row"><span>經驗值</span><span>+${fmt(m.reward.exp)}</span></div>
+    <button class="b-primary" style="width:100%;margin-top:12px" onclick="closeModal();pvpExit()">返回</button>`);
+  gainExp(m.reward.exp);
+  PV = null;
+  saveGame();
+}
+function pvpExit(){
+  PV = null;
+  $('bt-prep').style.display='block'; $('bt-field').style.display='none';
+  $('pv-queue').style.display='block'; $('pv-cancel').style.display='none';
+  $('pv-err').innerHTML='';
+  renderAll();
+}
+let pvSel = null;
+function pvpSelect(i){
+  if(!PV || PV.state.turn !== PV.you) return;
+  const u = PV.state.units[PV.you][i];
+  if(!u.alive){ toast('☠ 這張卡已陣亡'); return; }
+  pvSel = (pvSel === i) ? null : i;
+  renderPvp();
+}
+function pvpAttack(j){
+  if(!PV || PV.state.turn !== PV.you) return;
+  if(pvSel === null){ toast('請先點選一張我方卡牌'); return; }
+  const t = PV.state.units[1-PV.you][j];
+  if(!t.alive){ toast('☠ 目標已陣亡'); return; }
+  NET.ws.send(JSON.stringify({ t:'pvp_attack', from:pvSel, to:j }));
+  pvSel = null;
+}
+function pvpForfeit(){
+  openModal(`<h3>認輸</h3><div class="hint" style="margin-bottom:12px">將直接判定敗北。</div>
+    <div class="flex"><button class="b-ghost grow" onclick="closeModal()">取消</button>
+    <button class="b-red grow" onclick="closeModal();NET.ws.send(JSON.stringify({t:'pvp_forfeit'}))">確定認輸</button></div>`);
+}
+function pvpUnitHTML(u, i, side){
+  const E = ELEMENTS[u.element] || ELEMENTS.fire;
+  const pct = clamp(u.hp/u.maxHp*100, 0, 100);
+  const mine = side === PV.you;
+  const sel = mine && pvSel === i;
+  const targetable = !mine && PV.state.turn===PV.you && pvSel!==null && u.alive;
+  const buffs = [];
+  if(u.skill==='shield'   && !u.used.shield)   buffs.push('🛡️');
+  if(u.skill==='revive'   && !u.used.revive)   buffs.push('✨');
+  if(u.skill==='timestop' && !u.used.timestop) buffs.push('⏳');
+  return `<div class="bcard ${mine?'':'enemy'} ${u.alive?'':'dead'} ${sel?'sel':''} ${targetable?'targetable':''}"
+    onclick="${mine?`pvpSelect(${i})`:`pvpAttack(${i})`}">
+    ${buffs.length?`<div class="buff">${buffs.join('')}</div>`:''}
+    <div class="el">${E.icon}</div>
+    <div class="nm t-${u.rarity}">${esc(u.name)}</div>
+    <div class="val">${fmt(Math.max(0,u.hp))}</div>
+    <div class="hpbar"><i style="width:${pct}%"></i></div>
+    <div class="sk">${skillText(u.skill)}</div></div>`;
+}
+function renderPvp(){
+  if(!PV) return;
+  const S = PV.state, foe = 1-PV.you;
+  $('bt-bossbox').style.display='none';
+  $('bt-enemybox').style.display='block';
+  $('bt-endround').style.display='none';
+  $('bt-enemy').innerHTML  = S.units[foe].map((u,i)=>pvpUnitHTML(u,i,foe)).join('');
+  $('bt-player').innerHTML = S.units[PV.you].map((u,i)=>pvpUnitHTML(u,i,PV.you)).join('');
+  $('bt-ealive').textContent = `${S.units[foe].filter(u=>u.alive).length} / 5 存活`;
+  $('bt-palive').textContent = `${S.units[PV.you].filter(u=>u.alive).length} / 5 存活`;
+  document.querySelector('#bt-field .side-label span').innerHTML =
+    `🌐 ${esc(PV.players[foe].name)}（${PV.players[foe].rating} 分）`;
+  const tb = $('bt-turn'), myTurn = S.turn === PV.you;
+  tb.className = 'turnbar ' + (myTurn ? 'p' : 'e');
+  const left = S.deadline ? Math.max(0, Math.round((S.deadline - Date.now())/1000)) : 0;
+  tb.textContent = myTurn
+    ? (pvSel === null ? `你的回合 — 點選我方卡牌　⏱️ ${left}s` : `選擇攻擊目標　⏱️ ${left}s`)
+    : `等待 ${PV.players[foe].name} 行動…　⏱️ ${left}s`;
+}
+setInterval(()=>{ if(PV && !$('modal').classList.contains('on')) renderPvp(); }, 1000);
+
+/* --- 排行榜 --- */
+let rkKind = 'rating';
+function renderRank(){
+  if(!isOnline()){ $('rk-rows').innerHTML = `<div class="hint">請先到「線上大廳」登入。</div>`;
+    $('rk-tabs').innerHTML=''; $('rk-mine').innerHTML=''; return; }
+  NET.req('leaderboard', { kind: rkKind }).then(r => {
+    $('rk-season').textContent = r.season ? `賽季 ${r.season.number}` : '';
+    $('rk-tabs').innerHTML = r.boards.map(b =>
+      `<button class="${rkKind===b.kind?'on':''}" onclick="rkKind='${b.kind}';renderRank()">${b.name}</button>`).join('');
+    $('rk-mine').innerHTML = r.mine
+      ? `<div class="row"><span>我的名次</span><span style="color:var(--gold);font-weight:800">
+           第 ${r.mine.rank} 名 / ${r.mine.total} 人　（${fmt(r.mine.value)}）</span></div>`
+      : `<div class="hint">你尚未進入這個榜單。</div>`;
+    $('rk-rows').innerHTML = r.rows.length ? r.rows.map(x=>`
+      <div class="row"><span>
+        <b style="color:${x.rank<=3?'var(--gold)':'var(--dim)'}">#${x.rank}</b>
+        ${x.online?'🟢':'⚪'} ${esc(x.name)}
+        ${x.title?`<span class="tag" style="background:#ffc84a26;color:var(--gold)">${esc(x.title)}</span>`:''}
+        ${x.faction?`<span class="small">［${esc(x.faction)}］</span>`:''}
+      </span><span class="tabular">Lv.${x.level}　<b>${fmt(x.value)}</b></span></div>`).join('')
+      : `<div class="hint">這個榜單還沒有資料。</div>`;
+  }).catch(e => $('rk-rows').innerHTML = `<div class="hint" style="color:var(--red)">${esc(e.message)}</div>`);
+}
+
+/* --- 市場 --- */
+let mkRarity = '';
+function renderMarket(){
+  if(!isOnline()){ $('mk-rows').innerHTML = `<div class="hint">請先到「線上大廳」登入。</div>`; $('mk-mine').innerHTML=''; return; }
+  $('mk-rar').innerHTML = [['','全部'],...CONFIG.rarityOrder.map(k=>[k,CONFIG.rarities[k].name])]
+    .map(([v,t])=>`<button class="${mkRarity===v?'on':''}" onclick="mkRarity='${v}';renderMarket()">${t}</button>`).join('');
+  marketSearch(); marketMine();
+}
+function marketSearch(){
+  if(!isOnline()) return;
+  NET.req('market_query', {
+    name: $('mk-name').value.trim(), rarity: mkRarity, sort: $('mk-sort').value,
+  }).then(r => {
+    $('mk-info').textContent = `${r.total} 件商品　手續費 ${r.feeRate*100}%`;
+    $('mk-rows').innerHTML = r.listings.length ? r.listings.map(l=>`
+      <div class="statrow">
+        <span class="k">${ELEMENTS[l.card.element].icon}
+          <b class="t-${l.card.rarity}">${esc(l.card.name)}</b>
+          ${l.card.plus>0?`<span style="color:var(--gold)">+${l.card.plus}</span>`:''}
+          <br><span class="small">數值 ${fmt(l.card.maxValue)}　${skillText(l.card.skill)}　賣家 ${esc(l.sellerName)}</span></span>
+        <span class="v" style="width:auto;color:var(--gold)">💰${fmt(l.price)}</span>
+        <button class="b-gold b-xs" onclick="marketBuy('${l.id}')">購買</button>
+      </div>`).join('') : `<div class="hint">沒有符合條件的商品。</div>`;
+  }).catch(e => $('mk-rows').innerHTML = `<div class="hint" style="color:var(--red)">${esc(e.message)}</div>`);
+}
+function marketMine(){
+  NET.req('market_mine').then(r => {
+    $('mk-mine').innerHTML = r.listings.length ? r.listings.map(l=>`
+      <div class="statrow">
+        <span class="k">${ELEMENTS[l.card.element].icon} <b class="t-${l.card.rarity}">${esc(l.card.name)}</b>
+          <br><span class="small">數值 ${fmt(l.card.maxValue)}</span></span>
+        <span class="v" style="width:auto;color:var(--gold)">💰${fmt(l.price)}</span>
+        <button class="b-ghost b-xs" onclick="marketCancel('${l.id}')">下架</button>
+      </div>`).join('') : `<div class="hint">目前沒有上架中的卡牌。</div>`;
+  }).catch(()=>{});
+}
+function marketBuy(id){
+  NET.req('market_buy', { listingId:id })
+    .then(r => { toast(`🏪 已購買「${esc(r.card.name)}」　-💰${fmt(r.price)}`); sfx(880,.2,'triangle',.05); renderMarket(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function marketCancel(id){
+  NET.req('market_cancel', { listingId:id })
+    .then(()=>{ toast('已下架，卡牌退回背包'); renderMarket(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function showSellDialog(cardId){
+  const c = findCard(cardId); if(!c) return;
+  openModal(`
+    <h3>🏪 上架到市場</h3>
+    <div class="center" style="margin:10px 0"><div class="bigcard r-${c.rarity}" style="margin:0 auto">${bigCardInner(c)}</div></div>
+    <input id="sell-price" type="number" min="10" value="${Math.max(10, c.maxValue*2)}" placeholder="售價">
+    <div class="hint">成交時會扣除 <b>5%</b> 手續費。7 天內未售出會自動退回背包。</div>
+    <div class="flex" style="margin-top:10px">
+      <button class="b-ghost grow" onclick="closeModal()">取消</button>
+      <button class="b-gold grow" onclick="doSell('${cardId}')">確定上架</button>
+    </div>`);
+}
+function doSell(cardId){
+  const price = Math.round(Number($('sell-price').value)||0);
+  NET.req('market_list', { cardId, price }).then(r => {
+    P.cards = P.cards.filter(c => c.id !== cardId);
+    closeModal(); toast(`🏪 已上架「${esc(r.listing.card.name)}」@ ${fmt(price)}`);
+    saveGame(); renderAll();
+    if($('pg-market').classList.contains('on')) renderMarket();
+  }).catch(e => toast('⚠️ ' + esc(e.message)));
+}
+
+/* --- 交易 --- */
+let trPick = [];
+function renderTrade(){
+  if(!isOnline()){ $('tr-list').innerHTML = `<div class="hint">請先到「線上大廳」登入。</div>`; $('tr-pick').innerHTML=''; return; }
+  const pool = P.cards.filter(c => !c.locked && !P.team.includes(c.id));
+  $('tr-mycards').textContent = `${trPick.length} / ${5} 張`;
+  $('tr-pick').innerHTML = pool.length ? pool.map(c=>`
+    <div class="gcard r-${c.rarity} ${trPick.includes(c.id)?'sel':''}" onclick="trToggle('${c.id}')">
+      ${c.plus>0?`<div class="plus">+${c.plus}</div>`:''}
+      <div class="el">${ELEMENTS[c.element].icon}</div>
+      <div class="nm">${esc(c.name)}</div>
+      <div class="val">${fmt(c.value)}</div>
+      <div class="rr t-${c.rarity}">${CONFIG.rarities[c.rarity].name}</div></div>`).join('')
+    : `<div class="hint" style="grid-column:1/-1">沒有可交易的卡牌（已鎖定或在隊伍中的不能交易）。</div>`;
+  NET.req('trade_list').then(r => {
+    $('tr-list').innerHTML = r.offers.length ? r.offers.map(o=>{
+      const incoming = o.toId === NET.account.id;
+      return `<div class="card-panel" style="margin:0 0 9px;padding:11px">
+        <div class="row"><span>${incoming?'收到來自':'送給'}</span>
+          <span style="font-weight:800">${esc(incoming?o.fromName:o.toName)}</span></div>
+        <div class="row"><span>對方給出</span><span>${
+          (incoming?o.offerCardData:o.requestCardData).map(c=>esc(c.name)).join('、')||'—'}
+          ${(incoming?o.offerGold:o.requestGold)?`　💰${fmt(incoming?o.offerGold:o.requestGold)}`:''}</span></div>
+        <div class="row"><span>你要給出</span><span>${
+          (incoming?o.requestCardData:o.offerCardData).map(c=>esc(c.name)).join('、')||'—'}
+          ${(incoming?o.requestGold:o.offerGold)?`　💰${fmt(incoming?o.requestGold:o.offerGold)}`:''}</span></div>
+        <div class="flex" style="margin-top:8px">
+          ${incoming
+            ? `<button class="b-green grow b-sm" onclick="trRespond('${o.id}',true)">接受</button>
+               <button class="b-ghost grow b-sm" onclick="trRespond('${o.id}',false)">拒絕</button>`
+            : `<button class="b-ghost grow b-sm" onclick="trCancel('${o.id}')">取消邀請</button>`}
+        </div></div>`;
+    }).join('') : `<div class="hint">目前沒有進行中的交易。</div>`;
+  }).catch(()=>{});
+}
+function trToggle(id){
+  const i = trPick.indexOf(id);
+  if(i>=0) trPick.splice(i,1);
+  else { if(trPick.length>=5){ toast('最多 5 張'); return; } trPick.push(id); }
+  renderTrade();
+}
+function tradeSend(){
+  NET.req('trade_offer', {
+    toName: $('tr-to').value.trim(),
+    offerCards: trPick,
+    offerGold: Math.max(0, Number($('tr-mygold').value)||0),
+    requestCards: [],
+    requestGold: Math.max(0, Number($('tr-hisgold').value)||0),
+  }).then(()=>{ trPick=[]; $('tr-err').innerHTML='<span style="color:var(--green)">✅ 已送出交易邀請</span>';
+    toast('🤝 交易邀請已送出'); renderTrade(); })
+    .catch(e => $('tr-err').innerHTML = `<span style="color:var(--red)">⚠️ ${esc(e.message)}</span>`);
+}
+function trRespond(id, accept){
+  NET.req('trade_respond', { offerId:id, accept })
+    .then(r => { toast(r.status==='accepted' ? '✅ 交易完成' : '已拒絕'); renderTrade(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function trCancel(id){
+  NET.req('trade_cancel', { offerId:id }).then(()=>{ toast('已取消'); renderTrade(); }).catch(()=>{});
+}
+
+/* --- 陣營（v1.0 主頁 + v1.1 分頁）--- */
+let fcTab = 'home';
+const FC_TABS = [['home','總覽'],['base','🏰 基地'],['war','⚔️ 陣營戰'],
+                 ['boss','👹 陣營 Boss'],['shop','🛒 商店']];
+function setFcTab(k){ fcTab = k; renderFaction(); }
+function renderFaction(){
+  const box = $('fc-body'), tabs = $('fc-tabs');
+  if(!isOnline()){
+    tabs.style.display = 'none';
+    box.innerHTML = `<div class="card-panel"><div class="hint">請先到「線上大廳」登入。</div></div>`; return;
+  }
+  const fid = NET.account.factionId;
+  tabs.style.display = fid ? 'flex' : 'none';
+  if(fid){
+    tabs.innerHTML = FC_TABS.map(([k,n]) =>
+      `<button class="${fcTab===k?'on':''}" onclick="setFcTab('${k}')">${n}</button>`).join('');
+    if(fcTab === 'base') return renderBase(box);
+    if(fcTab === 'war')  return renderWar(box);
+    if(fcTab === 'boss') return renderFBoss(box);
+    if(fcTab === 'shop') return renderShop(box);
+  }
+  if(fid){
+    NET.req('faction_info', { factionId:fid }).then(r => {
+      const f = r.faction, isLeader = f.leaderId === NET.account.id;
+      box.innerHTML = `
+        <div class="card-panel">
+          <div class="rhead"><div class="t">${f.icon} ${esc(f.name)}</div>
+            <div class="small">Lv.${f.level}　${f.members.length} / ${f.cap} 人</div></div>
+          <div class="hint" style="margin-top:0">${esc(f.desc||'（沒有介紹）')}</div>
+          <div class="row"><span>會長</span><span>${esc(f.leaderName)}</span></div>
+          <div class="row"><span>陣營資金</span><span class="tabular">💰 ${fmt(f.funds)}</span></div>
+          ${f.nextLevel ? `<div class="row"><span>升到 Lv.${f.nextLevel.level}</span>
+            <span class="tabular">需要 💰 ${fmt(f.nextLevel.fund)}（上限 ${f.nextLevel.cap} 人）</span></div>
+            <div class="bar"><i style="width:${clamp(f.funds/f.nextLevel.fund*100,0,100)}%;
+              background:linear-gradient(90deg,var(--gold),var(--green))"></i></div>` : ''}
+          <div class="row"><span>戰績</span><span>${
+            (f.warHistory||[]).length
+              ? `${f.warHistory.filter(h=>h.win).length} 勝 / ${f.warHistory.length} 場　·　Boss 討伐 ${f.bossCleared||0} 次`
+              : `尚無陣營戰紀錄　·　Boss 討伐 ${f.bossCleared||0} 次`}</span></div>
+          <div class="flex" style="margin-top:11px">
+            <input id="fc-amt" type="number" min="1" value="1000" placeholder="捐獻金額">
+            <button class="b-gold" onclick="factionDonate()">💰 捐獻</button>
+          </div>
+          <div class="flex" style="margin-top:8px">
+            <button class="b-gold grow" onclick="claimFactionChest()">🎁 每日寶箱</button>
+            <button class="b-ghost grow" onclick="factionLeave()">退出陣營</button>
+          </div>
+        </div>
+        ${isLeader && f.applications.length ? `
+        <div class="card-panel"><h2>入團申請</h2>
+          ${f.applications.map(x=>`<div class="statrow">
+            <span class="k">${esc(x.name)}<br><span class="small">Lv.${x.level}　${x.rating} 分</span></span>
+            <button class="b-green b-xs" onclick="factionApprove('${x.id}',true)">同意</button>
+            <button class="b-ghost b-xs" onclick="factionApprove('${x.id}',false)">拒絕</button>
+          </div>`).join('')}</div>` : ''}
+        <div class="card-panel"><h2>成員（依貢獻排序）</h2>
+          ${f.members.map(m=>`<div class="row">
+            <span>${m.online?'🟢':'⚪'} ${m.isLeader?'👑 ':''}${esc(m.name)}</span>
+            <span class="tabular">Lv.${m.level}　${m.rating} 分　貢獻 ${fmt(m.contrib)}</span></div>`).join('')}
+        </div>`;
+    }).catch(e => box.innerHTML = `<div class="card-panel"><div class="hint" style="color:var(--red)">${esc(e.message)}</div></div>`);
+  }else{
+    NET.req('faction_list').then(r => {
+      const cfg = NET.server ? NET.server.faction : { createLevel:10, createCost:3000 };
+      box.innerHTML = `
+        <div class="card-panel">
+          <h2>建立陣營</h2>
+          <div class="row"><span>條件</span><span>Lv.${cfg.createLevel} 以上　💰 ${fmt(cfg.createCost)}</span></div>
+          <input id="fc-name" maxlength="12" placeholder="陣營名稱" style="margin:8px 0">
+          <div class="flex">
+            <input id="fc-icon" maxlength="2" value="🛡️" style="flex:0 0 70px;text-align:center">
+            <input id="fc-desc" maxlength="100" placeholder="陣營介紹">
+          </div>
+          <select id="fc-join" style="margin-top:8px">
+            <option value="open">自由加入</option>
+            <option value="approval">需要審核</option>
+          </select>
+          <button class="b-primary" style="width:100%;margin-top:9px" onclick="factionCreate()">建立陣營</button>
+          <div class="hint" id="fc-err"></div>
+        </div>
+        <div class="card-panel"><h2>陣營列表（${r.factions.length}）</h2>
+          ${r.factions.length ? r.factions.map(f=>`<div class="statrow">
+            <span class="k">${f.icon} <b>${esc(f.name)}</b>
+              <br><span class="small">Lv.${f.level}　${f.members}/${f.cap} 人　戰力 ${fmt(f.power)}　會長 ${esc(f.leaderName)}</span></span>
+            <button class="b-green b-xs" ${f.members>=f.cap?'disabled':''}
+              onclick="factionJoin('${f.id}')">${f.joinType==='approval'?'申請':'加入'}</button>
+          </div>`).join('') : `<div class="hint">目前還沒有任何陣營，來建立第一個吧。</div>`}
+        </div>`;
+    }).catch(e => box.innerHTML = `<div class="card-panel"><div class="hint" style="color:var(--red)">${esc(e.message)}</div></div>`);
+  }
+}
+function factionCreate(){
+  NET.req('faction_create', { name:$('fc-name').value.trim(), icon:$('fc-icon').value.trim(),
+    desc:$('fc-desc').value.trim(), joinType:$('fc-join').value })
+    .then(r => { NET.account.factionId = r.faction.id; toast(`🛡️ 陣營「${esc(r.faction.name)}」成立`);
+      fanfare([659,880],90); renderFaction(); renderAll(); })
+    .catch(e => $('fc-err').innerHTML = `<span style="color:var(--red)">⚠️ ${esc(e.message)}</span>`);
+}
+function factionJoin(id){
+  NET.req('faction_join', { factionId:id })
+    .then(r => { if(r.pending){ toast('已送出申請，等待會長審核'); }
+      else { NET.account.factionId = id; toast('已加入陣營'); } renderFaction(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function factionLeave(){
+  NET.req('faction_leave').then(()=>{ NET.account.factionId = null; toast('已退出陣營'); renderFaction(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function factionDonate(){
+  NET.req('faction_donate', { amount: Math.round(Number($('fc-amt').value)||0) })
+    .then(r => { toast(r.levelUp ? `🎉 陣營升到 Lv.${r.levelUp.level}！上限 ${r.levelUp.cap} 人` : '感謝捐獻');
+      renderFaction(); renderTop(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function factionApprove(id, accept){
+  NET.req('faction_approve', { applicantId:id, accept }).then(()=>{ toast(accept?'已同意':'已拒絕'); renderFaction(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function claimFactionChest(){
+  NET.req('faction_chest')
+    .then(r => { toast(`🎁 每日寶箱：💰 +${fmt(r.gold)}　貢獻 +${fmt(r.contrib)}`);
+      fanfare([659,880],80); renderFaction(); renderTop(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+
+/* ================= v1.1：陣營基地 ================= */
+const hpBar = (hp,max,col) => `<div class="bar" style="height:11px"><i style="width:${
+  clamp(hp/max*100,0,100)}%;background:${col}"></i></div>`;
+function renderBase(box){
+  NET.req('base_info').then(r => {
+    const b = r.base, isLeader = NET.account.id === (NET.account.leaderId || null);
+    box.innerHTML = `
+      <div class="card-panel">
+        <div class="rhead"><div class="t">🏰 城堡</div>
+          <div class="small">${b.underAttack?'<span style="color:var(--red)">⚔️ 遭受攻擊中</span>':'陣營資金 💰 '+fmt(r.funds)}</div></div>
+        <div class="row"><span>耐久</span><span class="tabular">${fmt(b.castleHp)} / ${fmt(b.castleMax)}</span></div>
+        ${hpBar(b.castleHp, b.castleMax, 'linear-gradient(90deg,#ff5d73,#ffb430)')}
+        <div class="row" style="margin-top:6px"><span>修復費用</span>
+          <span class="tabular">${b.repairCost>0?('💰 '+fmt(b.repairCost)):'不需修復'}</span></div>
+        <button class="b-gold" style="width:100%;margin-top:9px" ${b.repairCost<=0||r.funds<b.repairCost?'disabled':''}
+          onclick="baseRepair()">🔧 修復城堡（陣營資金）</button>
+      </div>
+
+      <div class="card-panel">
+        <div class="rhead"><div class="t">🗼 防禦塔</div><div class="small">Lv.${b.towerLv} / ${b.towerMax}</div></div>
+        <div class="row"><span>守軍減傷</span><span style="color:var(--green);font-weight:800">${(b.towerReduce*100).toFixed(0)}%</span></div>
+        <div class="row"><span>城堡 HP 加成</span><span class="tabular">+${fmt(b.towerLv*10000)}</span></div>
+        <div class="row"><span>升級費用</span><span class="tabular">${b.towerCost?('💰 '+fmt(b.towerCost)):'已滿級'}</span></div>
+        <button class="b-primary" style="width:100%;margin-top:9px" ${!b.towerCost||r.funds<b.towerCost?'disabled':''}
+          onclick="towerUp()">🗼 升級防禦塔</button>
+        <div class="hint">只有會長可以升級，費用從陣營資金扣除。</div>
+      </div>
+
+      <div class="card-panel">
+        <div class="rhead"><div class="t">🛡️ 守城部隊</div>
+          <div class="small">${b.defenders.length} / ${b.maxDefenders} 人　總戰力 ${fmt(b.totalDefPower)}</div></div>
+        ${b.defenders.length ? b.defenders.map(d=>`
+          <div class="statrow">
+            <span class="k">${esc(d.ownerName)}<br><span class="small">${
+              d.cards.map(c=>esc(c.name)).join('、')}</span></span>
+            <span class="v" style="width:auto;color:var(--gold)">${fmt(d.power)}</span>
+          </div>`).join('') : `<div class="hint">尚未有人佈防。沒有守軍就無法被宣戰，但也拿不到防守獎勵。</div>`}
+        <div class="flex" style="margin-top:10px">
+          <button class="b-green grow" onclick="baseDefend()">🛡️ 用目前隊伍佈防</button>
+          <button class="b-ghost grow" onclick="baseClearDef()">撤除我的佈防</button>
+        </div>
+        <div class="hint">佈防的是隊伍的<b>快照</b>，卡牌仍可自由使用、強化或交易。陣營戰期間無法變更。</div>
+      </div>`;
+  }).catch(e => box.innerHTML = `<div class="card-panel"><div class="hint" style="color:var(--red)">${esc(e.message)}</div></div>`);
+}
+const baseDefend    = () => NET.req('base_defend').then(()=>{ toast('🛡️ 佈防完成'); renderFaction(); }).catch(e=>toast('⚠️ '+esc(e.message)));
+const baseClearDef  = () => NET.req('base_clear').then(()=>{ toast('已撤除佈防'); renderFaction(); }).catch(e=>toast('⚠️ '+esc(e.message)));
+const towerUp       = () => NET.req('tower_upgrade').then(r=>{ toast(`🗼 防禦塔 Lv.${r.base.towerLv}`); fanfare([659,880],80); renderFaction(); }).catch(e=>toast('⚠️ '+esc(e.message)));
+const baseRepair    = () => NET.req('castle_repair').then(()=>{ toast('🔧 城堡已修復'); renderFaction(); }).catch(e=>toast('⚠️ '+esc(e.message)));
+
+/* ================= v1.1：陣營戰 ================= */
+function renderWar(box){
+  NET.req('war_info').then(r => {
+    if(!r.war){
+      box.innerHTML = `
+        <div class="card-panel">
+          <div class="rhead"><div class="t">⚔️ 宣戰</div>
+            <div class="small">費用 💰 ${fmt(r.declareCost)}（陣營資金）</div></div>
+          <div class="hint" style="margin-top:0">
+            每邊最多 ${10} 人參戰、每人 5 張卡（最多 50 vs 50），每人 3 次攻擊，戰爭 24 小時。<br>
+            必須先擊敗全部<b>守城卡牌</b>，才能攻擊城堡。城堡耐久歸零即獲勝。
+          </div>
+        </div>
+        <div class="card-panel">
+          <h2>可宣戰的陣營</h2>
+          ${r.targets.length ? r.targets.map(x=>`
+            <div class="statrow">
+              <span class="k">${x.icon} <b>${esc(x.name)}</b>
+                <br><span class="small">Lv.${x.level}　${x.members} 人　守軍 ${x.defenders} 組　城堡 ${fmt(x.castleMax)}　戰力 ${fmt(x.power)}</span></span>
+              <button class="b-red b-xs" ${x.defenders?'':'disabled'} onclick="warDeclare('${x.id}','${esc(x.name)}')">
+                ${x.defenders?'宣戰':'無守軍'}</button>
+            </div>`).join('') : `<div class="hint">目前沒有可宣戰的陣營（對方需先佈防，且不在戰爭中）。</div>`}
+          <div class="hint">只有會長可以宣戰。</div>
+        </div>`;
+      return;
+    }
+    const w = r.war, isAtk = w.role === 'attacker';
+    const left = Math.max(0, w.endAt - Date.now());
+    box.innerHTML = `
+      <div class="card-panel">
+        <div class="rhead"><div class="t">⚔️ ${esc(w.aName)} <span style="color:var(--dim)">vs</span> ${esc(w.dName)}</div>
+          <div class="small">${isAtk?'<span style="color:var(--red)">進攻方</span>':'<span style="color:var(--blue)">防守方</span>'}
+            ・剩餘 ${Math.floor(left/3600000)} 小時 ${Math.floor(left%3600000/60000)} 分</div></div>
+        <div class="row"><span>城堡耐久</span><span class="tabular">${fmt(w.castleHp)} / ${fmt(w.castleMax)}</span></div>
+        ${hpBar(w.castleHp, w.castleMax, 'linear-gradient(90deg,#ff5d73,#ffb430)')}
+        <div class="row" style="margin-top:6px"><span>守軍存活</span>
+          <span class="tabular">${w.defAlive} / ${w.defTotal} 張　（塔減傷 ${(w.towerReduce*100).toFixed(0)}%）</span></div>
+        ${hpBar(w.defAlive, w.defTotal || 1, 'linear-gradient(90deg,#3ddc97,#5ad4ff)')}
+        <div class="row" style="margin-top:6px"><span>參戰人數</span><span>${w.participants} / ${w.maxPlayers}</span></div>
+        ${isAtk ? `
+          <div class="row"><span>我的攻擊次數</span><span>${r.myAttacks} / ${w.attacksPerPlayer}</span></div>
+          <button class="b-red" style="width:100%;margin-top:9px" ${(w.over||r.myAttacks>=w.attacksPerPlayer)?'disabled':''}
+            onclick="warAttack()">⚔️ 發動攻擊</button>`
+          : `<div class="hint">防守方無需操作，只要守軍撐到時間結束就獲勝。戰後全體成員都能領到獎勵。</div>`}
+      </div>
+
+      <div class="card-panel">
+        <h2>守城部隊</h2>
+        <div class="bfield" style="grid-template-columns:repeat(5,1fr)">
+          ${w.defUnits.slice(0,25).map(u=>`
+            <div class="bcard enemy ${u.alive?'':'dead'}">
+              <div class="el">${ELEMENTS[u.element].icon}</div>
+              <div class="nm t-${u.rarity}">${esc(u.name)}</div>
+              <div class="val">${fmt(u.hp)}</div>
+              <div class="hpbar"><i style="width:${clamp(u.hp/u.maxHp*100,0,100)}%"></i></div>
+              <div class="sk">${esc(u.owner)}</div>
+            </div>`).join('')}
+        </div>
+        ${w.defUnits.length>25?`<div class="hint">僅顯示前 25 張（共 ${w.defUnits.length} 張）。</div>`:''}
+      </div>
+
+      <div class="card-panel">
+        <h2>戰報</h2>
+        ${w.attacks.length ? w.attacks.slice().reverse().map(x=>`
+          <div class="row"><span>${esc(x.playerName)}</span>
+            <span class="tabular">守軍 ${fmt(x.dmgUnits)}${x.dmgCastle?`　🏰 ${fmt(x.dmgCastle)}`:''}</span></div>`).join('')
+          : `<div class="hint">還沒有人發動攻擊。</div>`}
+      </div>
+      <div id="war-log"></div>`;
+  }).catch(e => box.innerHTML = `<div class="card-panel"><div class="hint" style="color:var(--red)">${esc(e.message)}</div></div>`);
+}
+function warDeclare(id, name){
+  openModal(`<h3>⚔️ 向「${esc(name)}」宣戰</h3>
+    <div class="hint" style="margin-bottom:12px">宣戰後 24 小時內雙方無法變更佈防，費用從陣營資金扣除。</div>
+    <div class="flex"><button class="b-ghost grow" onclick="closeModal()">取消</button>
+    <button class="b-red grow" onclick="closeModal();doWarDeclare('${id}')">確定宣戰</button></div>`);
+}
+function doWarDeclare(id){
+  NET.req('war_declare', { targetId:id })
+    .then(()=>{ toast('⚔️ 宣戰成功！'); fanfare([523,659,784],90); renderFaction(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+function warAttack(){
+  NET.req('war_attack').then(r => {
+    renderFaction();
+    setTimeout(()=>{
+      const el = $('war-log');
+      if(el) el.innerHTML = `<div class="card-panel"><h2>本次戰鬥紀錄</h2>
+        <div id="blog2">${r.log.map(l=>`<div class="ln">${l}</div>`).join('')}</div></div>`;
+    }, 400);
+    toast(r.finished ? '🏆 城堡被攻陷，陣營戰勝利！'
+      : `⚔️ 造成守軍 ${fmt(r.dmgUnits)} 傷害${r.dmgCastle?`，城堡 ${fmt(r.dmgCastle)}`:''}`);
+    r.finished ? fanfare() : sfx(660,.15,'square');
+  }).catch(e => toast('⚠️ ' + esc(e.message)));
+}
+
+/* ================= v1.1：陣營 Boss ================= */
+function renderFBoss(box){
+  NET.req('fboss_info').then(r => {
+    const b = r.boss;
+    box.innerHTML = `
+      <div class="card-panel">
+        <div class="rhead"><div class="t">${b.icon} ${esc(b.name)}</div>
+          <div class="small">已討伐 ${b.cleared} 次</div></div>
+        <div class="center" style="font-size:56px;margin:6px 0">${b.icon}</div>
+        <div class="row"><span>生命</span><span class="tabular">${fmt(b.hp)} / ${fmt(b.maxHp)}</span></div>
+        ${hpBar(b.hp, b.maxHp, 'linear-gradient(90deg,#ff5d73,#a76bff)')}
+        <div class="row" style="margin-top:6px"><span>攻擊力</span><span class="tabular">${fmt(b.atk)}</span></div>
+        <div class="row"><span>陣營總傷害</span><span class="tabular">${fmt(b.totalDamage)}
+          <span class="small">（${(b.totalDamage/b.maxHp*100).toFixed(1)}%）</span></span></div>
+        <div class="row"><span>我的傷害</span><span class="tabular" style="color:var(--gold)">${fmt(b.myDamage)}</span></div>
+        <div class="row"><span>今日攻擊次數</span><span>${b.myAttacks} / ${b.attacksPerDay}</span></div>
+        <button class="b-red" style="width:100%;margin-top:10px" ${b.myAttacks>=b.attacksPerDay?'disabled':''}
+          onclick="fbossAttack()">⚔️ 挑戰 ${esc(b.name)}</button>
+        <div class="hint">全陣營共同削減同一隻 Boss，擊殺後<b>依傷害佔比</b>分配獎勵。次數每日重置，Boss 每被討伐一次就會換成更強的。</div>
+      </div>
+      <div class="card-panel">
+        <h2>傷害排行</h2>
+        ${b.rank.length ? b.rank.map((x,i)=>`
+          <div class="row"><span><b style="color:${i<3?'var(--gold)':'var(--dim)'}">#${i+1}</b> ${esc(x.name)}</span>
+            <span class="tabular">${fmt(x.dmg)}
+              <span class="small">（${(x.dmg/(b.totalDamage||1)*100).toFixed(1)}%）</span></span></div>`).join('')
+          : `<div class="hint">還沒有人挑戰。</div>`}
+      </div>
+      <div id="fboss-log"></div>`;
+  }).catch(e => box.innerHTML = `<div class="card-panel"><div class="hint" style="color:var(--red)">${esc(e.message)}</div></div>`);
+}
+function fbossAttack(){
+  NET.req('fboss_attack').then(r => {
+    renderFaction();
+    setTimeout(()=>{
+      const el = $('fboss-log');
+      if(el) el.innerHTML = `<div class="card-panel"><h2>本次戰鬥紀錄</h2>
+        <div id="blog3">${r.log.map(l=>`<div class="ln">${l}</div>`).join('')}</div></div>`;
+    }, 400);
+    if(r.killed){
+      fanfare([523,659,784,1046]);
+      openModal(`<h3 class="center" style="color:var(--green)">🏆 Boss 討伐成功</h3>
+        <div class="row"><span>你造成的傷害</span><span class="tabular">${fmt(r.dealt)}</span></div>
+        ${r.reward?`<div class="row"><span>傷害佔比</span><span>${(r.reward.share*100).toFixed(1)}%</span></div>
+        <div class="row"><span>金幣</span><span>+${fmt(r.reward.gold)}</span></div>
+        <div class="row"><span>貢獻度</span><span>+${fmt(r.reward.contrib)}</span></div>`:''}
+        <button class="b-primary" style="width:100%;margin-top:12px" onclick="closeModal();renderFaction()">確定</button>`);
+    }else{
+      toast(`⚔️ 造成 ${fmt(r.dealt)} 傷害`);
+      sfx(660,.15,'square');
+    }
+  }).catch(e => toast('⚠️ ' + esc(e.message)));
+}
+
+/* ================= v1.1：陣營商店 ================= */
+function renderShop(box){
+  NET.req('shop_list').then(r => {
+    box.innerHTML = `
+      <div class="card-panel">
+        <div class="rhead"><div class="t">🛒 陣營商店</div>
+          <div class="small">我的貢獻度 <b style="color:var(--gold)">${fmt(r.contrib)}</b></div></div>
+        <div class="hint" style="margin-top:0">貢獻度來自捐獻、陣營戰、陣營 Boss 與每日寶箱。</div>
+      </div>
+      <div class="card-panel">
+        ${r.items.map(it=>`
+          <div class="statrow">
+            <span class="k">${it.icon} <b>${esc(it.name)}</b><br>
+              <span class="small">${it.type==='gold'?('金幣 +'+fmt(it.amount))
+                : it.type==='bag'?('背包 +'+it.amount+' 格（上限 '+it.max+'）')
+                : (CONFIG.rarities[it.min].name+'以上 ×'+it.count)}</span></span>
+            <span class="v" style="width:auto;color:${r.contrib>=it.cost?'var(--gold)':'var(--dim2)'}">${fmt(it.cost)}</span>
+            <button class="b-gold b-xs" ${r.contrib<it.cost?'disabled':''}
+              onclick="shopBuy('${it.key}')">兌換</button>
+          </div>`).join('')}
+      </div>`;
+  }).catch(e => box.innerHTML = `<div class="card-panel"><div class="hint" style="color:var(--red)">${esc(e.message)}</div></div>`);
+}
+function shopBuy(key){
+  NET.req('shop_buy', { key })
+    .then(r => { toast(`🛒 已兌換「${esc(r.item.name)}」　${esc(r.detail)}`);
+      fanfare([659,880],80); renderFaction(); renderAll(); })
+    .catch(e => toast('⚠️ ' + esc(e.message)));
+}
+
+/* --- 線上大廳 --- */
+function renderOnline(){
+  const st = $('on-status'); if(!st) return;
+  const acc = $('on-account');
+  if(!NET.connected){
+    st.innerHTML = `<span style="color:var(--red)">⚪ 未連線</span>`;
+    acc.innerHTML = `
+      <div class="hint" style="margin-top:0">目前為<b>單機模式</b>，所有進度存在本機 LocalStorage。<br>
+        連線後可使用真人 PvP、全球排行榜、市場、交易與陣營。</div>
+      ${NET.gaveUp?`<div class="hint" style="color:var(--red)">已停止自動重連（試了 ${NET.maxRetries} 次都連不上 ${esc(NET.url||'')}）。</div>`:''}
+      <button class="b-primary" style="width:100%;margin-top:10px" onclick="showLogin()">🌐 連線並登入</button>`;
+  }else if(!NET.account){
+    st.innerHTML = `<span style="color:var(--gold)">🟡 已連線・未登入</span>`;
+    acc.innerHTML = `
+      <div class="row"><span>伺服器</span><span class="small">${esc(NET.url)}</span></div>
+      <div class="row"><span>線上人數</span><span>${NET.onlineCount}</span></div>
+      <button class="b-primary" style="width:100%;margin-top:10px" onclick="showLogin()">登入 / 註冊</button>`;
+  }else{
+    const a = NET.account;
+    st.innerHTML = `<span style="color:var(--green)">🟢 已登入</span>`;
+    acc.innerHTML = `
+      <div class="row"><span>帳號</span><span style="font-weight:800">${esc(a.name)}</span></div>
+      <div class="row"><span>伺服器</span><span class="small">${esc(NET.url)}</span></div>
+      <div class="row"><span>賽季</span><span>${NET.season?('第 '+NET.season.number+' 賽季　'+
+        Math.max(0,Math.ceil((NET.season.endAt-Date.now())/86400000))+' 天後結束'):'—'}</span></div>
+      <div class="row"><span>排位積分</span><span class="tabular">${fmt(P.rating)}　${getRank().name}</span></div>
+      <div class="row"><span>PvP 戰績</span><span>${P.wins} 勝 ${P.losses} 敗</span></div>
+      <div class="flex" style="margin-top:10px">
+        <button class="b-ghost grow b-sm" onclick="NET.doSync();toast('☁️ 已同步')">☁️ 立即同步</button>
+        <button class="b-ghost grow b-sm" onclick="doLogout()">登出</button>
+      </div>`;
+    NET.req('mail_read').then(r=>{
+      if(!r.mail.length){ $('on-mail-panel').style.display='none'; return; }
+      $('on-mail-panel').style.display='block';
+      $('on-mail').innerHTML = r.mail.map(x=>`<div class="row">
+        <span>${esc(x.title)}</span><span class="small">${esc(x.body)}</span></div>`).join('');
+    }).catch(()=>{});
+  }
+  const mn = $('mn-online');
+  if(mn) mn.textContent = !NET.connected ? '單機模式・點此連線'
+    : (NET.account ? `已登入 ${NET.account.name}　賽季 ${NET.season?NET.season.number:'—'}` : '已連線・未登入');
+  const fc = $('on-fc');
+  if(fc) fc.textContent = NET.account && NET.account.factionId ? '已加入陣營' : '建立或加入陣營';
+}
+
+/* ==========================================================================
+   9. 畫面繪製
+   ========================================================================== */
+// 從「更多」進入的子頁面（導覽列仍高亮「更多」）
+const SUB_PAGES = ['dex','ach','daily','trial','online','rank','market','trade','faction'];
+const PAGE_RENDER = { rank:renderRank, market:renderMarket, trade:renderTrade,
+                      faction:renderFaction, online:renderOnline };
+function go(pg){
+  const navKey = SUB_PAGES.includes(pg) ? 'more' : pg;
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.pg === navKey));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'pg-' + pg));
+  window.scrollTo(0,0);
+  renderAll();
+  if(PAGE_RENDER[pg]) PAGE_RENDER[pg]();      // 線上頁面才向伺服器要資料，避免無謂請求
+}
+function renderTop(){
+  $('tb-name').innerHTML = esc(P.name) +
+    (P.title ? `　<span class="tag" style="background:#ffc84a26;color:var(--gold)">${esc(P.title)}</span>` : '');
+  const rank = getRank();
+  $('tb-sub').innerHTML = `Lv.${P.level}　<span style="color:${rank.color}">${rank.name}</span>　${P.wins}勝 ${P.losses}敗`;
+  $('tb-gold').textContent = fmt(P.gold);
+  $('tb-rating').textContent = fmt(P.rating);
+}
+function renderHome(){
+  const need = expNeeded(P.level), rank = getRank();
+  $('hm-id').textContent = P.playerId;
+  $('hm-lv').textContent = 'Lv.' + P.level;
+  $('hm-expbar').style.width = clamp(P.exp / need * 100, 0, 100) + '%';
+  $('hm-exp').textContent = `EXP ${fmt(P.exp)} / ${fmt(need)}`;
+  $('hm-rank').innerHTML = `<span style="color:${rank.color};font-weight:800">${rank.name}</span>　${fmt(P.rating)} 分`;
+  $('hm-record').textContent = `${P.wins} 勝 ${P.losses} 敗`;
+  $('hm-streak').textContent = `${P.streak} / ${P.bestStreak}`;
+  $('hm-bag').textContent = `${P.cards.length} / ${P.bagSize}`;
+  $('hm-team').textContent = `${P.team.length} / ${CONFIG.battle.teamSize}`;
+  $('hm-sp').textContent = P.statPoints;
+
+  const pl = CONFIG.draw.pity.legendary, pm = CONFIG.draw.pity.mythic;
+  $('hm-pityL').textContent = `${P.pity.legendary} / ${pl}`;
+  $('hm-pityLbar').style.width = clamp(P.pity.legendary/pl*100,0,100) + '%';
+  $('hm-pityM').textContent = `${P.pity.mythic} / ${pm}`;
+  $('hm-pityMbar').style.width = clamp(P.pity.mythic/pm*100,0,100) + '%';
+}
+function renderDraw(){
+  $('dw-bag').textContent = `${P.cards.length} / ${P.bagSize}`;
+  $('dw-total').textContent = fmt(P.drawCount);
+  const rates = getDrawRates(), base = CONFIG.draw.rates;
+  $('dw-rates').innerHTML = CONFIG.rarityOrder.map(k=>{
+    const R = CONFIG.rarities[k], up = rates[k] - base[k];
+    return `<div class="row">
+      <span class="t-${k}" style="font-weight:800">${R.name}</span>
+      <span class="tabular">${fmt(R.range[0])} ~ ${fmt(R.range[1])}
+        <b style="color:var(--txt)">${rates[k].toFixed(2)}%</b>
+        ${Math.abs(up)>0.0001 ? `<span style="color:${up>0?'var(--green)':'var(--dim2)'};font-size:11px">
+          （${up>0?'+':''}${up.toFixed(2)}）</span>` : ''}</span></div>`;
+  }).join('') + `<div class="row"><span>總和</span>
+      <span style="color:var(--green);font-weight:800">${CONFIG.rarityOrder.reduce((s,k)=>s+rates[k],0).toFixed(2)}%</span></div>`;
+}
+function cardHTML(c, opts={}){
+  const R = CONFIG.rarities[c.rarity], E = ELEMENTS[c.element];
+  const inTeam = P.team.includes(c.id);
+  return `<div class="gcard r-${c.rarity} ${opts.sel?'sel':''}" onclick="${opts.onclick || `showCardDetail('${c.id}')`}">
+    ${c.plus > 0 ? `<div class="plus">+${c.plus}</div>` : ''}
+    ${c.locked ? '<div class="lock">🔒</div>' : ''}
+    ${inTeam ? '<div class="team">隊</div>' : ''}
+    <div class="el">${E.icon}</div>
+    <div class="nm">${esc(c.name)}</div>
+    <div class="val">${fmt(c.value)}</div>
+    <div class="rr t-${c.rarity}">${R.name}</div>
+    <div class="sk">${skillText(c.skill)}</div>
+  </div>`;
+}
+let bagFilter = 'all';
+function setBagFilter(f){ bagFilter = f; renderBag(); }
+function renderBag(){
+  $('bg-count').textContent = `${P.cards.length} / ${P.bagSize}`;
+  $('bg-team').textContent  = `${P.team.length} / ${CONFIG.battle.teamSize}`;
+  const opts = [['all','全部'], ...CONFIG.rarityOrder.map(k=>[k, CONFIG.rarities[k].name]), ['team','隊伍'], ['locked','已鎖定']];
+  $('bg-filters').innerHTML = opts.map(([v,t])=>
+    `<button class="${bagFilter===v?'on':''}" onclick="setBagFilter('${v}')">${t}</button>`).join('');
+
+  let list = [...P.cards];
+  if(bagFilter === 'team')        list = list.filter(c => P.team.includes(c.id));
+  else if(bagFilter === 'locked') list = list.filter(c => c.locked);
+  else if(bagFilter !== 'all')    list = list.filter(c => c.rarity === bagFilter);
+  list.sort((a,b)=> CONFIG.rarities[b.rarity].order - CONFIG.rarities[a.rarity].order || b.value - a.value);
+
+  const nt = nextBagTier();
+  $('bg-nexttier').textContent = nt ? `${P.bagSize} → ${nt.cap}　💰${fmt(nt.cost)}` : '已達上限';
+  $('bg-grid').innerHTML = list.map(c => cardHTML(c)).join('');
+  $('bg-empty').innerHTML = list.length ? '點擊卡牌可編隊、鎖定或刪除。' :
+    (P.cards.length ? '這個分類沒有卡牌。' : '背包空空的，先去抽牌吧！');
+}
+let battleMode = 'ai';
+function setBattleMode(m){
+  battleMode = m;
+  ['ai','boss','pvp'].forEach(k =>
+    $('md-'+k).className = (m===k ? 'b-primary' : 'b-ghost') + ' grow b-sm');
+  $('bt-aipanel').style.display   = m==='ai'   ? 'block' : 'none';
+  $('bt-bosspanel').style.display = m==='boss' ? 'block' : 'none';
+  $('bt-pvppanel').style.display  = m==='pvp'  ? 'block' : 'none';
+  renderBattlePrep();
+}
+function renderPvpPrep(){
+  if(!$('pv-status')) return;
+  const cfg = NET.server ? NET.server.pvp : null;
+  $('pv-cost').textContent = cfg ? cfg.cost : 100;
+  $('pv-win').textContent  = cfg ? `💰 +${cfg.win.gold}　🏆 +${cfg.win.rating}　EXP +${cfg.win.exp}` : '—';
+  $('pv-lose').textContent = cfg ? `💰 +${cfg.lose.gold}　🏆 ${cfg.lose.rating}　EXP +${cfg.lose.exp}` : '—';
+  $('pv-online').textContent = NET.connected ? `${NET.onlineCount} 人` : '—';
+  $('pv-season').textContent = NET.season ? `賽季 ${NET.season.number}` : '';
+  const err = !NET.connected ? '尚未連線到伺服器'
+            : !NET.account   ? '請先登入帳號'
+            : validateTeam();
+  $('pv-status').innerHTML = isOnline()
+    ? `<div class="row"><span>帳號</span><span style="font-weight:800">${esc(NET.account.name)}</span></div>
+       <div class="row"><span>排位積分</span><span class="tabular">${fmt(P.rating)}　${getRank().name}</span></div>`
+    : `<div class="hint" style="margin-top:0">真人 PvP 需要連線到伺服器。到「更多 → 線上大廳」登入即可。</div>`;
+  $('pv-queue').disabled = !!err;
+  $('pv-err').innerHTML = err
+    ? `<span style="color:var(--red)">⚠️ ${esc(err)}</span>`
+    : ($('pv-cancel').style.display==='block' ? $('pv-err').innerHTML : '準備完成，可以配對。');
+}
+function selectBoss(i){
+  const b = CONFIG.boss.list[i];
+  if(!bossUnlocked(b)){ toast(`🔒 需要 Lv.${b.unlockLv}`); return; }
+  bossIndex = i; renderBattlePrep();
+}
+function renderBattlePrep(){
+  const t = teamCards();
+  $('bt-team').innerHTML = t.length
+    ? t.map(c => cardHTML(c)).join('')
+    : `<div class="hint" style="grid-column:1/-1">尚未編隊 — 到「🎒 卡牌」頁面點選卡牌加入隊伍。</div>`;
+  $('bt-power').textContent = fmt(teamPower(t));
+  const myth = t.filter(c=>c.rarity==='mythic').length;
+  $('bt-teamnote').innerHTML =
+    `隊伍 ${t.length} / ${CONFIG.battle.teamSize}　·　神話卡 ${myth} / ${CONFIG.battle.maxMythicInTeam}`;
+  const err = validateTeam();
+  $('bt-start').disabled = !!err || P.gold < CONFIG.battle.cost;
+  $('bt-err').innerHTML = err ? `<span style="color:var(--red)">⚠️ ${err}</span>`
+    : (P.gold < CONFIG.battle.cost ? `<span style="color:var(--red)">⚠️ 金幣不足（需要 ${CONFIG.battle.cost}）</span>`
+    : '準備完成，可以開戰。');
+
+  // Boss 面板
+  $('bt-bosscost').textContent = fmt(CONFIG.boss.cost);
+  $('bt-bosslist').innerHTML = CONFIG.boss.list.map((b,i)=>{
+    const ok = bossUnlocked(b), rec = P.bossRecords[b.key] || {best:0,clears:0};
+    return `<div class="bosscard ${bossIndex===i?'on':''} ${ok?'':'lockd'}" onclick="selectBoss(${i})">
+      <div class="bi">${ok?b.icon:'🔒'}</div>
+      <div class="grow">
+        <div class="bn">${b.name}${rec.clears?` <span class="tag" style="background:#3ddc9733;color:var(--green)">已討伐 ${rec.clears}</span>`:''}</div>
+        <div class="bd">HP ${fmt(b.hp)}　攻擊 ${fmt(b.atk)}
+          ${ok?'':`　·　需要 Lv.${b.unlockLv}`}
+          ${rec.best?`　·　最佳傷害 ${fmt(rec.best)}`:''}</div>
+      </div></div>`;
+  }).join('');
+  const bd = CONFIG.boss.list[bossIndex];
+  const berr = !bossUnlocked(bd) ? `🔒 需要 Lv.${bd.unlockLv}` : (err || (P.gold < CONFIG.boss.cost ? `金幣不足（需要 ${CONFIG.boss.cost}）` : null));
+  $('bt-bossstart').disabled = !!berr;
+  $('bt-bosserr').innerHTML = berr ? `<span style="color:var(--red)">⚠️ ${berr}</span>` : '準備完成，可以出發。';
+}
+function unitTag(u){
+  const R = CONFIG.rarities[u.rarity];
+  return `<b class="t-${u.rarity}">${ELEMENTS[u.element].icon}${esc(u.name)}</b>`;
+}
+function battleCardHTML(u, i, side){
+  const E = ELEMENTS[u.element];
+  const pctHp = clamp(u.hp / u.maxHp * 100, 0, 100);
+  const sel = (side==='player' && B.selected === i);
+  const targetable = (side==='enemy' && B.turn==='player' && B.selected !== null && u.alive);
+  const acted = (B.mode==='boss' && side==='player' && B.acted && B.acted.has(i));
+  const onclick = side === 'player' ? `selectMyCard(${i})` : `playerAttack(${i})`;
+  const buffs = [];
+  if(u.skill === 'shield'   && !u.used.shield)   buffs.push('🛡️');
+  if(u.skill === 'revive'   && !u.used.revive)   buffs.push('✨');
+  if(u.skill === 'timestop' && !u.used.timestop) buffs.push('⏳');
+  return `<div class="bcard ${side==='enemy'?'enemy':''} ${u.alive?'':'dead'} ${sel?'sel':''} ${targetable?'targetable':''} ${acted?'acted':''}"
+      id="bc-${side}-${i}" onclick="${onclick}">
+    ${buffs.length?`<div class="buff">${buffs.join('')}</div>`:''}
+    <div class="el">${E.icon}</div>
+    <div class="nm t-${u.rarity}">${esc(u.name)}</div>
+    <div class="val">${fmt(Math.max(0,u.hp))}</div>
+    <div class="hpbar"><i style="width:${pctHp}%"></i></div>
+    <div class="sk">${skillText(u.skill)}</div>
+  </div>`;
+}
+function renderBattle(){
+  if(!B){ renderBattlePrep(); return; }
+  const isBoss = B.mode === 'boss';
+  $('bt-bossbox').style.display  = isBoss ? 'block' : 'none';
+  $('bt-enemybox').style.display = isBoss ? 'none'  : 'block';
+  $('bt-endround').style.display = isBoss ? 'block' : 'none';
+
+  if(isBoss){
+    const bs = B.boss;
+    $('bs-icon').textContent = bs.icon;
+    $('bs-name').textContent = bs.name;
+    $('bs-hp').textContent = `${fmt(Math.max(0,bs.hp))} / ${fmt(bs.maxHp)}`;
+    $('bs-bar').style.width = clamp(bs.hp/bs.maxHp*100,0,100) + '%';
+    const st = [];
+    if(bs.barrier) st.push('🛡️ 神之屏障');
+    if(bs.doom>0)  st.push(`☠ 末日倒數 ${bs.doom}`);
+    st.push(`累計傷害 ${fmt(B.totalDamage)}`);
+    $('bs-state').textContent = st.join('　·　');
+  }else{
+    $('bt-enemy').innerHTML  = B.enemy.map((u,i)=>battleCardHTML(u,i,'enemy')).join('');
+    $('bt-ealive').textContent = `${B.enemy.filter(u=>u.alive).length} / ${B.enemy.length} 存活`;
+  }
+  $('bt-player').innerHTML = B.player.map((u,i)=>battleCardHTML(u,i,'player')).join('');
+  $('bt-palive').textContent = `${B.player.filter(u=>u.alive).length} / ${B.player.length} 存活`;
+
+  const tb = $('bt-turn');
+  if(B.over){ tb.className = 'turnbar'; tb.textContent = '戰鬥結束'; }
+  else if(B.turn === 'player'){
+    tb.className = 'turnbar p';
+    if(isBoss){
+      const left = B.player.filter((u,i)=>u.alive && !B.acted.has(i)).length;
+      tb.textContent = B.selected === null
+        ? `你的回合 — 還有 ${left} 張可行動，點選卡牌`
+        : '再點上方 Boss 發動攻擊';
+    }else{
+      tb.textContent = B.selected === null ? '你的回合 — 點選一張我方卡牌' : '選擇要攻擊的敵方卡牌';
+    }
+  }else{
+    tb.className = 'turnbar e';
+    tb.textContent = isBoss ? 'Boss 行動中…' : '敵方行動中…';
+  }
+}
+function pushLog(html){
+  if(!B) return;
+  B.log.push(html);
+  const box = $('blog');
+  if(box){ box.insertAdjacentHTML('beforeend', html); box.scrollTop = box.scrollHeight; }
+}
+function popDamage(unit, text, color){
+  const side = unit.side;
+  const arr = side === 'player' ? B.player : B.enemy;
+  const i = arr.indexOf(unit);
+  const el = $(`bc-${side}-${i}`);
+  if(!el) return;
+  const d = document.createElement('div');
+  d.className = 'dmgpop'; d.textContent = text; d.style.color = color;
+  el.appendChild(d);
+  setTimeout(()=>d.remove(), 1000);
+}
+const STAT_INFO = [
+  { key:'atk',  name:'攻擊', desc:()=>`傷害 +${(P.stats.atk*CONFIG.battle.atkPerPoint*100).toFixed(0)}%` },
+  { key:'hp',   name:'血量', desc:()=>`角色生命（Boss 模式）` },
+  { key:'def',  name:'防禦', desc:()=>`減傷 ${(P.stats.def/(P.stats.def+CONFIG.battle.defConstant)*100).toFixed(1)}%` },
+  { key:'mdef', name:'魔抗', desc:()=>`魔法減傷（v0.2）` },
+  { key:'spd',  name:'速度', desc:()=>`決定先手` },
+  { key:'con',  name:'體質', desc:()=>`角色 HP ${fmt(CONFIG.player.baseHpFormula.base + P.stats.con*CONFIG.player.baseHpFormula.perCon)}` },
+  { key:'luck', name:'幸運', desc:()=>{
+      const r = getDrawRates(), b = CONFIG.draw.rates;
+      return `傳說 +${(r.legendary-b.legendary).toFixed(2)}%　神話 +${(r.mythic-b.mythic).toFixed(2)}%`; } },
+];
+function renderMore(){
+  $('mr-sp').textContent = P.statPoints > 0 ? `（可分配 ${P.statPoints} 點）` : '（無可分配點數）';
+  $('mr-stats').innerHTML = STAT_INFO.map(s=>`
+    <div class="statrow">
+      <span class="k">${s.name}</span>
+      <span class="d">${s.desc()}</span>
+      <span class="v">${P.stats[s.key]}</span>
+      <button class="b-gold b-xs" ${P.statPoints<=0?'disabled':''} onclick="upgradeStat('${s.key}')">＋</button>
+    </div>`).join('');
+  $('mr-hp').textContent = fmt(CONFIG.player.baseHpFormula.base + P.stats.con * CONFIG.player.baseHpFormula.perCon);
+
+  const rank = getRank();
+  $('mr-rating').textContent = fmt(P.rating);
+  $('mr-rank').innerHTML = `<span style="color:${rank.color};font-weight:800">${rank.name}</span>`;
+  $('mr-ranks').innerHTML = CONFIG.ranks.map((r,i)=>{
+    const next = CONFIG.ranks[i+1];
+    const range = next ? `${fmt(r.min)} ~ ${fmt(next.min-1)}` : `${fmt(r.min)}+`;
+    return `<div class="row"><span style="color:${r.color}">${r.name}</span><span class="tabular">${range}</span></div>`;
+  }).join('');
+
+  // 「更多」選單摘要
+  const doneAch = CONFIG.achievements.filter(a=>P.achievements[a.key]).length;
+  const doneQ = P.daily.quests.filter(q=>q.claimed).length;
+  $('mn-dex').textContent   = `${dexCount()} / ${DEX_TOTAL} 種`;
+  $('mn-ach').textContent   = `${doneAch} / ${CONFIG.achievements.length} 個`;
+  $('mn-daily').textContent = `${doneQ} / ${P.daily.quests.length} 完成${P.daily.chestClaimed?'　·　寶箱已領':''}`;
+  $('mn-trial').textContent = trialUnlocked()
+    ? `第 ${P.trial.maxFloor} / ${CONFIG.trial.floors} 層`
+    : `🔒 需要 Lv.${CONFIG.trial.unlockLv}`;
+
+  // Boss 討伐紀錄
+  $('mr-boss').innerHTML = CONFIG.boss.list.map(b=>{
+    const rec = P.bossRecords[b.key] || {best:0,clears:0};
+    const ok = bossUnlocked(b);
+    return `<div class="row"><span>${ok?b.icon:'🔒'} ${b.name}</span>
+      <span class="tabular">${ok ? (rec.clears
+        ? `<span style="color:var(--green)">已討伐 ${rec.clears} 次</span>　最佳 ${fmt(rec.best)}`
+        : (rec.best ? `未討伐　最佳 ${fmt(rec.best)}` : '未挑戰'))
+        : `需要 Lv.${b.unlockLv}`}</span></div>`;
+  }).join('');
+
+  // 背包容量
+  const nt = nextBagTier();
+  $('mr-bag').innerHTML = CONFIG.bagTiers.map(t=>{
+    const owned = P.bagSize >= t.cap;
+    return `<div class="row"><span>${owned?'✅':'　'} ${t.cap} 格</span>
+      <span class="tabular">${t.cost ? `💰 ${fmt(t.cost)}` : '免費'}${owned?'　<span style="color:var(--green)">已擁有</span>':''}</span></div>`;
+  }).join('') + (nt
+    ? `<button class="b-gold" style="width:100%;margin-top:10px" ${P.gold<nt.cost?'disabled':''}
+         onclick="expandBag()">🎒 擴充至 ${nt.cap} 格（💰 ${fmt(nt.cost)}）</button>`
+    : `<div class="hint" style="color:var(--green)">已達最大容量 ${P.bagSize} 格</div>`);
+
+  $('mr-ver').textContent = 'v' + CONFIG.version;
+  const raw = localStorage.getItem(CONFIG.saveKey) || '';
+  $('mr-size').textContent = raw ? `${(raw.length/1024).toFixed(1)} KB` : '—';
+  $('mr-saved').textContent = P.savedAt ? new Date(P.savedAt).toLocaleString('zh-TW') : '—';
+
+  renderSelfCheck();
+}
+// 規格要求的自我檢查
+function renderSelfCheck(){
+  const rates = getDrawRates();
+  const sum = CONFIG.rarityOrder.reduce((s,k)=>s+rates[k],0);
+  const t = teamCards();
+  const checks = [
+    ['抽牌機率總和為 100%',      Math.abs(sum-100) < 1e-6, `${sum.toFixed(4)}%`],
+    ['背包容量限制生效',          P.cards.length <= P.bagSize, `${P.cards.length} / ${P.bagSize}`],
+    ['隊伍為 5 張才可出戰',       t.length === CONFIG.battle.teamSize, `${t.length} / 5`],
+    ['隊伍神話卡 ≤ 1',            t.filter(c=>c.rarity==='mythic').length <= CONFIG.battle.maxMythicInTeam,
+                                  `${t.filter(c=>c.rarity==='mythic').length} 張`],
+    ['隊伍卡牌皆存在於背包',      P.team.every(id => !!findCard(id)), `${P.team.length} 筆`],
+    ['排位積分未低於 0',          P.rating >= CONFIG.battle.minRating, fmt(P.rating)],
+    ['防禦減傷永遠 < 100%',       CONFIG.battle.defConstant > 0, `上限 <100%`],
+    ['LocalStorage 可用',         !!localStorage.getItem(CONFIG.saveKey), '已寫入'],
+    ['強化 +1~+5 成功率 100%',    CONFIG.upgrade.rates.slice(0,5).every(r=>r===1), '5 級'],
+    ['合成結果 < 素材總和',        CONFIG.fusion.maxRatio < 1,
+                                  `上限 ${(CONFIG.fusion.maxRatio*100).toFixed(0)}%`],
+    ['合成品質機率總和 100%',      Math.abs(CONFIG.fusion.quality.reduce((s,q)=>s+q.chance,0)-1)<1e-9,
+                                  `${(CONFIG.fusion.quality.reduce((s,q)=>s+q.chance,0)*100).toFixed(0)}%`],
+    ['卡牌數值與強化等級一致',     P.cards.every(c => c.maxValue === c.baseValue + Math.max(1,Math.round(c.baseValue*CONFIG.upgrade.gainRatio))*c.plus),
+                                  `${P.cards.length} 張`],
+    ['背包容量為合法階層',         CONFIG.bagTiers.some(t=>t.cap===P.bagSize), `${P.bagSize} 格`],
+    ['圖鑑目錄與名稱產生器一致',   CONFIG.dexOrder.every(r=>DEX_CATALOG[r].length===NAME_PARTS.prefix[r].length*NAME_PARTS.core.length),
+                                  `${DEX_TOTAL} + ${DEX_CATALOG.super_mythic.length} 種`],
+    ['圖鑑紀錄皆為合法種類',       Object.keys(P.dex).every(k=>{const i=k.indexOf(':');
+                                    return (DEX_CATALOG[k.slice(0,i)]||[]).includes(k.slice(i+1));}),
+                                  `${Object.keys(P.dex).length} 筆`],
+    ['每日任務為今日且不重複',     P.daily.date===todayStr() && new Set(P.daily.quests.map(q=>q.key)).size===P.daily.quests.length,
+                                  `${P.daily.quests.length} 個`],
+    ['試煉層數未超過上限',         P.trial.maxFloor<=CONFIG.trial.floors, `${P.trial.maxFloor} / ${CONFIG.trial.floors}`],
+    ['稱號皆來自已達成成就',       P.titles.every(t=>CONFIG.achievements.some(a=>a.title===t&&P.achievements[a.key])),
+                                  `${P.titles.length} 個`],
+    ['超神話不會從抽牌產出',       !CONFIG.rarityOrder.includes('super_mythic'), '僅試煉取得'],
+  ];
+  $('mr-check').innerHTML = checks.map(([n,ok,v])=>
+    `<div class="row"><span>${ok?'✅':'❌'} ${n}</span><span class="tabular"
+      style="color:${ok?'var(--green)':'var(--red)'}">${v}</span></div>`).join('');
+}
+/* ---------- v0.3 畫面 ---------- */
+let dexFilter = 'common';
+function setDexFilter(f){ dexFilter = f; renderDex(); }
+function renderDex(){
+  const total = dexCount();
+  $('dx-total').textContent = `${total} / ${DEX_TOTAL}`;
+  $('dx-bar').style.width = clamp(total/DEX_TOTAL*100,0,100) + '%';
+  $('dx-rows').innerHTML = CONFIG.dexOrder.map(r=>{
+    const R = CONFIG.rarities[r], have = dexCount(r), all = DEX_CATALOG[r].length;
+    return `<div class="row"><span class="t-${r}" style="font-weight:800">${R.name}${R.special?' <span class="small">（試煉專屬）</span>':''}</span>
+      <span class="tabular">${have} / ${all}
+        <span class="small">（${(have/all*100).toFixed(0)}%）</span></span></div>`;
+  }).join('');
+
+  $('dx-miles').innerHTML = CONFIG.dex.milestones.map(m=>{
+    const need = m.n === 'all' ? DEX_TOTAL : m.n;
+    const done = P.dexClaimed.includes(String(m.n));
+    return `<div class="row"><span>${done?'✅':'　'} 收集 ${m.n==='all'?'全部':m.n} 種</span>
+      <span style="color:${done?'var(--green)':'var(--dim)'}">${m.label}
+        <span class="small">（${Math.min(total,need)} / ${need}）</span></span></div>`;
+  }).join('');
+
+  $('dx-filters').innerHTML = CONFIG.dexOrder.map(r=>
+    `<button class="${dexFilter===r?'on':''}" onclick="setDexFilter('${r}')">${CONFIG.rarities[r].name}</button>`).join('');
+
+  const names = DEX_CATALOG[dexFilter];
+  $('dx-grid').className = 'dexgrid';
+  $('dx-grid').innerHTML = names.map(n=>{
+    const cnt = P.dex[dexKey(dexFilter,n)] || 0;
+    return `<div class="dexcell ${cnt?'got':'miss'} ${cnt?'r-'+dexFilter:''}">
+      ${cnt>1?`<span class="cnt">×${cnt}</span>`:''}
+      ${cnt ? esc(n) : '？？？'}</div>`;
+  }).join('');
+}
+function renderAch(){
+  const total = CONFIG.achievements.length;
+  const done = CONFIG.achievements.filter(a=>P.achievements[a.key]).length;
+  $('ac-count').textContent = `${done} / ${total}`;
+  $('ac-bar').style.width = clamp(done/total*100,0,100) + '%';
+  renderTitles();
+  $('ac-list').innerHTML = CONFIG.achievements.map(a=>{
+    const ok = !!P.achievements[a.key];
+    return `<div class="achrow ${ok?'done':''}">
+      <span class="ai">${ok?'🏆':'🔒'}</span>
+      <span class="ab"><span class="an">${a.name}</span><br><span class="ad">${a.desc}</span></span>
+      <span class="ar">💰 ${fmt(a.gold)}${a.title?`<br><span style="color:var(--gold)">稱號 ${a.title}</span>`:''}${a.pack?'<br><span style="color:var(--c-mythic)">神話卡包</span>':''}</span>
+    </div>`;
+  }).join('');
+}
+function renderTitles(){
+  const el = $('ac-titles'); if(!el) return;
+  el.innerHTML = P.titles.length
+    ? P.titles.map(t=>`<span class="titlechip ${P.title===t?'on':''}" onclick="setTitle('${esc(t)}')">${esc(t)}</span>`).join('')
+      + `<div class="hint">點擊即可配戴／取消，配戴中的稱號會顯示在名稱旁。</div>`
+    : `<div class="hint">尚未解鎖任何稱號。完成帶有稱號獎勵的成就即可獲得。</div>`;
+}
+function renderDaily(){
+  ensureDaily();
+  $('dq-date').textContent = P.daily.date;
+  $('dq-list').innerHTML = P.daily.quests.map(q=>{
+    const def = questDef(q.key), prog = questProgress(q), done = questDone(q);
+    return `<div class="qrow">
+      <span class="qi">${q.claimed?'✅':done?'🎁':'📋'}</span>
+      <span class="qb"><span class="qn">${def.name}</span>
+        <div class="bar" style="height:5px;margin:4px 0 2px"><i style="width:${prog/def.target*100}%;
+          background:${done?'var(--green)':'var(--blue)'}"></i></div>
+        <span class="qp">${prog} / ${def.target}　·　💰 ${def.gold}</span></span>
+      <button class="${q.claimed?'b-ghost':done?'b-gold':'b-ghost'} b-xs" ${(q.claimed||!done)?'disabled':''}
+        onclick="claimQuest('${q.key}')">${q.claimed?'已領取':done?'領取':'進行中'}</button>
+    </div>`;
+  }).join('');
+  const C = CONFIG.daily.chest;
+  $('dq-chest').textContent = `💰 ${fmt(C.gold)}　EXP ${fmt(C.exp)}　${CONFIG.rarities[C.cardMin].name}以上卡牌 ×1`;
+  $('dq-chestbtn').disabled = P.daily.chestClaimed || !allQuestsClaimed();
+  $('dq-chestbtn').textContent = P.daily.chestClaimed ? '✅ 今日已領取' : '🎁 開啟寶箱';
+}
+function renderTrial(){
+  const T = CONFIG.trial, mf = P.trial.maxFloor, next = trialNextFloor();
+  $('tr-prog').textContent = `${mf} / ${T.floors} 層`;
+  $('tr-bar').style.width = clamp(mf/T.floors*100,0,100) + '%';
+  const type = trialFloorType(next);
+  const typeName = {normal:'一般層', boss:'🗿 Boss 層（獎勵 ×2）',
+                    super:'🌀 超級 Boss（獎勵 ×5）', final:'👁️ 最終 Boss'}[type];
+  const cleared = mf >= T.floors;
+  $('tr-info').innerHTML = cleared
+    ? `<div class="row"><span>狀態</span><span style="color:var(--green);font-weight:800">🏆 已通關全部 100 層</span></div>`
+    : `<div class="row"><span>下一層</span><span style="font-weight:800">第 ${next} 層　${typeName}</span></div>
+       <div class="row"><span>敵方強度</span><span class="tabular">${
+          type==='normal' ? `戰力 ${fmt(trialPower(next))}` : `HP ${fmt(trialBossDef(next).hp)}　攻擊 ${fmt(trialBossDef(next).atk)}`}</span></div>
+       <div class="row"><span>首次通過獎勵</span><span>💰 ${fmt(T.goldPerFloor*next*(type==='boss'?2:type==='super'?5:1))}　EXP ${fmt(T.expPerFloor*next*(type==='boss'?2:type==='super'?5:1))}</span></div>`;
+  const err = !trialUnlocked() ? `需要 Lv.${T.unlockLv}（目前 Lv.${P.level}）`
+            : cleared ? null : validateTeam();
+  $('tr-start').disabled = !!err || cleared;
+  $('tr-err').innerHTML = err ? `<span style="color:var(--red)">⚠️ ${err}</span>`
+    : cleared ? '' : '準備完成，可以進入試煉。';
+
+  $('tr-floors').innerHTML = `<div class="floors">` +
+    Array.from({length:T.floors},(_,i)=>{
+      const f = i+1, t = trialFloorType(f);
+      const cls = [ 'fl' ];
+      if(f <= mf) cls.push('done');
+      else if(f === next && !cleared) cls.push('next');
+      if(t !== 'normal') cls.push(t);
+      return `<div class="${cls.join(' ')}" title="第 ${f} 層">${f}</div>`;
+    }).join('') + `</div>
+    <div class="hint">🟩 已通過　🟨 下一層　紅框 Boss　紫框 超級 Boss　青框 最終 Boss</div>`;
+}
+
+function renderAll(){
+  if(!P) return;
+  ensureDaily();
+  renderTop(); renderHome(); renderDraw(); renderBag(); renderMore();
+  renderDex(); renderAch(); renderDaily(); renderTrial();
+  renderOnline(); renderPvpPrep();
+  if(PV) renderPvp();
+  else if(B) renderBattle();
+  else renderBattlePrep();
+}
+
+/* ==========================================================================
+   10. 啟動
+   ========================================================================== */
+function showCreatePlayer(){
+  openModal(`
+    <h3>🃏 歡迎來到無限卡牌</h3>
+    <div class="hint" style="margin-bottom:12px">
+      免費無限抽牌、收集卡牌、組成 5 張隊伍與 AI 對戰。<br>
+      先取一個名字吧。
+    </div>
+    <input id="np-name" maxlength="12" placeholder="輸入玩家名稱（最多 12 字）" value="勇者">
+    <button class="b-primary" style="width:100%;margin-top:12px" onclick="createPlayer()">開始遊戲</button>
+    <div class="hint">初始金幣 ${fmt(CONFIG.player.startGold)}　·　背包 ${CONFIG.player.startBagSize} 格　·　排位 ${CONFIG.player.startRating}</div>`);
+  setTimeout(()=>{ const el = $('np-name'); if(el){ el.focus(); el.select(); } }, 50);
+}
+function createPlayer(){
+  const name = ($('np-name').value || '').trim().slice(0,12) || '勇者';
+  P = newPlayer(name);
+  rollDailyQuests();
+  closeModal();
+  saveGame(); setBattleMode('ai'); renderAll();
+  toast(`歡迎，${esc(name)}！`);
+}
+function init(){
+  document.querySelectorAll('#nav button').forEach(b=>{
+    b.onclick = () => { go(b.dataset.pg); sfx(600,.05,'square',.025); };
+  });
+  P = loadGame();
+  if(!P){ showCreatePlayer(); }
+  else {
+    ensureDaily();
+    checkAchievements(true);      // 舊存檔補發已達成的成就（靜默）
+    setBattleMode('ai'); renderAll(); saveGame();
+  }
+  // 若之前登入過，自動重連（純單機玩家不會受影響：連不上就靜靜地繼續離線）
+  if(localStorage.getItem('ic_token') || localStorage.getItem('ic_server')) NET.connect();
+  // 離開頁面前保險存檔
+  window.addEventListener('beforeunload', ()=>saveGame());
+}
+init();
+</script>
+</body>
+</html>

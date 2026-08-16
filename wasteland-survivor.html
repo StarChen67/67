@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>末日求生記 — Wasteland Survivor</title>
+<style>
+:root{
+  --bg:#15120d; --panel:#211c15; --panel2:#2b2419; --line:#4a3f2a;
+  --txt:#f0ece0; --dim:#a89a7c; --gold:#e8a33d; --green:#7cbf5a; --red:#ff5d5d; --blue:#5aa9ff; --toxic:#9ed84a;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#2b2314 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding-bottom:24px;overflow-x:hidden}
+#app{max-width:640px;margin:0 auto;padding:14px 12px 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.panel h2{font-size:12px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid #ffffff10}
+.row:last-child{border-bottom:none}
+.row>span:first-child{color:var(--dim)}
+.flex{display:flex;gap:8px;flex-wrap:wrap}
+.grow{flex:1}
+.center{text-align:center}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.7;margin-top:8px}
+.hint b{color:var(--gold)}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;padding:11px 14px;font-size:13.5px;font-weight:600;color:var(--txt);background:var(--panel2);transition:transform .1s;width:100%;text-align:left}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.b-gold{background:linear-gradient(135deg,#e8a33d,#c9781f);color:#221200;text-align:center}
+.b-green{background:linear-gradient(135deg,#7cbf5a,#4f8f36);color:#0d1f06;text-align:center}
+.b-ghost{background:transparent;border:1px solid var(--line);text-align:center}
+.b-red{background:linear-gradient(135deg,#ff5d5d,#c62f2f);text-align:center}
+.b-sm{padding:6px 10px;font-size:12px;width:auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 14px}
+.brand{font-weight:800;font-size:17px;letter-spacing:1px}
+.brand span{color:var(--gold)}
+.day-badge{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--gold)}
+.bar-bg{background:#00000055;border-radius:8px;height:9px;overflow:hidden;margin:4px 0 8px}
+.bar-fill{height:100%;border-radius:8px;transition:width .3s}
+.stat-line{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);margin-bottom:2px}
+.choice-btn{margin-bottom:8px;line-height:1.5}
+.choice-btn .cost{display:block;font-size:11px;color:var(--dim);font-weight:400;margin-top:3px}
+.story-text{font-size:14px;line-height:1.9;white-space:pre-wrap;margin-bottom:4px}
+.log{background:#00000040;border-radius:8px;padding:10px;font-size:12.5px;line-height:1.9;max-height:150px;overflow-y:auto;color:var(--dim)}
+.log b{color:var(--txt)}
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.inv-item{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 4px}
+.inv-item .em{font-size:20px}
+.inv-item .n{font-size:13px;font-weight:700;margin-top:2px}
+.inv-item .lb{font-size:10px;color:var(--dim)}
+.pick-card{background:var(--panel2);border:2px solid var(--line);border-radius:14px;padding:14px;text-align:center;cursor:pointer;margin-bottom:10px}
+.pick-card.sel{border-color:var(--gold)}
+.pick-card .em{font-size:32px;margin-bottom:4px}
+.pick-card h3{font-size:14px;margin-bottom:4px}
+.pick-card p{font-size:11.5px;color:var(--dim);line-height:1.6}
+.enemy-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;text-align:center}
+.enemy-card .em{font-size:40px}
+.ending-title{font-size:20px;font-weight:800;margin-bottom:6px}
+.ending-title.good{color:var(--green)}
+.ending-title.bad{color:var(--red)}
+.ending-title.neutral{color:var(--gold)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SAVE_KEY = 'wasteland_survivor_save_v1';
+
+const BACKGROUNDS = [
+  { id:'soldier', emoji:'🎖️', name:'退役軍人', desc:'體魄強健、彈藥充足，但物資消耗較快。',
+    stats:{hp:120,maxHp:120,hunger:20,thirst:20,sanity:70},
+    items:{food:2,water:2,medkit:1,ammo:5,parts:0} },
+  { id:'medic', emoji:'💊', name:'隨隊醫師', desc:'擅長急救、心理素質穩定，體力普通。',
+    stats:{hp:90,maxHp:90,hunger:20,thirst:20,sanity:90},
+    items:{food:2,water:2,medkit:3,ammo:1,parts:0} },
+  { id:'scavenger', emoji:'🎒', name:'廢土流浪者', desc:'熟悉搜刮技巧，物資豐富，但戰鬥能力較弱。',
+    stats:{hp:85,maxHp:85,hunger:15,thirst:15,sanity:75},
+    items:{food:4,water:4,medkit:1,ammo:2,parts:2} },
+];
+
+const ITEM_META = {
+  food:{emoji:'🥫',label:'食物'}, water:{emoji:'💧',label:'淨水'},
+  medkit:{emoji:'💉',label:'醫療包'}, ammo:{emoji:'🔫',label:'彈藥'}, parts:{emoji:'⚙️',label:'零件'},
+};
+
+function freshState(bg){
+  return {
+    day:1, screen:'day', bg:bg.id,
+    hp:bg.stats.hp, maxHp:bg.stats.maxHp, hunger:bg.stats.hunger, thirst:bg.stats.thirst, sanity:bg.stats.sanity,
+    inv:{...bg.items},
+    flags:{}, log:[], pendingEvent:null, combat:null, ended:null,
+  };
+}
+
+let S = load();
+
+function load(){
+  try{ const raw = localStorage.getItem(SAVE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return null;
+}
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function wipe(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+function pushLog(msg){ S.log.unshift(msg); if(S.log.length>40) S.log.pop(); }
+function has(item,n){ return (S.inv[item]||0) >= n; }
+function give(item,n){ S.inv[item] = (S.inv[item]||0) + n; if(S.inv[item]<0) S.inv[item]=0; }
+
+// ---------- Enemy templates ----------
+const ENEMIES = {
+  raider:{ name:'掠奪者', emoji:'🔪', hp:35, atk:[8,16] },
+  raiderBoss:{ name:'掠奪者頭目「禿鷹」', emoji:'🦅', hp:70, atk:[12,22] },
+  infected:{ name:'感染者', emoji:'🧟', hp:28, atk:[10,18] },
+  infectedHorde:{ name:'感染者群', emoji:'🧟‍♂️', hp:50, atk:[14,20] },
+};
+
+function startCombat(enemyKey, onWin, onLose, onFlee){
+  const t = ENEMIES[enemyKey];
+  S.combat = { key:enemyKey, name:t.name, emoji:t.emoji, hp:t.hp, maxHp:t.hp, atk:t.atk,
+    onWin, onLose, onFlee, log:[`遭遇 ${t.name}！`] };
+  S.screen = 'combat';
+  render();
+}
+
+function combatLog(msg){ S.combat.log.unshift(msg); if(S.combat.log.length>20) S.combat.log.pop(); }
+
+function enemyTurn(){
+  const c = S.combat;
+  const dmg = Math.floor(c.atk[0] + Math.random()*(c.atk[1]-c.atk[0]+1));
+  S.hp = clamp(S.hp - dmg, 0, S.maxHp);
+  combatLog(`${c.name} 攻擊你，造成 ${dmg} 傷害。`);
+  if(S.hp<=0){ endRun('bad_death', '你在戰鬥中傷重不治，永遠留在了這片廢土上。'); return; }
+}
+
+function combatAttack(){
+  const c = S.combat;
+  const usesAmmo = has('ammo',1);
+  let dmg;
+  if(usesAmmo){ give('ammo',-1); dmg = Math.floor(14 + Math.random()*10); combatLog(`你開槍射擊，造成 ${dmg} 傷害。`); }
+  else { dmg = Math.floor(6 + Math.random()*8); combatLog(`你近身搏鬥，造成 ${dmg} 傷害。（沒有彈藥）`); }
+  c.hp = clamp(c.hp - dmg, 0, c.maxHp);
+  if(c.hp<=0){ combatLog(`${c.name} 被擊敗了！`); const win=c.onWin; S.combat=null; S.screen='day'; win&&win(); render(); return; }
+  enemyTurn();
+  render();
+}
+
+function combatDefend(){
+  const c = S.combat;
+  const dmg = Math.floor(c.atk[0]*0.4);
+  S.hp = clamp(S.hp - dmg, 0, S.maxHp);
+  combatLog(`你舉起防禦姿態，僅承受 ${dmg} 傷害。`);
+  if(S.hp<=0){ endRun('bad_death', '你在戰鬥中傷重不治，永遠留在了這片廢土上。'); return; }
+  render();
+}
+
+function combatItem(){
+  if(!has('medkit',1)){ combatLog('沒有醫療包了！'); render(); return; }
+  give('medkit',-1);
+  const heal = 30;
+  S.hp = clamp(S.hp + heal, 0, S.maxHp);
+  combatLog(`你使用醫療包，恢復 ${heal} 生命值。`);
+  enemyTurn();
+  render();
+}
+
+function combatFlee(){
+  const c = S.combat;
+  const chance = 0.5 + (S.sanity>50?0.1:0);
+  if(Math.random() < chance){
+    combatLog('你成功逃離了戰鬥！');
+    const flee = c.onFlee; S.combat=null; S.screen='day';
+    flee && flee();
+  } else {
+    combatLog('逃跑失敗！');
+    enemyTurn();
+  }
+  render();
+}
+
+// ---------- Random daily events ----------
+const RANDOM_EVENTS = [
+  { id:'ruins', title:'🏚️ 廢棄超市', text:'你發現一間半塌的超市，貨架上似乎還剩一些東西。',
+    choices:[
+      { label:'仔細搜刮', cost:'消耗時間，可能遇到危險', run(){
+        if(Math.random()<0.25){ startCombat('raider', ()=>{ give('food',2); give('parts',1); pushLog('擊退掠奪者後，你搜刮到了物資。'); }, null, ()=>{ pushLog('你逃離了超市，沒有收穫。'); }); return true; }
+        give('food',2); give('water',1); pushLog('你搜刮到 2 份食物與 1 份淨水。'); return false;
+      }},
+      { label:'謹慎離開', cost:'安全但無收穫', run(){ pushLog('你覺得太危險，選擇了謹慎離開。'); S.sanity=clamp(S.sanity+3,0,100); return false; } },
+    ]},
+  { id:'stranger', title:'🚶 陌生倖存者', text:'一名衣衫襤褸的倖存者向你搭話，請求分你一些食物。',
+    choices:[
+      { label:'分享食物（-1 食物）', cost:'消耗 1 食物，提升精神', run(){ if(!has('food',1)){ pushLog('你想幫忙，但自己也沒有食物了。'); return false; } give('food',-1); S.sanity=clamp(S.sanity+10,0,100); pushLog('你分享了食物，內心感到一絲溫暖。'); return false; } },
+      { label:'拒絕並離開', cost:'保留物資，精神下降', run(){ S.sanity=clamp(S.sanity-6,0,100); pushLog('你拒絕了對方，心裡有些不是滋味。'); return false; } },
+      { label:'搶奪對方物資', cost:'觸發戰鬥', run(){ startCombat('raider', ()=>{ give('food',1); give('ammo',1); S.sanity=clamp(S.sanity-15,0,100); pushLog('你搶到了一些物資，但良心備受譴責。'); }, null, ()=>{}); return true; } },
+    ]},
+  { id:'water', title:'🚰 汙染水源', text:'你找到一處水源，但看起來不太乾淨。',
+    choices:[
+      { label:'直接飲用', cost:'有機率生病', run(){ if(Math.random()<0.4){ S.hp=clamp(S.hp-15,0,S.maxHp); pushLog('你喝下污水後開始腹痛，生命值下降。'); } else { S.thirst=clamp(S.thirst-30,0,100); pushLog('幸運地，這次水源沒有問題。'); } return false; } },
+      { label:'用零件過濾（需要 1 零件）', cost:'消耗 1 零件，安全取水', run(){ if(!has('parts',1)){ pushLog('你沒有零件可以製作過濾器。'); return false; } give('parts',-1); give('water',2); pushLog('你製作了簡易過濾器，獲得 2 份淨水。'); return false; } },
+      { label:'放棄離開', cost:'無收穫', run(){ pushLog('你決定不冒險，繼續趕路。'); return false; } },
+    ]},
+  { id:'infected_house', title:'🏚️ 陰暗小屋', text:'小屋裡傳出低吼聲，似乎有感染者棲息於此，但門後可能藏有補給。',
+    choices:[
+      { label:'闖入戰鬥', cost:'觸發戰鬥', run(){ startCombat('infected', ()=>{ give('medkit',1); give('parts',1); pushLog('清理小屋後，你找到醫療包與零件。'); }, null, ()=>{}); return true; } },
+      { label:'繞道而行', cost:'安全但浪費時間', run(){ S.hunger=clamp(S.hunger+5,0,100); pushLog('你繞了遠路，多消耗了一些體力。'); return false; } },
+    ]},
+  { id:'rest', title:'🔥 平靜的夜晚', text:'難得平靜的一晚，你可以好好休息。',
+    choices:[
+      { label:'紮營休息', cost:'恢復精神與體力', run(){ S.sanity=clamp(S.sanity+12,0,100); S.hp=clamp(S.hp+10,0,S.maxHp); pushLog('你睡了個好覺，感覺好多了。'); return false; } },
+      { label:'輪流警戒巡邏', cost:'消耗精神，避免夜襲', run(){ S.sanity=clamp(S.sanity-5,0,100); pushLog('你徹夜警戒，雖然疲憊但很安全。'); return false; } },
+    ]},
+  { id:'trade', title:'🏕️ 流動商隊', text:'一支小型商隊路過，願意以物易物。',
+    choices:[
+      { label:'用零件換醫療包（2 零件→1 醫療包）', cost:'', run(){ if(!has('parts',2)){ pushLog('你的零件不夠交易。'); return false; } give('parts',-2); give('medkit',1); pushLog('你換到了 1 個醫療包。'); return false; } },
+      { label:'用彈藥換食物（2 彈藥→3 食物）', cost:'', run(){ if(!has('ammo',2)){ pushLog('你的彈藥不夠交易。'); return false; } give('ammo',-2); give('food',3); pushLog('你換到了 3 份食物。'); return false; } },
+      { label:'不交易，直接離開', cost:'', run(){ pushLog('你婉拒了交易，繼續前行。'); return false; } },
+    ]},
+  { id:'raiders_ambush', title:'🔪 掠奪者埋伏', text:'一群掠奪者從廢墟中衝出，擋住了你的去路！',
+    choices:[
+      { label:'正面迎戰', cost:'觸發戰鬥', run(){ startCombat('raider', ()=>{ give('ammo',1); pushLog('你擊退了掠奪者，撿到一些彈藥。'); }, null, ()=>{}); return true; } },
+      { label:'試圖逃跑', cost:'看精神狀態決定成功率', run(){ if(Math.random() < 0.5+(S.sanity>50?0.15:0)){ pushLog('你成功逃離了埋伏。'); } else { S.hp=clamp(S.hp-12,0,S.maxHp); pushLog('逃跑時被劃傷，損失了一些生命值。'); } return false; } },
+    ]},
+  { id:'quiet_scav', title:'🧭 靜謐廢墟', text:'你在一處無人的廢墟中緩慢搜索。',
+    choices:[
+      { label:'搜索補給', cost:'', run(){ const roll=Math.random(); if(roll<0.5){ give('water',2); pushLog('你找到 2 份淨水。'); } else if(roll<0.8){ give('parts',1); pushLog('你找到 1 個零件。'); } else { give('ammo',2); pushLog('你找到 2 發彈藥。'); } return false; } },
+      { label:'原地休息', cost:'', run(){ S.sanity=clamp(S.sanity+5,0,100); pushLog('你稍作休息，恢復了一些精神。'); return false; } },
+    ]},
+];
+
+// ---------- Story milestone events ----------
+function milestoneForDay(day){
+  if(day===5) return 'radio';
+  if(day===10 && S.flags.cityQuest) return 'settlement';
+  if(day===15 && S.flags.cityQuest) return 'boss';
+  if(day===20 && S.flags.cityQuest) return 'shelterClue';
+  if(day===25 && S.flags.shelterMap) return 'finalApproach';
+  return null;
+}
+
+const MILESTONES = {
+  radio:{ title:'📻 神秘信號', text:'你的收音機截獲了一段斷斷續續的訊息：「……這裡是……避難所……如果你聽得到……前往市中心……」',
+    choices:[
+      { label:'前往市中心追查信號', cost:'開啟主線任務', run(){ S.flags.cityQuest=true; pushLog('你決定朝市中心前進，追尋避難所的線索。'); return false; } },
+      { label:'太危險了，忽略信號', cost:'專注生存', run(){ pushLog('你選擇不理會信號，專心在廢土上求生。'); return false; } },
+    ]},
+  settlement:{ title:'🏘️ 倖存者聚落', text:'你抵達市郊，發現一個由倖存者組成的小型聚落，他們願意收留你。',
+    choices:[
+      { label:'加入聚落，結盟', cost:'獲得同伴', run(){ S.flags.ally=true; give('food',3); give('medkit',1); S.sanity=clamp(S.sanity+15,0,100); pushLog('你加入了聚落，獲得補給與同伴的支持。'); return false; } },
+      { label:'婉拒，獨自前行', cost:'保持獨立', run(){ pushLog('你婉拒了邀請，選擇獨自繼續旅程。'); return false; } },
+    ]},
+  boss:{ title:'🦅 禿鷹的地盤', text:'市中心的廢墟被一群武裝掠奪者占據，首領「禿鷹」擋在你面前。',
+    choices:[
+      { label:'挑戰禿鷹', cost:'困難戰鬥', run(){ startCombat('raiderBoss', ()=>{ S.flags.weapon=true; give('ammo',3); pushLog('你擊敗了禿鷹，奪得他的武器與彈藥！'); }, null, ()=>{ pushLog('你逃離了禿鷹的地盤，暫時放棄了這條路線。'); }); return true; } },
+      { label:'繞路潛行', cost:'避免戰鬥，但錯失獎勵', run(){ if(Math.random()<0.6){ pushLog('你成功潛行繞過了禿鷹的地盤。'); } else { S.hp=clamp(S.hp-20,0,S.maxHp); pushLog('潛行失敗，你被發現並受了傷，但仍逃了出來。'); } return false; } },
+    ]},
+  shelterClue:{ title:'🗺️ 避難所地圖', text:'在禿鷹的據點（或聚落的檔案室）中，你找到一張標示著「Vault-9 避難所」位置的殘破地圖。',
+    choices:[
+      { label:'收下地圖，規劃路線', cost:'開啟結局路線', run(){ S.flags.shelterMap=true; pushLog('你仔細研究了地圖，確定了避難所的方位。'); return false; } },
+    ]},
+  finalApproach:{ title:'🚪 避難所大門', text:'你終於抵達 Vault-9 避難所的入口，厚重的金屬門前佈滿了荊棘與鏽蝕。',
+    choices:[
+      { label:'嘗試破解門鎖（需要 2 零件）', cost:'', run(){
+        if(has('parts',2)){ give('parts',-2); S.flags.doorOpen=true; pushLog('你用零件修復了門鎖機構，大門緩緩開啟！'); }
+        else { S.hp=clamp(S.hp-10,0,S.maxHp); pushLog('你沒有足夠的零件，強行破壞門鎖弄傷了自己，但門開了一半。'); S.flags.doorOpen=true; }
+        return false;
+      }},
+    ]},
+};
+
+// ---------- Day progression ----------
+function nextDay(){
+  if(S.ended) return;
+  S.day += 1;
+  S.hunger = clamp(S.hunger + 15, 0, 100);
+  S.thirst = clamp(S.thirst + 20, 0, 100);
+  if(S.hunger>=100){ S.hp=clamp(S.hp-12,0,S.maxHp); pushLog('你飢餓難耐，生命值下降。'); }
+  if(S.thirst>=100){ S.hp=clamp(S.hp-16,0,S.maxHp); pushLog('你嚴重缺水，生命值下降。'); }
+  if(S.hunger>=100 || S.thirst>=100){ S.sanity=clamp(S.sanity-8,0,100); }
+  if(S.sanity<=0){ S.hp=clamp(S.hp-6,0,S.maxHp); }
+
+  if(S.hp<=0){ endRun('bad_death','你的身體再也撐不住了，倒在了廢土之上。'); return; }
+  if(S.day>30){ finishGame(); return; }
+
+  const mKey = milestoneForDay(S.day);
+  if(mKey){ S.pendingEvent = { type:'milestone', key:mKey }; }
+  else {
+    const ev = RANDOM_EVENTS[Math.floor(Math.random()*RANDOM_EVENTS.length)];
+    S.pendingEvent = { type:'random', key:ev.id };
+  }
+  save();
+  render();
+}
+
+function consumeSupplies(){
+  if(has('food',1)){ give('food',-1); } else { S.hp=clamp(S.hp-8,0,S.maxHp); pushLog('沒有食物可吃，你更加虛弱。'); }
+  if(has('water',1)){ give('water',-1); } else { S.hp=clamp(S.hp-8,0,S.maxHp); pushLog('沒有水可喝，你更加虛弱。'); }
+  S.hunger = clamp(S.hunger - 40, 0, 100);
+  S.thirst = clamp(S.thirst - 45, 0, 100);
+}
+
+function chooseOption(idx){
+  const pe = S.pendingEvent;
+  if(!pe) return;
+  const pool = pe.type==='milestone' ? MILESTONES : Object.fromEntries(RANDOM_EVENTS.map(e=>[e.id,e]));
+  const ev = pool[pe.key];
+  const choice = ev.choices[idx];
+  const wentToCombat = choice.run();
+  if(!wentToCombat){
+    S.pendingEvent = null;
+    save();
+  }
+  render();
+}
+
+function eatDrink(){
+  consumeSupplies();
+  S.pendingEvent = null;
+  save();
+  render();
+}
+
+function endRun(kind, text){
+  S.ended = { kind, text };
+  S.screen = 'end';
+  wipe();
+  render();
+}
+
+function finishGame(){
+  let kind, text;
+  if(S.flags.doorOpen && S.flags.ally){
+    kind='good'; text='你推開避難所大門，身後跟著並肩作戰的同伴。Vault-9 內部燈火通明，補給充足——你們終於找到了真正的家。這是最好的結局：與夥伴一同倖存。';
+  } else if(S.flags.doorOpen){
+    kind='good'; text='你獨自推開了避難所的大門，裡面塵封已久卻仍有可用的物資與電力。你成為了 Vault-9 的第一位新住民，廢土上的傳說從此展開新的篇章。';
+  } else if(S.flags.shelterMap){
+    kind='neutral'; text='你手握著避難所的地圖，卻在抵達前耗盡了第 30 天。你在附近搭建了臨時營地，決定明天繼續踏上最後一程——故事仍在繼續。';
+  } else if(S.flags.cityQuest){
+    kind='neutral'; text='你追尋著信號來到市中心，見識了廢土上形形色色的人與事，但始終沒能找到傳說中的避難所。三十天過去，你依然是個堅韌的流浪者。';
+  } else {
+    kind='neutral'; text='你沒有追尋任何傳說中的避難所，只是憑著本能在廢土上活了三十天。平凡，卻也是一種勝利。';
+  }
+  endRun(kind, text);
+}
+
+function restart(){
+  S = null;
+  wipe();
+  render();
+}
+
+// ---------- Rendering ----------
+function statBar(label, val, color, invert){
+  const pct = clamp(val,0,100);
+  const dangerHigh = invert && pct>=80;
+  const dangerLow = !invert && pct<=20;
+  const c = (dangerHigh||dangerLow) ? 'var(--red)' : color;
+  return `<div class="stat-line"><span>${label}</span><span>${Math.round(pct)}</span></div>
+  <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${c}"></div></div>`;
+}
+
+function renderTopStatus(){
+  return `<div class="panel">
+    <h2>倖存者狀態</h2>
+    ${statBar('❤️ 生命值', S.hp/S.maxHp*100, 'var(--red)', false)}
+    ${statBar('🍖 飢餓度', S.hunger, 'var(--gold)', true)}
+    ${statBar('💧 口渴度', S.thirst, 'var(--blue)', true)}
+    ${statBar('🧠 精神狀態', S.sanity, 'var(--green)', false)}
+    <div class="inv-grid" style="margin-top:10px">
+      ${Object.keys(ITEM_META).map(k=>`<div class="inv-item"><div class="em">${ITEM_META[k].emoji}</div><div class="n">${S.inv[k]||0}</div><div class="lb">${ITEM_META[k].label}</div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderIntro(){
+  document.getElementById('app').innerHTML = `
+    <div class="topbar"><div class="brand">☢️ 末日<span>求生記</span></div></div>
+    <div class="panel center">
+      <div style="font-size:40px;margin-bottom:8px">🏚️</div>
+      <h2 style="color:var(--txt);font-size:16px;letter-spacing:1px;margin-bottom:6px">世界已經崩壞三年了……</h2>
+      <p class="hint">文明的餘燼在風中飄散，你是少數還活著的人之一。食物、淨水、彈藥都極度稀缺，每一次選擇都可能是生與死的分界。撐過 30 天，找到傳說中的「Vault-9 避難所」吧。</p>
+    </div>
+    <div class="panel">
+      <h2>選擇你的出身</h2>
+      ${BACKGROUNDS.map((b,i)=>`
+        <div class="pick-card" onclick="selectBg('${b.id}')">
+          <div class="em">${b.emoji}</div>
+          <h3>${b.name}</h3>
+          <p>${b.desc}</p>
+        </div>`).join('')}
+    </div>
+    <div class="hint center">遊戲會自動存檔於本機瀏覽器，可隨時關閉再回來繼續。</div>
+  `;
+}
+
+window.selectBg = function(id){
+  const bg = BACKGROUNDS.find(b=>b.id===id);
+  S = freshState(bg);
+  pushLog(`你以「${bg.name}」的身份，踏上了廢土求生之路。`);
+  save();
+  render();
+};
+
+function renderDayScreen(){
+  const pe = S.pendingEvent;
+  let center = '';
+  if(pe){
+    const pool = pe.type==='milestone' ? MILESTONES : Object.fromEntries(RANDOM_EVENTS.map(e=>[e.id,e]));
+    const ev = pool[pe.key];
+    center = `
+      <div class="panel">
+        <h2>${pe.type==='milestone'?'主線劇情':'隨機事件'}</h2>
+        <div class="story-text">${ev.title}\n\n${ev.text}</div>
+      </div>
+      <div class="panel">
+        <h2>你的選擇</h2>
+        ${ev.choices.map((c,i)=>`<button class="choice-btn" onclick="chooseOption(${i})">${c.label}${c.cost?`<span class="cost">${c.cost}</span>`:''}</button>`).join('')}
+      </div>`;
+  } else {
+    center = `
+      <div class="panel center">
+        <h2>今日尚無事件</h2>
+        <p class="hint" style="margin-bottom:10px">先解決溫飽，準備好再前進到下一天。</p>
+        <button class="b-green" onclick="eatDrink()">🍽️ 進食與飲水</button>
+      </div>
+      <div class="panel center">
+        <button class="b-gold" onclick="nextDay()">➡️ 前進到第 ${S.day+1} 天</button>
+      </div>`;
+  }
+  document.getElementById('app').innerHTML = `
+    <div class="topbar"><div class="brand">☢️ 末日<span>求生記</span></div><div class="day-badge">第 ${S.day} / 30 天</div></div>
+    ${renderTopStatus()}
+    ${center}
+    <div class="panel">
+      <h2>紀錄</h2>
+      <div class="log">${S.log.map(l=>`<div>• ${l}</div>`).join('') || '<div>尚無紀錄</div>'}</div>
+    </div>
+    <div class="panel center">
+      <button class="b-ghost b-sm" style="width:auto" onclick="if(confirm('確定要放棄目前進度，重新開始嗎？')) restart()">🔄 重新開始</button>
+    </div>
+  `;
+}
+
+function renderCombat(){
+  const c = S.combat;
+  document.getElementById('app').innerHTML = `
+    <div class="topbar"><div class="brand">☢️ 末日<span>求生記</span></div><div class="day-badge">戰鬥中</div></div>
+    <div class="enemy-card">
+      <div class="em">${c.emoji}</div>
+      <h3 style="margin:4px 0">${c.name}</h3>
+      ${statBar('敵方生命值', c.hp/c.maxHp*100, 'var(--red)', false)}
+    </div>
+    <div class="panel">
+      <h2>你的生命值</h2>
+      ${statBar('❤️ 生命值', S.hp/S.maxHp*100, 'var(--red)', false)}
+    </div>
+    <div class="panel">
+      <h2>行動</h2>
+      <div class="flex">
+        <button class="b-red grow" onclick="combatAttack()">⚔️ 攻擊${has('ammo',1)?' (消耗1彈藥)':''}</button>
+        <button class="b-ghost grow" onclick="combatDefend()">🛡️ 防禦</button>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <button class="b-green grow" onclick="combatItem()" ${has('medkit',1)?'':'disabled'}>💉 使用醫療包 (${S.inv.medkit||0})</button>
+        <button class="b-gold grow" onclick="combatFlee()">🏃 逃跑</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>戰鬥紀錄</h2>
+      <div class="log">${c.log.map(l=>`<div>• ${l}</div>`).join('')}</div>
+    </div>
+  `;
+}
+
+function renderEnd(){
+  const e = S.ended;
+  const cls = e.kind==='good' ? 'good' : (e.kind.startsWith('bad') ? 'bad' : 'neutral');
+  const titleText = e.kind==='good' ? '🎉 生還結局' : (e.kind.startsWith('bad') ? '💀 廢土殞落' : '🌫️ 未完的旅程');
+  document.getElementById('app').innerHTML = `
+    <div class="topbar"><div class="brand">☢️ 末日<span>求生記</span></div></div>
+    <div class="panel center">
+      <div class="ending-title ${cls}">${titleText}</div>
+      <p class="story-text" style="text-align:left;margin-top:10px">${e.text}</p>
+      <div class="hint" style="margin-top:10px">存活天數：第 ${S.day} 天　|　結局類型：${e.kind==='good'?'完美生還':(e.kind.startsWith('bad')?'不幸罹難':'未完結局')}</div>
+    </div>
+    <div class="panel center">
+      <button class="b-gold" onclick="restart()">🔄 重新開始新的旅程</button>
+    </div>
+  `;
+}
+
+function render(){
+  if(!S){ renderIntro(); return; }
+  if(S.screen==='combat' && S.combat){ renderCombat(); return; }
+  if(S.screen==='end' && S.ended){ renderEnd(); return; }
+  renderDayScreen();
+}
+
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: star-arcade
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node platform-server.js
+    autoDeploy: true
+
+  - type: web
+    name: star-arcade-tamer
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node tamer-server.js
+    autoDeploy: true
+
+  - type: web
+    name: star-arcade-cards
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node cards-server.js
+    autoDeploy: true
+
+  - type: web
+    name: star-arcade-mmo
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    autoDeploy: true

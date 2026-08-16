@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>星辰大陸 Online（多人版）</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif; }
+  body { background:#0b0e14; color:#e8e8e8; overflow:hidden; }
+  #game { position:relative; width:100vw; height:100vh; }
+  canvas { display:block; background:#111; }
+  .hud { position:absolute; pointer-events:none; }
+  #topbar {
+    top:0; left:0; right:0; height:56px; display:flex; align-items:center; gap:16px;
+    background:linear-gradient(#000c, #0006); padding:0 14px; pointer-events:auto; font-size:13px; flex-wrap:wrap;
+  }
+  #topbar .stat b { color:#ffd54f; }
+  .bar { width:130px; height:12px; background:#333; border-radius:6px; overflow:hidden; display:inline-block; vertical-align:middle; }
+  .bar > div { height:100%; }
+  #hpfill { background:#e53935; width:100%; } #mpfill { background:#1e88e5; width:100%; } #expfill { background:#8bc34a; width:0%; }
+  #btnbar { position:absolute; top:62px; right:10px; display:flex; flex-direction:column; gap:6px; pointer-events:auto; }
+  button { background:#263238; color:#eee; border:1px solid #546e7a; border-radius:6px; padding:7px 13px; cursor:pointer; font-size:13px; }
+  button:hover { background:#37474f; }
+  button.gold { background:#5d4037; border-color:#ffb300; }
+  button.green { background:#2e7d32; }
+  button.red { background:#b71c1c; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  #logwrap { position:absolute; left:10px; bottom:64px; width:400px; pointer-events:auto; }
+  #log { max-height:150px; overflow-y:auto; background:#000a; border:1px solid #444; border-radius:8px 8px 0 0; padding:8px; font-size:12px; }
+  #log div { margin-bottom:2px; }
+  #chatline { display:flex; }
+  #chatInput { flex:1; background:#0d1117; color:#eee; border:1px solid #444; border-top:none; border-radius:0 0 0 8px; padding:6px 8px; font-size:12px; }
+  #chatSend { border-radius:0 0 8px 0; }
+  .modal {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:#161b26; border:2px solid #5c6bc0; border-radius:12px; padding:18px;
+    min-width:460px; max-width:760px; max-height:82vh; overflow-y:auto; z-index:50; pointer-events:auto;
+    box-shadow:0 10px 40px #000c;
+  }
+  .modal h2 { color:#ffd54f; margin-bottom:10px; font-size:18px; }
+  .modal .close { position:absolute; top:10px; right:12px; background:#b71c1c; }
+  .row { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid #2a3040; gap:10px; font-size:13px; }
+  .row:hover { background:#1f2634; }
+  .tag { font-size:11px; padding:1px 6px; border-radius:4px; background:#37474f; }
+  #joinScreen { text-align:center; max-width:900px; min-width:760px; }
+  .classCard {
+    display:inline-block; width:150px; margin:8px; padding:14px 8px; background:#1e2636;
+    border:2px solid #3949ab; border-radius:10px; cursor:pointer; vertical-align:top;
+  }
+  .classCard:hover, .classCard.sel { border-color:#ffd54f; background:#26314a; }
+  .classCard.rare { border-color:#00e5ff; background:linear-gradient(160deg,#0d2a33,#1a2340); box-shadow:0 0 16px #00e5ff66; }
+  #savedChars:not(:empty) { background:#12203a; border:2px solid #43a047; border-radius:10px; padding:10px 12px; margin-bottom:12px; text-align:left; }
+  #savedChars h3 { color:#8bc34a; font-size:15px; margin-bottom:6px; }
+  .saveRow { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 4px; border-bottom:1px solid #1f2c44; font-size:13px; }
+  .saveRow:last-child { border-bottom:none; }
+  .gradeBadge { display:inline-block; padding:1px 7px; border-radius:4px; font-weight:bold; font-size:11px; color:#0b0e14; }
+  #talentReveal {
+    position:absolute; inset:0; background:#000c; z-index:120; display:none;
+    align-items:center; justify-content:center; flex-direction:column; gap:10px; pointer-events:auto;
+  }
+  #talentReveal .card {
+    background:#12182a; border:3px solid #666; border-radius:16px; padding:26px 40px; text-align:center;
+    animation:tpop .45s ease-out;
+  }
+  @keyframes tpop { from{ transform:scale(.7); opacity:0 } to{ transform:scale(1); opacity:1 } }
+  #talentReveal .g { font-size:46px; font-weight:bold; letter-spacing:2px; }
+  #talentReveal .n { font-size:26px; color:#fff; margin:8px 0; }
+  #talentReveal .d { font-size:16px; color:#b0bec5; }
+  .classCard.rare h3 { color:#00e5ff; }
+  .classCard h3 { margin-bottom:6px; font-size:16px; }
+  .classCard p { font-size:11px; color:#b0bec5; line-height:1.6; }
+  #skillbar { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:6px; pointer-events:auto; }
+  .skillslot {
+    width:52px; height:52px; background:#000a; border:1px solid #666; border-radius:8px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; text-align:center;
+    position:relative; cursor:pointer;
+  }
+  .skillslot .key { position:absolute; top:1px; left:4px; color:#ffd54f; font-size:10px; }
+  .skillslot .cd { position:absolute; inset:0; background:#000b; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ff8a65; font-size:14px; }
+  #bigOverlay {
+    position:absolute; inset:0; background:#000b; display:none; z-index:100;
+    align-items:center; justify-content:center; text-align:center; flex-direction:column; gap:16px;
+  }
+  #bigOverlay h1 { font-size:44px; color:#ffd54f; text-shadow:0 0 30px #000; }
+  #bigOverlay p { font-size:18px; }
+  #invitePrompt {
+    position:absolute; top:70px; left:50%; transform:translateX(-50%); z-index:60;
+    background:#1a2333; border:2px solid #ffd54f; border-radius:10px; padding:14px 18px; display:none; pointer-events:auto;
+    text-align:center;
+  }
+  .hidden { display:none !important; }
+  .small { font-size:11px; color:#90a4ae; }
+  input[type=text],input[type=number] { background:#0d1117; color:#eee; border:1px solid #555; border-radius:4px; padding:5px 8px; }
+  .hpline { height:14px; background:#333; border-radius:7px; overflow:hidden; margin:4px 0 10px; }
+  .hpline > div { height:100%; background:#e53935; }
+  #inspectPanel {
+    top:62px; left:10px; width:240px; background:#0e1420f0; border:2px solid #ffd54f;
+    border-radius:10px; padding:10px 12px 8px; pointer-events:auto; font-size:12px; display:none;
+  }
+  #inspectPanel h4 { color:#ffd54f; font-size:14px; margin-bottom:2px; padding-right:22px; }
+  #inspectPanel .sub { color:#90a4ae; font-size:11px; margin-bottom:6px; }
+  #inspectPanel .kv { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-bottom:1px solid #232b3a; }
+  #inspectPanel .kv span:first-child { color:#90a4ae; }
+  #inspectPanel .kv b { color:#e8e8e8; }
+  #inspectPanel .close { top:6px; right:8px; padding:2px 8px; font-size:12px; }
+  #inspectPanel .minibar { height:10px; background:#333; border-radius:5px; overflow:hidden; margin:4px 0 6px; }
+  #inspectPanel .minibar > div { height:100%; background:#e53935; }
+  h3.sec { color:#90caf9; margin:8px 0 4px; font-size:14px; }
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="cv"></canvas>
+
+  <div id="topbar" class="hud hidden">
+    <span class="stat">🕐 <b id="uiTime">--</b></span>
+    <span class="stat">🟢 在線 <b id="uiOnline">1</b> / 1,000,000</span>
+    <span class="stat" id="uiName"></span>
+    <span class="stat">Lv.<b id="uiLv">1</b></span>
+    <span class="stat">❤️<span class="bar"><div id="hpfill"></div></span> <span id="uiHp"></span></span>
+    <span class="stat">🔷<span class="bar"><div id="mpfill"></div></span></span>
+    <span class="stat">EXP<span class="bar"><div id="expfill"></div></span></span>
+    <span class="stat">💰 <b id="uiGold">0</b></span>
+    <span class="stat" id="uiZone">📍新手村</span>
+  </div>
+
+  <div id="btnbar" class="hud hidden">
+    <button class="gold" onclick="openDungeons()">🏰 副本 (R)</button>
+    <button onclick="openLeaderboard()">🏆 排行榜 (L)</button>
+    <button onclick="openStats()">📊 屬性 (C)</button>
+    <button onclick="openBag()">🎒 背包 (B)</button>
+    <button onclick="openShop()">🏪 商店</button>
+    <button onclick="send({t:'auctionList'})">🏛️ 拍賣行</button>
+    <button onclick="openPlayers('trade')">🤝 交易</button>
+    <button onclick="openParty()">👥 組隊 (P)</button>
+    <button onclick="openFaction()">🚩 陣營 (G)</button>
+    <button class="gold" onclick="send({t:'towerEnter'})">🗼 試煉塔 (E)</button>
+    <button class="green" onclick="send({t:'saveNow'})">💾 存檔</button>
+    <button onclick="openHelp()">❓ 說明</button>
+  </div>
+
+  <div id="skillbar" class="hud hidden"></div>
+  <div id="logwrap" class="hud hidden">
+    <div id="log"></div>
+    <div id="chatline">
+      <input id="chatInput" placeholder="按 Enter 聊天…" maxlength="100">
+      <button id="chatSend" onclick="sendChat()">送出</button>
+    </div>
+  </div>
+
+  <div id="inspectPanel" class="hud">
+    <button class="close" onclick="clearInspect()">✕</button>
+    <div id="inspectBody"></div>
+  </div>
+
+  <div id="invitePrompt">
+    <p id="inviteText" style="margin-bottom:10px"></p>
+    <button class="green" onclick="respondInvite(true)">✅ 同意</button>
+    <button class="red" onclick="respondInvite(false)">❌ 拒絕</button>
+  </div>
+
+  <div id="bigOverlay"></div>
+  <div id="talentReveal" onclick="this.style.display='none'"></div>
+
+  <!-- 加入畫面 -->
+  <div id="joinScreen" class="modal">
+    <h2>⭐ 星辰大陸 Online — 多人連線版 ⭐</h2>
+    <div id="savedChars"></div>
+    <p class="small">真正的多人連線！開啟多個視窗即可多人同玩。技能與裝備有職業限制。</p>
+    <div id="classCards"></div>
+    <p id="rareHint" style="margin:6px 0"></p>
+    <p style="margin-top:8px">
+      <input type="text" id="playerName" placeholder="輸入角色名稱" value="勇者" maxlength="12">
+      <button class="gold" style="font-size:15px" onclick="join()">🚀 進入遊戲</button>
+    </p>
+    <p class="small" id="joinHint"></p>
+  </div>
+
+  <div id="modalRoot"></div>
+</div>
+
+<script src="/data.js"></script>
+<script>
+"use strict";
+const D = window.DATA;
+const { CLS, SKILLS, EQUIPS, POTIONS, MAPS, CONST, STAT_INFO } = D;
+const CLS_ICON = { warrior:"⚔️", mage:"🔮", archer:"🏹", assassin:"🗡️", priest:"✨", dragoon:"🐉", summoner:"👾", sniper:"🎯" };
+const rand=(a,b)=>a+Math.random()*(b-a);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const fmt=n=>(+n).toLocaleString("zh-Hant");
+
+/* ============ 連線 ============ */
+let ws=null, me=null, myId=null;
+let snap={players:[],monsters:[],hqs:[],pets:[],events:[]};
+let others=new Map(); // id -> {x,y,tx,ty,...} 插值
+let effects=[];
+let keys={};
+let cam={x:0,y:0};
+let selCls="warrior";
+let joined=false, dead=false;
+let auctionCache=[];
+
+function send(o){ if(ws&&ws.readyState===1) ws.send(JSON.stringify(o)); }
+/* 副本是動態產生的實例地圖，定義由伺服器下發 */
+const dynMaps={};
+function getMap(k){ return MAPS[k]||dynMaps[k]||MAPS.novice; }
+
+function connect(){
+  if(!location.host){
+    document.getElementById("joinHint").innerHTML="❌ 請不要直接開啟 HTML 檔案。<br>請先執行 <b>node server.js</b>，再用瀏覽器開啟 <b>http://localhost:3000</b>";
+    return;
+  }
+  ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host);
+  // 關閉分頁時主動斷線，避免伺服器留下幽靈連線
+  addEventListener("beforeunload",()=>{ try{ ws.close(); }catch(e){} });
+  ws.onopen=()=>{ document.getElementById("joinHint").textContent="✅ 已連上伺服器"; };
+  ws.onclose=()=>{ document.getElementById("joinHint").textContent="❌ 與伺服器斷線，請重新整理頁面"; if(joined&&!dead) showOverlay("🔌 與伺服器斷線","<button onclick='location.reload()'>重新連線</button>"); };
+  ws.onmessage=ev=>{
+    const m=JSON.parse(ev.data);
+    switch(m.t){
+      case "joined": myId=m.id; addToken(m.token); break;
+      case "classRoll": rareUnlocked=!!m.rare; buildClassCards(); requestChars(); break;
+      case "talentRoll": showTalentReveal(m.talent); break;
+      case "charList": renderSavedChars(m.list); break;
+      case "charGone": dropToken(m.token); break;
+      case "loadFail": alert(m.msg); location.reload(); break;
+      case "you": onYou(m); break;
+      case "self": if(me){ Object.assign(me,{hp:m.hp,maxHp:m.maxHp,mp:m.mp,maxMp:m.maxMp,exp:m.exp,expNeed:m.expNeed,lv:m.lv,gold:m.gold,cds:m.cds}); updateHUD(); } break;
+      case "state": onState(m); break;
+      case "log": log(m.msg,m.color); break;
+      case "chat": log(`${m.sys?"📢":"💬"} <b style="color:${m.sys?"#ffd54f":"#81d4fa"}">${esc(m.from)}</b>：${esc(m.text)}`); break;
+      case "invite": showInvite(m); break;
+      case "trade": onTrade(m); break;
+      case "auction": auctionCache=m.list; openAuction(); break;
+      case "leaderboard": renderLeaderboard(m); break;
+      case "dungeonList": renderDungeons(m); break;
+      case "tower": onTower(m); break;
+      case "victory": showOverlay("🏆 勝利！","你擊敗了新手村的1000級Boss·滅世魔龍！<br>獲勝者："+m.names.map(esc).join("、")+"<br><span class='small'>所有參與挑戰的隊員都算獲勝！</span><br><button onclick='hideOverlay()'>繼續遊玩</button> <button onclick='location.reload()'>重新開始</button>"); break;
+      case "defeat": dead=true; showOverlay("💀 你輸了",esc(m.reason)+"<br><button onclick='location.reload()'>重新開始</button>"); break;
+      case "full": showOverlay("🈵 伺服器已滿","在線人數已達上限 1,000,000 人"); break;
+    }
+  };
+}
+function esc(s){ return String(s??"").replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+
+/* ============ 天賦 ============ */
+function talentBadge(t){
+  if(!t) return "";
+  return `<span class="gradeBadge" style="background:${t.color}">${t.gradeName}</span>`;
+}
+function showTalentReveal(t){
+  const el=document.getElementById("talentReveal");
+  const rare=t.gradeIdx>=5;
+  el.innerHTML=`<div class="card" style="border-color:${t.color};${rare?`box-shadow:0 0 40px ${t.color}`:""}">
+      <div class="small">🌟 你的天賦</div>
+      <div class="g" style="color:${t.color}">${t.gradeName}</div>
+      <div class="n">${esc(t.name)}</div>
+      <div class="d">${t.icon} ${esc(t.desc)}</div>
+      <p class="small" style="margin-top:12px">全 ${fmt(D.TALENT_COUNT)} 種天賦｜此等級抽中機率 ${(D.TALENT_GRADES[t.gradeIdx].p*100).toFixed(2)}%</p>
+      <p class="small">（點畫面關閉，之後可按 C 查看）</p>
+    </div>`;
+  el.style.display="flex";
+  setTimeout(()=>{ if(el.style.display==="flex") el.style.display="none"; }, rare?9000:5000);
+}
+
+function onYou(m){
+  if(m.mapDef) dynMaps[m.mapDef.key]=m.mapDef;
+  const firstMap = !me || me.map!==m.map;
+  const oldX=me&&me.x, oldY=me&&me.y;
+  me={...me,...m};
+  if(firstMap){
+    others.clear(); snap={players:[],monsters:[],hqs:[],pets:[],events:[]};
+    // 加入或切換地圖時採用伺服器座標
+  } else {
+    me.x=oldX; me.y=oldY; // 平時以本地移動為準，避免回彈
+  }
+  renderSkillbar(); updateHUD();
+}
+function onState(m){
+  document.getElementById("uiTime").textContent=m.time;
+  document.getElementById("uiOnline").textContent=fmt(m.online);
+  snap=m;
+  for(const p of m.players){
+    if(p.id===myId) continue;
+    const o=others.get(p.id);
+    if(o){ o.tx=p.x; o.ty=p.y; Object.assign(o,{name:p.name,cls:p.cls,lv:p.lv,hp:p.hp,maxHp:p.maxHp,party:p.party,fac:p.fac}); }
+    else others.set(p.id,{...p,tx:p.x,ty:p.y});
+  }
+  for(const id of [...others.keys()]) if(!m.players.some(p=>p.id===id)) others.delete(id);
+  for(const e of m.events){
+    if(e.e==="crit") effects.push({x:e.x,y:e.y,t:1.0,text:"💥暴擊!",color:"#ffd54f",big:true});
+    else if(e.e==="dmg") effects.push({x:e.x,y:e.y,t:0.8,text:`-${e.v}`,color:"#fff"});
+    else if(e.e==="heal") effects.push({x:e.x,y:e.y,t:0.8,text:`+${e.v}`,color:"#8bc34a"});
+    else if(e.e==="line") effects.push({x:e.x1,y:e.y1,t:0.3,line:{x2:e.x2,y2:e.y2},color:e.c||"#fff"});
+  }
+}
+
+/* ============ 加入 ============ */
+/* ============ 角色存檔（令牌存在瀏覽器 localStorage） ============ */
+const TOKENS_KEY="starOnlineTokens";
+function getTokens(){
+  try{ const a=JSON.parse(localStorage.getItem(TOKENS_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+}
+function saveTokens(a){ try{ localStorage.setItem(TOKENS_KEY, JSON.stringify(a.slice(0,20))); }catch(e){} }
+function addToken(tk){
+  if(!tk) return;
+  const a=getTokens().filter(x=>x!==tk); a.unshift(tk); saveTokens(a);
+}
+function dropToken(tk){ saveTokens(getTokens().filter(x=>x!==tk)); }
+function requestChars(){ send({t:"loadChars", tokens:getTokens()}); }
+
+function renderSavedChars(list){
+  const el=document.getElementById("savedChars");
+  if(!el) return;
+  if(!list||!list.length){ el.innerHTML=""; return; }
+  const ago=ts=>{
+    const s=Math.floor((Date.now()-ts)/1000);
+    if(s<60) return "剛剛"; if(s<3600) return Math.floor(s/60)+" 分鐘前";
+    if(s<86400) return Math.floor(s/3600)+" 小時前"; return Math.floor(s/86400)+" 天前";
+  };
+  el.innerHTML=`<h3>💾 你的角色存檔（${list.length}）</h3>`+list.map(c=>
+    `<div class="saveRow">
+       <span>${CLS_ICON[c.cls]||"🙂"} <b>${esc(c.name)}</b> <span class="tag">${CLS[c.cls]?CLS[c.cls].name:c.cls}</span>
+         Lv.<b style="color:#ffd54f">${c.lv}</b>${c.victor?" 👑":""}
+         ${c.talent?talentBadge(c.talent)+` <span class="small" style="color:${c.talent.color}">${esc(c.talent.name)}</span>`:""}
+         <span class="small">💰${fmt(c.gold)}｜📍${esc(c.map)}｜${ago(c.savedAt)}</span></span>
+       <span style="white-space:nowrap">
+         <button class="green" onclick="loadChar('${c.token}')">▶ 繼續遊玩</button>
+         <button class="red" onclick="removeChar('${c.token}','${esc(c.name)}')">🗑️</button>
+       </span></div>`).join("")
+    +`<p class="small" style="margin-top:6px">或在下方建立新角色。存檔記在這個瀏覽器裡，換瀏覽器就看不到。</p>`;
+}
+function loadChar(tk){
+  if(!ws||ws.readyState!==1) return;
+  send({t:"join", token:tk});
+  enterGame();
+}
+function removeChar(tk,name){
+  if(!confirm(`確定要刪除角色「${name}」嗎？此動作無法復原。`)) return;
+  send({t:"deleteCharByToken", token:tk});
+  dropToken(tk);
+  setTimeout(requestChars,200);
+}
+
+let rareUnlocked=false;
+function buildClassCards(){
+  const div=document.getElementById("classCards");
+  div.innerHTML=Object.entries(CLS).filter(([k,c])=>!c.rare||rareUnlocked).map(([k,c])=>
+    `<div class="classCard${k===selCls?" sel":""}${c.rare?" rare":""}" onclick="selCls='${k}';buildClassCards()">
+      <h3>${CLS_ICON[k]} ${c.name}</h3><p>${c.desc}<br>
+      ⚔️${c.atk}　❤️${c.hp}　🔷${c.mana}(藍${c.mana*D.MP_PER_MANA})<br>🛡️${c.def}　🔮${c.mdef}　💨${c.spd}　💪${c.con}</p></div>`).join("");
+  const hint=document.getElementById("rareHint");
+  if(hint) hint.innerHTML=rareUnlocked
+    ? `🎉 <b style="color:#00e5ff">恭喜！你這次抽中了 1% 稀有職業「狙擊手」！</b>`
+    : `<span class="small">稀有職業「狙擊手」有 1% 機率出現，重新整理頁面可以再抽一次。</span>`;
+}
+buildClassCards();
+function join(){
+  if(!ws||ws.readyState!==1){ document.getElementById("joinHint").textContent="連線中，請稍候…"; return; }
+  send({t:"join",name:document.getElementById("playerName").value.trim()||"勇者",cls:selCls});
+  enterGame();
+}
+let moveTimer=null;
+function enterGame(){
+  joined=true;
+  document.getElementById("joinScreen").classList.add("hidden");
+  document.querySelectorAll(".hud").forEach(e=>e.classList.remove("hidden"));
+  if(!moveTimer) moveTimer=setInterval(()=>{ if(me&&!dead&&isFinite(me.x)&&isFinite(me.y)) send({t:"move",x:me.x,y:me.y}); },50);
+  log("🖱️ 提示：用滑鼠點擊任何怪物或玩家，即可查看牠的詳細屬性！","#81d4fa");
+}
+
+/* ============ HUD ============ */
+function updateHUD(){
+  if(!me) return;
+  document.getElementById("uiName").textContent=`${me.name}（${CLS[me.cls].name}）`;
+  document.getElementById("uiLv").textContent=me.lv;
+  document.getElementById("uiHp").textContent=`${Math.max(0,me.hp)}/${me.maxHp}`;
+  document.getElementById("hpfill").style.width=Math.max(0,me.hp/me.maxHp*100)+"%";
+  document.getElementById("mpfill").style.width=Math.max(0,me.mp/me.maxMp*100)+"%";
+  document.getElementById("expfill").style.width=(me.exp/me.expNeed*100)+"%";
+  document.getElementById("uiGold").textContent=fmt(me.gold);
+  const M=getMap(me.map);
+  const d=me.dungeon;
+  const zone=d
+    ? `<a style="color:#ffd54f;cursor:pointer" onclick="openDungeonPanel()">🏰${d.name} 第${d.wave}/${d.waves}波·剩${d.alive}隻·${d.minsLeft}分</a>`
+    : M.safe?`📍${M.name}(安全區·禁PvP)`:`📍${M.name}(危險！死亡即輸)`;
+  const pts=me.statPoints||0;
+  document.getElementById("uiZone").innerHTML=zone
+    +(pts>0?` <a style="color:#8bc34a;cursor:pointer" onclick="openStats()">✨屬性點×${pts} 待分配</a>`:"")
+    +(me.talent?` <a style="cursor:pointer;color:${me.talent.color}" onclick="openStats()">🌟${me.talent.gradeName} ${esc(me.talent.name)}</a>`:"");
+  const slots=document.querySelectorAll(".skillslot");
+  (me.skills||[]).forEach((sid,i)=>{
+    const cd=(me.cds||{})[sid]||0;
+    const el=slots[i]?.querySelector(".cd");
+    if(el){ if(cd>0.05){ el.classList.remove("hidden"); el.textContent=cd.toFixed(1);} else el.classList.add("hidden"); }
+  });
+}
+function renderSkillbar(){
+  const bar=document.getElementById("skillbar");
+  bar.innerHTML="";
+  (me.skills||[]).forEach((sid,i)=>{
+    const s=SKILLS[sid];
+    const d=document.createElement("div");
+    d.className="skillslot";
+    d.innerHTML=`<span class="key">${i+1}</span><span>${s.name}</span><span class="small">MP${s.mp}</span><div class="cd hidden"></div>`;
+    d.onclick=()=>send({t:"skill",i});
+    bar.appendChild(d);
+  });
+}
+function log(msg,color){
+  const el=document.getElementById("log");
+  const d=document.createElement("div");
+  d.innerHTML=msg; if(color) d.style.color=color;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
+  while(el.children.length>80) el.removeChild(el.firstChild);
+}
+
+/* ============ 輸入 ============ */
+const chatInput=document.getElementById("chatInput");
+addEventListener("keydown",e=>{
+  if(!joined||dead) return;
+  if(document.activeElement===chatInput){
+    if(e.key==="Enter") sendChat();
+    return;
+  }
+  if(e.key==="Enter"){ chatInput.focus(); return; }
+  keys[e.key.toLowerCase()]=true;
+  const k=e.key.toLowerCase();
+  if(k===" "){ e.preventDefault(); send({t:"attack"}); }
+  if(k==="1"||k==="2"||k==="3") send({t:"skill",i:+k-1});
+  if(k==="q") send({t:"pvp"});
+  if(k==="b") openBag();
+  if(k==="c") openStats();
+  if(k==="l") openLeaderboard();
+  if(k==="r") openDungeons();
+  if(k==="p") openParty();
+  if(k==="g") openFaction();
+  if(k==="e"){ // 傳送門或試煉塔
+    const M=getMap(me.map);
+    const pt=M.portals.find(q=>dist(me,q)<120);
+    if(pt) send({t:"portal"});
+    else send({t:"towerEnter"});
+  }
+});
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+function sendChat(){
+  const v=chatInput.value.trim();
+  if(v){ send({t:"chat",text:v}); }
+  chatInput.value=""; chatInput.blur();
+}
+
+/* ============ 邀請提示 ============ */
+let curInvite=null;
+function showInvite(m){
+  curInvite=m;
+  document.getElementById("inviteText").innerHTML=`${esc(m.text)}<br><span class="small">（${m.kind==="party"?"組隊":m.kind==="faction"?"陣營":"交易"}邀請 — 需你同意才會成立）</span>`;
+  document.getElementById("invitePrompt").style.display="block";
+}
+function respondInvite(accept){
+  document.getElementById("invitePrompt").style.display="none";
+  send({t:"inviteRespond",accept});
+  curInvite=null;
+}
+
+/* ============ Modal 工具 ============ */
+function modal(html){ lbOpen=false; document.getElementById("modalRoot").innerHTML=html; }
+function closeModal(){ modal(""); }
+function showOverlay(title,body){
+  const el=document.getElementById("bigOverlay");
+  el.innerHTML=`<h1>${title}</h1><p>${body}</p>`;
+  el.style.display="flex";
+}
+function hideOverlay(){ document.getElementById("bigOverlay").style.display="none"; }
+
+/* ============ 背包 ============ */
+function openBag(){
+  if(!me) return;
+  const rows=(me.inv||[]).map((it,i)=>{
+    let act="";
+    if(it.heal||it.mana) act=`<button onclick="send({t:'useItem',i:${i}});setTimeout(openBag,150)">使用</button>`;
+    else if(it.slot) act=`<button onclick="send({t:'equipItem',i:${i}});setTimeout(openBag,150)">裝備</button>
+      <button class="gold" onclick="send({t:'enhance',where:'inv',i:${i}});setTimeout(openBag,180)">⚒️+1 (💰${fmt(D.enhCost(it))})</button>`;
+    const m2=D.enhMul(it.enh||0), g=n=>Math.round((n||0)*m2);
+    const info=it.heal?`回復${it.heal}HP`:it.mana?`回復${it.mana}MP`
+      :`攻+${g(it.atk)} 防+${g(it.def)} 魔抗+${g(it.mdef)} 速+${g(it.spd)} 體+${g(it.con)} HP+${g(it.hp)}｜Lv.${it.lv} ${it.cls==="any"?"全職業":CLS[it.cls].name}`;
+    return `<div class="row"><span>${itemLabel(it)}${it.count?` ×${it.count}`:""} <span class="small">${info}</span></span>
+      <span>${act} <button onclick="askSell(${i})">上架拍賣</button></span></div>`;
+  }).join("")||"<p class='small'>背包是空的</p>";
+  const eq=s=>me.equip&&me.equip[s]?itemLabel(me.equip[s]):"（無）";
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🎒 背包</h2>
+    <p class="small">武器：${eq("weapon")}｜防具：${eq("armor")}<br>
+    ⚔️攻 ${fmt(me.atk||0)}｜❤️血 ${fmt(me.maxHp||0)}｜🔷法力 ${fmt(me.mana||0)}(藍${fmt(me.maxMp||0)})｜🛡️防 ${fmt(me.def||0)}｜🔮魔抗 ${fmt(me.mdef||0)}｜💨速 ${fmt(me.spd||0)}｜💪體 ${fmt(me.con||0)}
+    ｜💰${fmt(me.gold)}　<button onclick="openStats()">📊 屬性/強化</button></p>${rows}</div>`);
+}
+function askSell(i){
+  const it=me.inv[i];
+  const price=prompt(`為「${it.name}」定價（金幣）：`,it.price||100);
+  if(price===null) return;
+  const p=parseInt(price);
+  if(!(p>0)){ log("價格無效。"); return; }
+  send({t:"auctionSell",i,price:p});
+  closeModal();
+}
+
+/* ============ 副本 ============ */
+let dgFilter="ok", dgCache=null;
+function openDungeons(){ send({t:"dungeonList"}); }
+function dgSetFilter(f){ dgFilter=f; if(dgCache) renderDungeons(dgCache); }
+function renderDungeons(m){
+  if(m.inDungeon){ openDungeonPanel(); return; }
+  dgCache=m;
+  const all=m.list;
+  // 還沒有任何副本可進時，自動改顯示下一階段目標，避免看到空清單
+  if(dgFilter==="ok" && !all.some(d=>me.lv>=d.minLv)) dgFilter="next";
+  const list = dgFilter==="ok" ? all.filter(d=>me.lv>=d.minLv)
+             : dgFilter==="next" ? all.filter(d=>me.lv<d.minLv).slice(0,10)
+             : all;
+  const rows=list.map(d=>{
+    const why = me.lv<d.minLv ? `需要 Lv.${d.minLv}` : me.gold<d.fee ? `金幣不足（需 ${fmt(d.fee)}）` : "";
+    return `<div class="row"><span>
+        <b style="color:#90a4ae">No.${d.no}</b> 🏰 <b>${esc(d.name)}</b>
+        <span class="tag">${esc(d.tierName)}</span> <span class="tag">Lv.${d.minLv}+</span>
+        <span class="small"><br>${d.waves} 波｜終王 ${esc(d.bossName)}(Lv.${d.bossLv})｜獎勵 💰${fmt(d.gold)}＋${fmt(d.exp)}經驗＋裝備</span></span>
+      <span style="text-align:right;white-space:nowrap">入場 💰${fmt(d.fee)}<br>
+        <button class="gold" ${d.canEnter?"":"disabled"} onclick="send({t:'dungeonEnter',key:'${d.key}'});closeModal()">進入</button>
+        ${why?`<br><span class="small" style="color:#ff8a65">${why}</span>`:""}</span></div>`;
+  }).join("")||"<p class='small'>這個分類目前沒有副本。試試「全部 50 個」。</p>";
+  const okCount=all.filter(d=>me.lv>=d.minLv).length;
+  const btn=(k,label)=>`<button ${dgFilter===k?'class="gold"':""} onclick="dgSetFilter('${k}')">${label}</button>`;
+  modal(`<div class="modal" style="min-width:660px"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🏰 副本（共 ${all.length} 個）</h2>
+    <p class="small">獨立實例地圖，怪物分波出現，清光一波才出下一波，最後是王關。
+    <b>組隊時附近隊友會一起進入</b>，獎勵共享。副本內死亡只會被傳送出去，<b style="color:#8bc34a">不算輸掉遊戲</b>；逾時未通關則失敗。</p>
+    <p style="margin:8px 0">${btn("ok",`✅ 我能進的 (${okCount})`)} ${btn("next","🔒 下一階段目標")} ${btn("all",`📜 全部 ${all.length} 個`)}
+      <span class="small">　你的等級 Lv.${me.lv}｜金幣 💰${fmt(me.gold)}</span></p>
+    ${rows}</div>`);
+}
+function openDungeonPanel(){
+  const d=me.dungeon;
+  if(!d){ openDungeons(); return; }
+  const mRows=d.members.map(x=>`<div class="row"><span>${CLS_ICON[x.cls]} ${esc(x.name)} Lv.${x.lv}</span>
+    <span class="small">HP ${fmt(x.hp)}/${fmt(x.maxHp)}</span></div>`).join("");
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🏰 ${esc(d.name)}</h2>
+    <p class="small">進度：第 <b style="color:#ffd54f">${d.wave}/${d.waves}</b> 波${d.wave>=d.waves?"（王關）":""}
+      ｜場上剩餘怪物 <b>${d.alive}</b> 隻｜剩餘時間 約 ${d.minsLeft} 遊戲分鐘</p>
+    ${d.cleared?`<p style="color:#ffd54f">🏆 已通關！即將自動離開副本。</p>`:""}
+    <h3 class="sec">隊伍成員（${d.members.length}人）</h3>${mRows}
+    <p style="margin-top:10px"><button class="red" onclick="send({t:'dungeonLeave'});closeModal()">🚪 離開副本（放棄獎勵）</button></p></div>`);
+}
+
+/* ============ 等級排行榜 ============ */
+let lbOpen=false, lbTimer=null, lbTab="online";
+function openLeaderboard(){
+  lbOpen=true;
+  send({t:"leaderboard"});
+  clearInterval(lbTimer);
+  lbTimer=setInterval(()=>{ if(lbOpen) send({t:"leaderboard"}); else clearInterval(lbTimer); },3000);
+}
+function closeLeaderboard(){ lbOpen=false; clearInterval(lbTimer); closeModal(); }
+function lbSwitch(tab){ lbTab=tab; send({t:"leaderboard"}); }
+function renderLeaderboard(m){
+  if(!lbOpen) return;
+  const medal=r=>r===1?"🥇":r===2?"🥈":r===3?"🥉":`#${r}`;
+  const ago=ts=>{
+    const s=Math.floor((Date.now()-ts)/1000);
+    if(s<60) return "剛剛";
+    if(s<3600) return `${Math.floor(s/60)} 分鐘前`;
+    if(s<86400) return `${Math.floor(s/3600)} 小時前`;
+    return `${Math.floor(s/86400)} 天前`;
+  };
+  const onlineRows=m.online.map(o=>
+    `<div class="row" style="${o.me?"background:#2a3550;border-left:3px solid #ffd54f":""}">
+      <span style="min-width:44px">${medal(o.rank)}</span>
+      <span style="flex:1">${CLS_ICON[o.cls]} <b>${esc(o.name)}</b>${o.me?' <span class="small">（你）</span>':""}${o.victor?" 👑":""}
+        <span class="small">${CLS[o.cls].name}｜📍${getMap(o.map).name}</span></span>
+      <span style="text-align:right"><b style="color:#ffd54f">Lv.${o.lv}</b>
+        <span class="small"> exp ${fmt(o.exp)}｜💰${fmt(o.gold)}</span></span>
+    </div>`).join("")||"<p class='small'>目前沒有線上玩家</p>";
+
+  const fameRows=m.fame.length?m.fame.map(r=>
+    `<div class="row">
+      <span style="min-width:44px">${medal(r.rank)}</span>
+      <span style="flex:1">${CLS_ICON[r.cls]} <b>${esc(r.name)}</b>${r.victor?" 👑 <span class='small'>擊敗滅世魔龍</span>":""}
+        <span class="small">${CLS[r.cls].name}｜${ago(r.at)}</span></span>
+      <span style="text-align:right"><b style="color:#ffd54f">Lv.${r.lv}</b>
+        <span class="small"> 💰${fmt(r.gold)}</span></span>
+    </div>`).join("")
+    :"<p class='small'>還沒有任何紀錄。達到 Lv.2 以上就會登上名人堂！</p>";
+
+  const mine=m.myRank;
+  const tabBtn=(k,label)=>`<button ${lbTab===k?'class="gold"':""} onclick="lbSwitch('${k}')">${label}</button>`;
+  modal(`<div class="modal" style="min-width:560px"><button class="close" onclick="closeLeaderboard()">✕</button>
+    <h2>🏆 等級排行榜</h2>
+    <p class="small">
+      ${mine?`你目前排名 <b style="color:#ffd54f">${medal(mine.rank)}</b>／${m.total} 人線上　Lv.${mine.lv}`:"你尚未上榜"}
+      ｜每 3 秒自動更新
+    </p>
+    <p style="margin:8px 0">${tabBtn("online","🟢 線上排行")} ${tabBtn("fame","👑 歷史名人堂")}</p>
+    ${lbTab==="online"
+      ? `<h3 class="sec">線上玩家等級排名（前 20 名）</h3>${onlineRows}`
+      : `<h3 class="sec">歷史最高紀錄（跨連線保存，前 20 名）</h3>${fameRows}`}
+    </div>`);
+  lbOpen=true;   // modal() 會重置，這裡設回來讓自動更新繼續
+}
+
+/* ============ 人物屬性面板（七大屬性＋升級＋小妖） ============ */
+function itemLabel(it){ return `${esc(it.name)}${it.enh?` <b style="color:#ffd54f">+${it.enh}</b>`:""}`; }
+function petRows(){
+  if(!me||me.cls!=="summoner") return "";
+  const mine=(snap.pets||[]).filter(p=>p.o===myId);
+  const rows=mine.map(p=>
+    `<div class="row"><span>${p.r?"⭐":"🔮"} <b>小妖·${CLS[p.c].name}</b>${p.r?' <span class="tag" style="background:#006064;color:#00e5ff">稀有</span>':""}
+       <span class="small">Lv.${p.lv}｜HP ${fmt(p.hp)}/${fmt(p.maxHp)}${CLS[p.c].noAttack?"｜專職治療你與同伴":""}</span></span>
+     <span style="width:110px"><div class="minibar" style="margin:0"><div style="width:${Math.max(0,p.hp/p.maxHp*100)}%;background:${p.r?"#00e5ff":"#ec407a"}"></div></div></span></div>`
+  ).join("")||`<p class='small'>目前沒有小妖，按技能鍵召喚。</p>`;
+  const u=me.skills.filter(s=>SKILLS[s].summon).map(s=>{
+    const sk=SKILLS[s], slv=(me.skillLv||{})[s]||1;
+    return `${sk.name} Lv.${slv} → 可召 ${D.petCount(sk,slv)} 隻、等級約 ${D.petLevel(me.lv,sk,slv)}`;
+  }).join("　｜　");
+  return `<h3 class="sec">🔮 我的小妖（${mine.length}/${D.PET_CAP}）
+    <span class="small">永久存在，血歸零才會消失。職業隨機（不會是召喚師，有 ${D.RARE_CHANCE*100}% 機率抽到稀有職業）。牠們會打怪自行升級。</span></h3>
+    ${rows}
+    ${u?`<p class="small" style="margin-top:6px">${u}</p>`:""}`;
+}
+function openStats(){
+  if(!me||!me.stats) return;
+  const s=me.stats;
+  const val={atk:s.atk,hp:me.maxHp,mana:s.mana,def:s.def,mdef:s.mdef,spd:s.spd,con:s.con};
+  const baseV={atk:s.base.atk,hp:s.base.hp,mana:s.base.mana,def:s.base.def,mdef:s.base.mdef,spd:s.base.spd,con:s.base.con};
+  const gearV={atk:s.gear.atk,hp:s.gear.hp+s.con*8,mana:s.gear.mana,def:s.gear.def,mdef:s.gear.mdef,spd:s.gear.spd,con:s.gear.con};
+  const allocV={atk:s.alloc.atk,hp:s.alloc.hp,mana:s.alloc.mana,def:s.alloc.def,mdef:s.alloc.mdef,spd:s.alloc.spd,con:s.alloc.con};
+  const extra={mana:`　→ 藍量上限 ${fmt(me.maxMp)}`, spd:`　→ 遊戲中移動速度 ${fmt(s.spd)}`, atk:me.noAttack?`　（牧師無法攻擊，此值不影響治療）`:""};
+  const pts=me.statPoints||0;
+  const spent=Object.values(me.alloc||{}).reduce((a,b)=>a+b,0);
+  const statRows=Object.keys(STAT_INFO).map(k=>{
+    const i=STAT_INFO[k], put=(me.alloc||{})[k]||0;
+    const btns=pts>0
+      ? `<button class="green" onclick="send({t:'allocStat',stat:'${k}',n:1});setTimeout(openStats,180)">+1</button>
+         ${pts>=5?`<button class="green" onclick="send({t:'allocStat',stat:'${k}',n:5});setTimeout(openStats,180)">+5</button>`:""}
+         ${pts>1?`<button class="green" onclick="send({t:'allocStat',stat:'${k}',n:${pts}});setTimeout(openStats,180)">全投(${pts})</button>`:""}`
+      : "";
+    return `<div class="row"><span>${i.icon} <b>${i.name}</b> <span class="small">${i.desc}</span></span>
+      <span style="text-align:right"><b style="color:#ffd54f;font-size:15px">${fmt(val[k])}</b><span class="small" style="color:#81d4fa">${extra[k]||""}</span>
+      <span class="small"> ＝ 基礎 ${fmt(baseV[k])}${put?` ＋ <b style="color:#8bc34a">點數 ${fmt(allocV[k])}</b>(${put}點)`:""} ＋ 裝備 ${fmt(gearV[k])}</span>
+      <br>${btns}</span></div>`;
+  }).join("");
+
+  // 裝備強化
+  const enhRow=(slot,label)=>{
+    const it=me.equip&&me.equip[slot];
+    if(!it) return `<div class="row"><span>${label}：<span class="small">（未裝備）</span></span></div>`;
+    const maxed=(it.enh||0)>=D.MAX_ENH;
+    const cost=D.enhCost(it);
+    const cur=D.enhMul(it.enh||0), nxt=D.enhMul((it.enh||0)+1);
+    const g=n=>Math.round((n||0)*cur), g2=n=>Math.round((n||0)*nxt);
+    const preview=["atk","def","mdef","spd","con","hp"].filter(k=>it[k]).map(k=>
+      `${STAT_INFO[k]?STAT_INFO[k].name:"血量"} ${g(it[k])}${maxed?"":`→<b style="color:#8bc34a">${g2(it[k])}</b>`}`).join("　");
+    return `<div class="row"><span>${label}：${itemLabel(it)} <span class="small">${preview||"無屬性"}</span></span>
+      <span>${maxed?`<span class="small">已滿級 +${D.MAX_ENH}</span>`
+        :`💰${fmt(cost)} <button class="gold" ${me.gold>=cost?"":"disabled"} onclick="send({t:'enhance',where:'${slot}'});setTimeout(openStats,180)">⚒️ 強化到 +${(it.enh||0)+1}</button>`}</span></div>`;
+  };
+
+  // 技能升級
+  const skillRows=(me.skills||[]).map(sid=>{
+    const sk=SKILLS[sid], lv=(me.skillLv||{})[sid]||1;
+    const maxed=lv>=D.MAX_SKILL_LV;
+    const cost=D.skillUpCost(sk,lv);
+    const eff=sk.heal
+      ? `治療 ${Math.round(D.skillHealRate(sk,lv)*100)}%${maxed?"":` →<b style="color:#8bc34a">${Math.round(D.skillHealRate(sk,lv+1)*100)}%</b>`}`
+      : `威力 ${Math.round(D.skillMul(sk,lv)*100)}%${maxed?"":` →<b style="color:#8bc34a">${Math.round(D.skillMul(sk,lv+1)*100)}%</b>`}`;
+    return `<div class="row"><span>【${sk.name}】<b style="color:#ffd54f">Lv.${lv}</b> <span class="small">${eff}｜MP${sk.mp}</span></span>
+      <span>${maxed?`<span class="small">已滿級</span>`
+        :`💰${fmt(cost)} <button class="gold" ${me.gold>=cost?"":"disabled"} onclick="send({t:'skillUp',id:'${sid}'});setTimeout(openStats,180)">📖 升到 Lv.${lv+1}</button>`}</span></div>`;
+  }).join("");
+
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>📊 人物屬性 — ${CLS_ICON[me.cls]} ${esc(me.name)}</h2>
+    <p class="small">${CLS[me.cls].name}｜Lv.${me.lv}｜💰 ${fmt(me.gold)} 金幣｜經驗 ${fmt(me.exp)}/${fmt(me.expNeed)}</p>
+    ${me.talent?`<div class="row" style="border-left:3px solid ${me.talent.color};background:#151d30">
+      <span>🌟 <b>天賦</b> ${talentBadge(me.talent)} <b style="color:${me.talent.color}">${esc(me.talent.name)}</b>
+        <span class="small"><br>${me.talent.icon} ${esc(me.talent.desc)}</span></span>
+      <span class="small" style="text-align:right">全 ${fmt(D.TALENT_COUNT)} 種<br>此等級 ${(D.TALENT_GRADES[me.talent.gradeIdx].p*100).toFixed(2)}%</span>
+    </div>`:""}
+    <div class="row" style="background:${pts>0?"#2a3550":"transparent"};border-left:${pts>0?"3px solid #ffd54f":"none"}">
+      <span>✨ <b>自由屬性點</b> <span class="small">每次升級全屬性+${D.LEVEL_BONUS}，並獲得 ${D.POINTS_PER_LEVEL} 點自由分配</span></span>
+      <span style="text-align:right"><b style="color:${pts>0?"#ffd54f":"#607d8b"};font-size:18px">${fmt(pts)}</b> 點可用
+        ${spent>0?`<br><button onclick="send({t:'resetStats'});setTimeout(openStats,180)">🔄 洗點（收回${spent}點·💰${fmt(D.resetCost(spent))}）</button>`:""}</span>
+    </div>
+    ${pts>0?`<p class="small" style="color:#ffd54f;margin:4px 0">👆 你有 ${pts} 點未分配！點下方各屬性的按鈕投入。每點：${Object.keys(STAT_INFO).map(k=>`${STAT_INFO[k].name}+${D.ALLOC_VALUE[k]}`).join("　")}</p>`:""}
+    ${statRows}
+    <h3 class="sec">⚒️ 裝備強化 <span class="small">每強化1級全屬性+12%，費用每級 ×1.55 遞增（上限 +${D.MAX_ENH}）</span></h3>
+    ${enhRow("weapon","武器")}
+    ${enhRow("armor","防具")}
+    <h3 class="sec">📖 技能升級 <span class="small">每升1級威力+10%，費用每級 ×1.6 遞增（上限 Lv.${D.MAX_SKILL_LV}）</span></h3>
+    ${skillRows}
+    ${petRows()}
+    </div>`);
+}
+
+/* ============ 商店 ============ */
+function openShop(){
+  const skillRows=Object.values(SKILLS).filter(s=>s.price>0).map(s=>{
+    const owned=me.skills.includes(s.id);
+    const can=s.cls===me.cls&&me.lv>=s.lv&&!owned&&me.gold>=s.price;
+    return `<div class="row"><span><span class="tag">${CLS[s.cls].name}</span> 【技能】${s.name} <span class="small">Lv.${s.lv}｜${s.desc}</span></span>
+      <span>💰${s.price} <button ${can?"":"disabled"} onclick="send({t:'buySkill',id:'${s.id}'});setTimeout(openShop,150)">${owned?"已學會":"購買"}</button></span></div>`;
+  }).join("");
+  const eqRows=EQUIPS.map(e=>{
+    const can=(e.cls==="any"||e.cls===me.cls)&&me.gold>=e.price;
+    return `<div class="row"><span><span class="tag">${e.cls==="any"?"全職業":CLS[e.cls].name}</span> ${e.name} <span class="small">Lv.${e.lv}｜攻+${e.atk} 防+${e.def} 魔抗+${e.mdef} 速+${e.spd} 體+${e.con} HP+${e.hp}</span></span>
+      <span>💰${fmt(e.price)} <button ${can?"":"disabled"} onclick="send({t:'buyEquip',id:'${e.id}'});setTimeout(openShop,150)">購買</button></span></div>`;
+  }).join("");
+  const potRows=POTIONS.map(p=>`<div class="row"><span>${p.name} <span class="small">${p.heal?`回${p.heal}HP`:`回${p.mana}MP`}</span></span>
+      <span>💰${p.price} <button ${me.gold>=p.price?"":"disabled"} onclick="send({t:'buyPotion',id:'${p.id}'});setTimeout(openShop,150)">購買</button></span></div>`).join("");
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🏪 商店</h2><p class="small">💰 你的金幣：${fmt(me.gold)}｜技能與裝備有職業限制</p>
+    <h3 class="sec">技能書</h3>${skillRows}
+    <h3 class="sec">裝備</h3>${eqRows}
+    <h3 class="sec">藥水</h3>${potRows}</div>`);
+}
+
+/* ============ 拍賣行 ============ */
+function openAuction(){
+  const rows=auctionCache.map(a=>{
+    const it=a.item;
+    const info=it.heal?`回${it.heal}HP`:it.mana?`回${it.mana}MP`:`攻+${it.atk||0} 防+${it.def||0} HP+${it.hp||0}`;
+    return `<div class="row"><span>${esc(it.name)} <span class="small">${info}｜賣家：${esc(a.sellerName)}${a.mine?"（你）":""}</span></span>
+      <span>💰${fmt(a.price)} ${a.mine
+        ?`<button onclick="send({t:'auctionCancel',id:${a.id}})">下架</button>`
+        :`<button ${me.gold>=a.price?"":"disabled"} onclick="send({t:'auctionBuy',id:${a.id}})">購買</button>`}</span></div>`;
+  }).join("")||"<p class='small'>目前沒有商品</p>";
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🏛️ 拍賣行</h2><p class="small">💰 你的金幣：${fmt(me.gold)}｜想賣東西？到背包點「上架拍賣」。<button onclick="send({t:'auctionList'})">🔄 刷新</button></p>${rows}</div>`);
+}
+
+/* ============ 玩家列表（交易/組隊/陣營邀請共用） ============ */
+function openPlayers(kind){
+  const title=kind==="trade"?"🤝 發起交易":kind==="party"?"👥 邀請組隊":"🚩 邀請加入陣營";
+  const near=[...others.values()];
+  const rows=near.map(o=>{
+    const d=Math.round(dist(o,me));
+    return `<div class="row"><span>${CLS_ICON[o.cls]} ${esc(o.name)} Lv.${o.lv} <span class="small">距離 ${d}</span></span>
+      <button onclick="send({t:'${kind==="trade"?"tradeRequest":kind==="party"?"partyInvite":"factionInvite"}',id:${o.id}});closeModal()">邀請</button></div>`;
+  }).join("")||`<p class='small'>此地圖上沒有其他玩家。<br>開另一個瀏覽器視窗連到本網址，就能多人同玩！</p>`;
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>${title}</h2><p class="small">邀請需對方同意才會成立</p>${rows}</div>`);
+}
+
+/* ============ 組隊 ============ */
+function openParty(){
+  const pt=me.party;
+  const mRows=pt?pt.members.map(m=>`<div class="row"><span>${m.id===pt.leaderId?"👑":"👤"} ${esc(m.name)} Lv.${m.lv} <span class="tag">${CLS[m.cls].name}</span> <span class="small">${getMap(m.map).name}</span></span></div>`).join(""):"<p class='small'>你目前沒有隊伍</p>";
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>👥 組隊（需雙方同意）</h2>
+    <h3 class="sec">我的隊伍</h3>${mRows}
+    <p style="margin-top:10px">
+      <button onclick="openPlayers('party')">➕ 邀請附近玩家</button>
+      ${pt?`<button class="red" onclick="send({t:'partyLeave'});closeModal()">離開隊伍</button>`:""}
+    </p>
+    <p class="small" style="margin-top:8px">組隊打怪經驗金幣平分；組隊擊敗Boss時，全體隊員一同獲勝！牧師的治癒可治療附近隊友。</p></div>`);
+}
+
+/* ============ 陣營 ============ */
+function openFaction(){
+  const f=me.faction;
+  if(!f){
+    const M=getMap(me.map);
+    modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+      <h2>🚩 建立陣營</h2>
+      <p class="small">規則：<br>1. 建立前必須把周圍(${CONST.FACTION_CLEAR_R}範圍)的怪物全部清空<br>2. 陣營只能建立在新手村外<br>3. 建立後可邀請其他玩家加入（對方可同意或拒絕）<br>4. 每1遊戲小時會有一次怪物攻城，請保護總部！<br>5. 可攻擊其他陣營的總部（荒野左下有NPC陣營「暗影軍團」）</p>
+      <p style="margin:10px 0"><input type="text" id="facName" placeholder="陣營名稱" value="${esc(me.name)}的軍團" maxlength="16"></p>
+      ${M.allowFaction?`<button class="gold" onclick="send({t:'factionCreate',name:document.getElementById('facName').value});closeModal()">在此建立陣營總部</button>`:`<p style="color:#ff8a65">❌ 此地圖不能建立陣營（新手村內禁止）</p>`}
+      </div>`);
+    return;
+  }
+  const mRows=f.members.map(m=>`<div class="row"><span>🚩 ${esc(m.name)} Lv.${m.lv}</span></div>`).join("");
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🚩 ${esc(f.name)}</h2>
+    <p class="small">總部：【${getMap(f.map).name}】血量 ${fmt(f.hq.hp)}/${fmt(f.hq.maxHp)}｜下次怪物攻城：約 ${f.nextSiege} 遊戲分鐘後</p>
+    <h3 class="sec">成員（${f.members.length}人）</h3>${mRows}
+    <p style="margin-top:10px"><button onclick="openPlayers('faction')">➕ 邀請玩家加入</button></p></div>`);
+}
+
+/* ============ 交易視窗 ============ */
+let tradeState=null;
+function onTrade(m){
+  if(m.done){ tradeState=null; closeModal(); return; }
+  tradeState=m;
+  const itemName=it=>it?`${it.name}${it.count?` ×1`:""}`:"（無）";
+  const invOpts=(me.inv||[]).map((it,i)=>`<option value="${i}">${esc(it.name)}${it.count?` ×${it.count}`:""}</option>`).join("");
+  modal(`<div class="modal"><button class="close" onclick="send({t:'tradeCancel'})">✕</button>
+    <h2>🤝 與 ${esc(m.partner)} 交易</h2>
+    <div style="display:flex;gap:20px">
+      <div style="flex:1">
+        <h3 class="sec">我方出價 ${m.myConfirmed?"✅已確認":""}</h3>
+        <p>金幣：<input type="number" id="trGold" value="${m.myGold}" min="0" style="width:90px"></p>
+        <p style="margin-top:6px">物品：<select id="trItem"><option value="-1">（不給物品）</option>${invOpts}</select></p>
+        <p style="margin-top:8px">
+          <button onclick="tradeSet()">更新出價</button>
+          <button class="green" onclick="send({t:'tradeConfirm'})">✅ 確認交易</button>
+        </p>
+      </div>
+      <div style="flex:1">
+        <h3 class="sec">對方出價 ${m.theirConfirmed?"✅已確認":""}</h3>
+        <p>金幣：💰${fmt(m.theirGold)}</p>
+        <p style="margin-top:6px">物品：${esc(itemName(m.theirItem))}</p>
+      </div>
+    </div>
+    <p class="small" style="margin-top:10px">雙方都按「確認交易」後成交。任一方更改出價會重置確認狀態。</p>
+    <p style="margin-top:6px"><button class="red" onclick="send({t:'tradeCancel'})">取消交易</button></p></div>`);
+  const sel=document.getElementById("trItem");
+  if(m.myItem){ const idx=(me.inv||[]).findIndex(it=>it===m.myItem||it.name===m.myItem.name); if(idx>=0) sel.value=idx; }
+}
+function tradeSet(){
+  send({t:"tradeSet",gold:+document.getElementById("trGold").value||0,item:+document.getElementById("trItem").value});
+}
+
+/* ============ 試煉塔 ============ */
+function onTower(m){
+  if(m.end){ closeModal(); return; }
+  const floorReward=m.floor*m.floor*5+50;
+  modal(`<div class="modal" style="text-align:center">
+    <h2>🗼 試煉塔 — 第 ${m.floor} 層</h2>
+    <p>👹 <b>${esc(m.mon.name)}</b>（Lv.${m.mon.lv}）</p>
+    <div class="hpline"><div style="width:${Math.max(0,m.mon.hp/m.mon.maxHp*100)}%"></div></div>
+    <p>🧝 ${esc(me.name)}（Lv.${me.lv}）HP ${m.pHp}/${m.pMaxHp}</p>
+    <div class="hpline"><div style="width:${Math.max(0,m.pHp/m.pMaxHp*100)}%;background:#43a047"></div></div>
+    <p class="small">已累積獎勵：💰${fmt(m.reward)}｜本層通關可再得 💰${fmt(floorReward)}${m.pd?`<br>你造成 ${m.pd} 傷害，守衛反擊 ${m.md} 傷害`:""}</p>
+    <p style="margin-top:10px">
+      <button class="gold" onclick="send({t:'towerFight'})">⚔️ 戰鬥！</button>
+      <button onclick="send({t:'towerLeave'})">🏃 領獎離開（帶走 ${fmt(m.reward)} 金幣）</button></p></div>`);
+}
+
+/* ============ 說明 ============ */
+function openHelp(){
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+  <h2>❓ 遊戲說明</h2>
+  <div style="font-size:13px;line-height:1.9">
+  <b>多人連線：</b>開多個瀏覽器視窗連到同一網址即可多人同玩！在線上限 1,000,000 人。<br>
+  <b>🌟 天賦：</b>每建立一個新角色都會<b>自動抽取一個天賦</b>，全遊戲共 <b style="color:#ffd54f">${D.TALENT_COUNT.toLocaleString()}</b> 種，天賦會<b>永久跟著這個角色</b>（想重抽就建立新角色）。<br>
+  <span class="small">等級由低到高：${D.TALENT_GRADES.map(g=>`<b style="color:${g.color}">${g.name}</b>(${(g.p*100).toFixed(2)}%)`).join("→")}　抽到 S 級以上會全服公告。<br>
+  天賦效果是實際生效的：攻擊／血量／法力值／防禦／魔抗／速度／體質加成、經驗與金幣加成、暴擊率、傷害減免、每秒回血、技能冷卻與耗魔縮減、小妖強度、副本獎勵。</span><br>
+  <b>💾 角色存檔：</b>角色會<b style="color:#8bc34a">每 20 秒自動存檔</b>，離線與關伺服器時也會存。下次進遊戲時，開始畫面上方會出現你的角色，按「▶ 繼續遊玩」就能接續。也可以隨時按右側「💾 存檔」手動存。<br>
+  <span class="small">存檔認的是瀏覽器裡記錄的角色令牌，所以換瀏覽器或清除網站資料就會看不到舊角色。<b style="color:#ff8a65">在新手村外血量歸零輸掉遊戲時，該角色的存檔會一併刪除</b>（成績仍留在名人堂）。</span><br>
+  <b>操作：</b>WASD移動｜空白鍵普攻｜1~3技能｜Q攻擊玩家(PvP)｜E傳送門/試煉塔｜Enter聊天｜C屬性｜R副本｜L排行榜｜B背包｜P組隊｜G陣營<br>
+  <b>升級成長：</b>每次升級<b style="color:#ffd54f">全六大屬性各 +${D.LEVEL_BONUS}</b>，並獲得 <b style="color:#8bc34a">${D.POINTS_PER_LEVEL} 點自由屬性點</b>，按 C 自由分配（每點：${Object.keys(STAT_INFO).map(k=>`${STAT_INFO[k].name}+${D.ALLOC_VALUE[k]}`).join("、")}）。分配後可花金幣洗點重來。<br>
+  <b>副本（按R）：</b>獨立實例地圖，怪物分波出現，清光一波才出下一波，最後是王關。組隊時附近隊友一起進入、獎勵共享。副本內死亡只會被傳送出去<b style="color:#8bc34a">不算輸</b>，但逾時未通關算失敗。<br>
+  <b>Boss 會回血：</b>所有 Boss 戰鬥中會緩慢回血，脫離戰鬥後快速回滿——火力不足就打不動，點擊 Boss 可看牠每秒回血量。<br>
+  <b>排行榜：</b>按 L 查看<b style="color:#ffd54f">線上等級排行</b>（每3秒更新、顯示你的名次）與<b style="color:#ffd54f">歷史名人堂</b>（跨連線永久保存，擊敗滅世魔龍者標示👑）。<br>
+  <b>七大屬性（按C查看）：</b>⚔️攻擊＝傷害｜❤️血量＝生命上限｜🔷法力值＝<b>藍量上限就是法力值×10</b>｜🛡️防禦＝減物理傷害｜🔮魔抗＝減魔法傷害｜💨速度＝<b>就是遊戲中的移動速度</b>，也加快攻速｜💪體質＝每點+8血量並加快回血。<br>
+  <b>職業（8種，含1%稀有）：</b>戰士／法師／弓箭手／刺客／牧師／龍騎士／召喚師，以及 1% 機率抽中的稀有職業<b style="color:#00e5ff">🎯狙擊手</b>（距離越遠傷害越高，最高2.5倍；射程隨等級成長）。重新整理頁面可再抽一次。<br>
+  <b>☮️ 牧師無法攻擊：</b>牧師是純輔助職業，普攻與PvP都被禁用，三個技能全是治療。<b>治療隊友可以換取經驗</b>（每治療20點血得1經驗），所以牧師請務必組隊遊玩。<br>
+  <b>👾 召喚師的小妖：</b>用技能召喚小妖，牠們會<b style="color:#ec407a">永久跟隨</b>，只有血量歸零才會消失（平時會緩慢自癒）。<b>全場上限 ${D.PET_CAP} 隻</b>，滿了要等牠們陣亡才能再召。<br>
+  <span class="small">・小妖有自己的<b>職業</b>，召喚時隨機抽取：<b>不會抽到召喚師</b>，但有 ${D.RARE_CHANCE*100}% 機率抽中稀有職業🎯狙擊手（會全服廣播）。抽到牧師小妖則專職治療你與其他小妖。<br>
+  ・小妖會<b>打怪自行升級</b>（出手的拿全額經驗、同伴分一半），等級越高越強。牠們也會被怪物攻擊，要小心保護。<br>
+  ・技能等級越高，一次能召喚的隻數越多（每 5 級 +1）、召喚出的小妖等級也越高。小妖會跟著角色一起存檔。</span><br>
+  <b>怪物也有速度：</b>點擊怪物可看牠的速度、防禦、魔抗、傷害類型與每秒回血。速度比你慢就能拉扯風箏，比你快就跑不掉。<br>
+  <b>強化與升級：</b>在屬性面板可用金幣<b style="color:#ffd54f">強化裝備</b>（每級全屬性+12%）與<b style="color:#ffd54f">升級技能</b>（每級威力+10%）。等級越高費用越貴——強化每級×1.55、技能每級×1.6。<br>
+  <b>地圖（4張）：</b>新手村(1-10級,安全) → 荒野(1-100級) → 冰霜雪原(100-300級,需Lv40) → 炎獄火山(300-600級,需Lv80)。走到傳送門按E切換。<br>
+  <b>新手村：</b>禁止PvP，等級10以上才能離開。<br>
+  <b>村外：</b>可PvP。<b style="color:#ff8a65">血量歸零立刻輸掉遊戲！</b><br>
+  <b>獲勝：</b>擊敗荒野深處的<b style="color:#ff8a80">1000級</b>Boss·滅世魔龍（極強！強烈建議組隊，全員獲勝）。冰霜女皇(300級)/炎獄魔王(600級)是挑戰用超級Boss。<br>
+  <b>查看屬性：</b>用滑鼠<b style="color:#ffd54f">點擊任何怪物或玩家</b>，左側會顯示牠的等級、生命、攻擊力、獎勵與戰力比較。點自己可看完整屬性。<br>
+  <b>組隊/陣營/交易：</b>都需要對方同意。陣營需先清空周圍怪物、只能建在村外，每1遊戲小時怪物攻城。<br>
+  <b>試煉塔：</b>荒野右上方，入場100金幣，塔內怪最高1000級，層數越高獎勵越多。<br>
+  <b>刷新：</b>怪物每10遊戲分鐘、Boss每15遊戲分鐘重生。<br>
+  <b>職業（6種）：</b>戰士/法師/弓箭手/刺客/牧師/龍騎士，技能與裝備有職業限制，牧師可治療隊友。
+  </div></div>`);
+}
+
+/* ============ 移動與渲染 ============ */
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
+function resize(){ cv.width=innerWidth; cv.height=innerHeight; }
+addEventListener("resize",resize); resize();
+
+/* ============ 人型角色繪製 ============ */
+function drawWeapon(cls){
+  ctx.lineCap="round";
+  switch(cls){
+    case "warrior": // 大劍
+      ctx.strokeStyle="#cfd8dc"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(9,3); ctx.lineTo(17,-13); ctx.stroke();
+      ctx.strokeStyle="#8d6e63"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(6,8); ctx.lineTo(10,1); ctx.stroke();
+      break;
+    case "mage": // 法杖＋魔球
+      ctx.strokeStyle="#8d6e63"; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(9,9); ctx.lineTo(13,-13); ctx.stroke();
+      ctx.fillStyle="#ce93d8";
+      ctx.beginPath(); ctx.arc(13,-16,4,0,7); ctx.fill();
+      ctx.strokeStyle="#f3e5f5"; ctx.lineWidth=1; ctx.stroke();
+      break;
+    case "archer": // 弓
+      ctx.strokeStyle="#a1887f"; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.arc(9,-3,12,-Math.PI*0.44,Math.PI*0.44); ctx.stroke();
+      ctx.strokeStyle="#eeeeee"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(14,-13); ctx.lineTo(14,7); ctx.stroke();
+      break;
+    case "assassin": // 雙匕首
+      ctx.strokeStyle="#eceff1"; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(9,4); ctx.lineTo(16,-4); ctx.moveTo(-9,4); ctx.lineTo(-15,-4); ctx.stroke();
+      break;
+    case "priest": // 十字權杖
+      ctx.strokeStyle="#ffe082"; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(9,9); ctx.lineTo(12,-14); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(7,-9); ctx.lineTo(16,-10); ctx.stroke();
+      break;
+    case "dragoon": // 龍槍
+      ctx.strokeStyle="#90a4ae"; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(3,13); ctx.lineTo(18,-15); ctx.stroke();
+      ctx.fillStyle="#cfd8dc";
+      ctx.beginPath(); ctx.moveTo(19,-18); ctx.lineTo(15,-11); ctx.lineTo(22,-13); ctx.closePath(); ctx.fill();
+      break;
+  }
+}
+function drawHumanoid(x,y,cls,o){
+  o=o||{};
+  const color=CLS[cls].color;
+  const swing=o.moving?Math.sin(o.phase||0):0;
+  ctx.save();
+  ctx.translate(x,y);
+  if(o.scale&&o.scale!==1) ctx.scale(o.scale,o.scale);
+  // 影子（不隨面向翻轉）
+  ctx.fillStyle="rgba(0,0,0,0.35)";
+  ctx.beginPath(); ctx.ellipse(0,17,11,4,0,0,7); ctx.fill();
+  if(o.ring){ // 選取／隊友光環
+    ctx.strokeStyle=o.ring; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(0,17,15,6,0,0,7); ctx.stroke();
+  }
+  ctx.scale(o.face===-1?-1:1,1);
+  ctx.lineCap="round";
+  // 腿
+  ctx.strokeStyle="#37474f"; ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(-2,5); ctx.lineTo(-3+swing*5,16);
+  ctx.moveTo(2,5);  ctx.lineTo(3-swing*5,16);
+  ctx.stroke();
+  // 手臂（後方手先畫）
+  ctx.strokeStyle=color; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(-5,-4); ctx.lineTo(-9-swing*3,4); ctx.stroke();
+  // 身體
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(-6,-7); ctx.lineTo(6,-7); ctx.lineTo(4,6); ctx.lineTo(-4,6); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle="rgba(0,0,0,0.5)"; ctx.lineWidth=1.2; ctx.stroke();
+  // 前方持武器的手
+  ctx.strokeStyle=color; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(5,-4); ctx.lineTo(9+swing*3,3); ctx.stroke();
+  // 頭
+  ctx.fillStyle="#ffcc80";
+  ctx.beginPath(); ctx.arc(0,-14,6.5,0,7); ctx.fill();
+  ctx.strokeStyle="rgba(0,0,0,0.45)"; ctx.lineWidth=1.2; ctx.stroke();
+  // 頭髮／頭盔
+  ctx.fillStyle=color;
+  ctx.beginPath(); ctx.arc(0,-15,6.5,Math.PI*1.02,Math.PI*2.02); ctx.fill();
+  // 眼睛（面向側）
+  ctx.fillStyle="#37474f";
+  ctx.beginPath(); ctx.arc(3,-13.5,1.1,0,7); ctx.fill();
+  drawWeapon(cls);
+  ctx.restore();
+}
+
+/* ============ 點擊檢視屬性 ============ */
+let inspect=null;   // {kind:"mon"|"player"|"me", id}
+let myFace=1, myPhase=0, myMoving=false;
+const petAnim=new Map();   // 小妖的走動動畫狀態
+cv.addEventListener("click",e=>{
+  if(!me) return;
+  const r=cv.getBoundingClientRect();
+  const wx=e.clientX-r.left+cam.x, wy=e.clientY-r.top+cam.y;
+  let best=null, bestD=1e9;
+  for(const m of snap.monsters){
+    const d=Math.hypot(m.x-wx,m.y-wy);
+    const hit=(m.b?40:22);
+    if(d<hit&&d<bestD){ best={kind:"mon",id:m.i}; bestD=d; }
+  }
+  for(const o of others.values()){
+    const d=Math.hypot(o.x-wx,o.y-wy);
+    if(d<26&&d<bestD){ best={kind:"player",id:o.id}; bestD=d; }
+  }
+  const dMe=Math.hypot(me.x-wx,me.y-wy);
+  if(dMe<26&&dMe<bestD){ best={kind:"me"}; bestD=dMe; }
+  inspect=best;
+  renderInspect();
+});
+function clearInspect(){ inspect=null; document.getElementById("inspectPanel").style.display="none"; }
+function renderInspect(){
+  const el=document.getElementById("inspectPanel");
+  if(!inspect||!me){ el.style.display="none"; return; }
+  const kv=(k,v)=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`;
+  let html="";
+  if(inspect.kind==="mon"){
+    const m=snap.monsters.find(x=>x.i===inspect.id);
+    if(!m){ // 已被擊殺
+      el.innerHTML=`<button class="close" onclick="clearInspect()">✕</button><h4>目標已消失</h4><div class="sub">怪物已被擊敗或離開視野</div>`;
+      el.style.display="block"; return;
+    }
+    const type=m.b?"☠️ Boss":m.s?"⚔️ 攻城怪":"👹 普通怪物";
+    const dmgLabel=m.ty==="m"?"🔮 魔法":m.ty==="x"?"⚡ 混合":"⚔️ 物理";
+    const armor=m.ty==="m"?(me.mdef||0):m.ty==="x"?((me.def||0)+(me.mdef||0))/2:(me.def||0);
+    const myDmg=Math.max(1,me.atk||0);
+    const itsDmg=Math.max(1,Math.round((m.a||0)-armor));
+    const hitsToKill=Math.ceil(m.hp/myDmg);
+    const hitsToDie=Math.ceil(me.hp/itsDmg);
+    html=`<h4>${esc(m.n||"怪物")}</h4>
+      <div class="sub">${type}｜Lv.${m.lv}${m.b?"":`｜距離 ${Math.round(dist(m,me))}`}</div>
+      <div class="minibar"><div style="width:${Math.max(0,m.hp/m.maxHp*100)}%"></div></div>
+      ${kv("生命",`${fmt(m.hp)} / ${fmt(m.maxHp)}`)}
+      ${kv("攻擊力",fmt(m.a||0))}
+      ${kv("傷害類型",dmgLabel)}
+      ${kv("防禦 / 魔抗",`${fmt(m.df||0)} / ${fmt(m.md||0)}`)}
+      ${kv("💨 速度",`${fmt(m.sp||0)}${me.spd>(m.sp||0)?' <span style="color:#8bc34a">(比你慢，可拉扯)</span>':' <span style="color:#ff8a65">(比你快，跑不掉！)</span>'}`)}
+      ${m.rg?kv("每秒回血",`<span style="color:#8bc34a">+${fmt(m.rg)}</span>`):""}
+      ${kv("對你造成",`約 ${fmt(itsDmg)} / 擊`)}
+      ${kv("你造成",`約 ${fmt(myDmg)} / 擊`)}
+      ${kv("預估擊殺",`${fmt(hitsToKill)} 擊`)}
+      ${kv("你可承受",`${fmt(hitsToDie)} 擊`)}
+      ${kv("經驗獎勵",fmt(m.lv*12+(m.b?m.lv*50:0)))}
+      ${kv("金幣獎勵",`${fmt(m.lv*3+(m.b?m.lv*100:0))} ~ ${fmt(m.lv*7+(m.b?m.lv*100:0))}`)}
+      ${kv("重生時間",m.s?"不重生":m.b?"15 遊戲分":"10 遊戲分")}
+      <div class="sub" style="margin-top:6px">${hitsToKill>hitsToDie?"⚠️ 這隻怪比你強，建議組隊或先練級！":"✅ 你有機會擊敗牠。"}</div>`;
+  } else if(inspect.kind==="player"||inspect.kind==="me"){
+    const isMe=inspect.kind==="me";
+    const o=isMe?null:others.get(inspect.id);
+    if(!isMe&&!o){ clearInspect(); return; }
+    const name=isMe?me.name:o.name, cls=isMe?me.cls:o.cls, lv=isMe?me.lv:o.lv;
+    const hp=isMe?me.hp:o.hp, maxHp=isMe?me.maxHp:o.maxHp;
+    const mate=!isMe&&me.party&&o.party===me.party.id;
+    html=`<h4>${CLS_ICON[cls]} ${esc(name)}${isMe?"（你）":""}</h4>
+      <div class="sub">${CLS[cls].name}｜Lv.${lv}${mate?"｜👥 你的隊友":isMe?"":`｜距離 ${Math.round(dist(o,me))}`}</div>
+      <div class="minibar"><div style="width:${Math.max(0,hp/maxHp*100)}%;background:#43a047"></div></div>
+      ${kv("生命",`${fmt(Math.max(0,hp))} / ${fmt(maxHp)}`)}
+      ${isMe?kv("魔力",`${fmt(me.mp)} / ${fmt(me.maxMp)}`):""}
+      ${isMe?kv("⚔️ 攻擊",fmt(me.atk)):""}
+      ${isMe?kv("🛡️ 防禦",fmt(me.def)):""}
+      ${isMe?kv("🔷 法力值",`${fmt(me.mana)}（藍量 ${fmt(me.maxMp)}）`):""}
+      ${isMe?kv("🔮 魔抗",fmt(me.mdef)):""}
+      ${isMe?kv("💨 速度",fmt(me.spd)):""}
+      ${isMe?kv("💪 體質",fmt(me.con)):""}
+      ${isMe?kv("金幣",fmt(me.gold)):""}
+      ${isMe?kv("經驗",`${fmt(me.exp)} / ${fmt(me.expNeed)}`):""}
+      ${isMe?`<p style="margin-top:8px"><button onclick="openStats()">📊 完整屬性 / 強化升級</button></p>`:""}
+      ${!isMe?kv("陣營",o.fac?(me.faction&&o.fac===me.faction.id?"同陣營":"其他陣營"):"無"):""}
+      ${!isMe?`<p style="margin-top:8px;display:flex;gap:4px;flex-wrap:wrap">
+        <button onclick="send({t:'partyInvite',id:${o.id}})">邀請組隊</button>
+        <button onclick="send({t:'tradeRequest',id:${o.id}})">交易</button>
+        ${me.faction?`<button onclick="send({t:'factionInvite',id:${o.id}})">邀陣營</button>`:""}
+      </p>`:""}`;
+  }
+  el.innerHTML=`<button class="close" onclick="clearInspect()">✕</button>`+html;
+  el.style.display="block";
+}
+
+let lastT=performance.now();
+function loop(t){
+  const dt=Math.min(0.05,(t-lastT)/1000); lastT=t;
+  if(me&&!dead){
+    // 本地移動（伺服器驗證邊界）
+    let dx=0,dy=0;
+    if(keys.w||keys.arrowup)dy-=1;
+    if(keys.s||keys.arrowdown)dy+=1;
+    if(keys.a||keys.arrowleft)dx-=1;
+    if(keys.d||keys.arrowright)dx+=1;
+    if((dx||dy)&&document.activeElement!==chatInput){
+      const M=getMap(me.map), L=Math.hypot(dx,dy), sp=me.spd||CONST.SPEED;
+      me.x=Math.max(20,Math.min(M.w-20,me.x+dx/L*sp*dt));
+      me.y=Math.max(20,Math.min(M.h-20,me.y+dy/L*sp*dt));
+      myMoving=true; myPhase+=dt*14;
+      if(dx>0) myFace=1; else if(dx<0) myFace=-1;
+    } else myMoving=false;
+    // 其他玩家插值＋走動動畫
+    for(const o of others.values()){
+      const ddx=o.tx-o.x, ddy=o.ty-o.y;
+      o.moving=Math.hypot(ddx,ddy)>1.5;
+      if(Math.abs(ddx)>0.6) o.face=ddx>0?1:-1;
+      o.phase=(o.phase||0)+(o.moving?dt*14:0);
+      o.x+=ddx*Math.min(1,dt*12);
+      o.y+=ddy*Math.min(1,dt*12);
+    }
+    // 小妖走動動畫
+    for(const pe of (snap.pets||[])){
+      const a=petAnim.get(pe.i)||{px:pe.x,py:pe.y,face:1,phase:0};
+      const ddx=pe.x-a.px, ddy=pe.y-a.py;
+      pe.moving=Math.hypot(ddx,ddy)>1;
+      if(Math.abs(ddx)>0.6) a.face=ddx>0?1:-1;
+      a.phase+=(pe.moving?dt*14:0);
+      a.px=pe.x; a.py=pe.y;
+      pe.face=a.face; pe.phase=a.phase;
+      petAnim.set(pe.i,a);
+    }
+    for(const k of [...petAnim.keys()]) if(!(snap.pets||[]).some(p=>p.i===k)) petAnim.delete(k);
+    for(let i=effects.length-1;i>=0;i--){ effects[i].t-=dt; if(effects[i].t<=0) effects.splice(i,1); }
+    render();
+    if(inspect) renderInspect();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function render(){
+  const M=getMap(me.map);
+  cam.x=Math.max(0,Math.min(M.w-cv.width,me.x-cv.width/2));
+  cam.y=Math.max(0,Math.min(M.h-cv.height,me.y-cv.height/2));
+  if(M.w<cv.width) cam.x=(M.w-cv.width)/2;
+  if(M.h<cv.height) cam.y=(M.h-cv.height)/2;
+  const ox=-cam.x, oy=-cam.y;
+
+  ctx.fillStyle="#000"; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle=M.bg; ctx.fillRect(ox,oy,M.w,M.h);
+
+  // 深處漸暗
+  if(M.deep){
+    const g=ctx.createRadialGradient(M.deep.x+ox,M.deep.y+oy,300,M.deep.x+ox,M.deep.y+oy,Math.max(M.w,M.h));
+    g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,30,0.6)");
+    ctx.fillStyle=g; ctx.fillRect(ox,oy,M.w,M.h);
+  }
+  // 地圖名與邊界
+  ctx.strokeStyle=M.safe?"#ffd54f":"#555"; ctx.lineWidth=4;
+  ctx.strokeRect(ox,oy,M.w,M.h);
+  ctx.fillStyle="#ffd54f"; ctx.font="bold 22px sans-serif"; ctx.textAlign="center";
+  ctx.fillText(`${M.safe?"🏡":"🗺️"} ${M.name}`, M.w/2+ox, 40+oy);
+
+  // 傳送門
+  for(const p of M.portals){
+    const x=p.x+ox,y=p.y+oy;
+    ctx.beginPath();
+    ctx.fillStyle="#4dd0e1";
+    ctx.arc(x,y,26,0,7); ctx.fill();
+    ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle="#b2ebf2"; ctx.font="bold 13px sans-serif";
+    ctx.fillText(`🌀 ${p.label}（E）`,x,y-36);
+  }
+  // 試煉塔
+  if(M.tower){
+    ctx.fillStyle="#ffb300";
+    ctx.fillRect(M.tower.x-30+ox,M.tower.y-70+oy,60,110);
+    ctx.font="bold 15px sans-serif";
+    ctx.fillText(`🗼 試煉塔（E進入·${CONST.TOWER_FEE}金幣）`,M.tower.x+ox,M.tower.y-84+oy);
+  }
+  // Boss 領地
+  if(M.boss){
+    ctx.strokeStyle="#ff5252"; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+    ctx.beginPath(); ctx.arc(M.boss.x+ox,M.boss.y+oy,240,0,7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="#ff8a80"; ctx.font="bold 15px sans-serif";
+    ctx.fillText(`☠️ ${M.boss.name}${M.boss.win?"（擊敗即獲勝）":""}`,M.boss.x+ox,M.boss.y-260+oy);
+  }
+  // 陣營總部
+  for(const f of snap.hqs){
+    const hx=f.x+ox, hy=f.y+oy;
+    ctx.fillStyle=f.npc?"#6a1b9a":(me.faction&&f.id===me.faction.id?"#1976d2":"#00838f");
+    ctx.fillRect(hx-35,hy-35,70,70);
+    ctx.fillStyle="#fff"; ctx.font="bold 13px sans-serif";
+    ctx.fillText(`🚩${f.name}`,hx,hy-44);
+    ctx.fillStyle="#333"; ctx.fillRect(hx-35,hy+40,70,7);
+    ctx.fillStyle="#e53935"; ctx.fillRect(hx-35,hy+40,70*Math.max(0,f.hp/f.maxHp),7);
+  }
+  // 怪物
+  ctx.font="11px sans-serif";
+  for(const m of snap.monsters){
+    const x=m.x+ox,y=m.y+oy;
+    if(x<-80||y<-80||x>cv.width+80||y>cv.height+80) continue;
+    const r=m.b?34:10+Math.min(10,m.lv*0.05);
+    ctx.beginPath();
+    ctx.fillStyle=m.b?"#d500f9":m.s?"#ff6e40":m.lv<=10?"#8d6e63":m.lv<=60?"#ef5350":m.lv<=150?"#ab47bc":m.lv<=350?"#3949ab":"#212121";
+    ctx.arc(x,y,r,0,7); ctx.fill();
+    if(m.b){ ctx.strokeStyle="#ffd54f"; ctx.lineWidth=3; ctx.stroke(); }
+    if(inspect&&inspect.kind==="mon"&&inspect.id===m.i){ // 被檢視的目標
+      ctx.strokeStyle="#ffd54f"; ctx.lineWidth=2; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.arc(x,y,r+8,0,7); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.fillStyle=m.b?"#ffd54f":"#ffcdd2";
+    ctx.fillText(`${m.n||"怪物"} Lv.${m.lv}`,x,y-r-14);
+    ctx.fillStyle="#333"; ctx.fillRect(x-16,y-r-10,32,4);
+    ctx.fillStyle="#e53935"; ctx.fillRect(x-16,y-r-10,32*Math.max(0,m.hp/m.maxHp),4);
+  }
+  // 小妖（有自己的職業，畫成小一號的人型）
+  for(const pe of (snap.pets||[])){
+    const x=pe.x+ox, y=pe.y+oy;
+    if(x<-60||y<-60||x>cv.width+60||y>cv.height+60) continue;
+    const mine=pe.o===myId;
+    drawHumanoid(x,y,pe.c,{face:pe.face||1,moving:pe.moving,phase:pe.phase,
+      scale:0.72, ring:pe.r?"#00e5ff":(mine?"#ec407a":"#ab47bc")});
+    ctx.font="10px sans-serif"; ctx.textAlign="center";
+    ctx.fillStyle=pe.r?"#00e5ff":(mine?"#f8bbd0":"#ce93d8");
+    ctx.fillText(`${pe.r?"⭐":"🔮"}小妖·${CLS[pe.c].name} Lv.${pe.lv}${mine?"":"·"+pe.on}`,x,y-24);
+    ctx.fillStyle="#333"; ctx.fillRect(x-13,y-20,26,3);
+    ctx.fillStyle=pe.r?"#00e5ff":"#ec407a"; ctx.fillRect(x-13,y-20,26*Math.max(0,pe.hp/pe.maxHp),3);
+  }
+  // 其他玩家
+  for(const o of others.values()){
+    const x=o.x+ox,y=o.y+oy;
+    if(x<-60||y<-60||x>cv.width+60||y>cv.height+60) continue;
+    const isMate=me.party&&o.party===me.party.id;
+    const sel=inspect&&inspect.kind==="player"&&inspect.id===o.id;
+    drawHumanoid(x,y,o.cls,{face:o.face,moving:o.moving,phase:o.phase,ring:sel?"#ffd54f":isMate?"#4fc3f7":null});
+    ctx.font="11px sans-serif"; ctx.textAlign="center";
+    ctx.fillStyle=isMate?"#4fc3f7":"#e0e0e0";
+    ctx.fillText(`${isMate?"👥":""}${CLS_ICON[o.cls]}${o.name} Lv.${o.lv}`,x,y-32);
+    ctx.fillStyle="#333"; ctx.fillRect(x-14,y-26,28,4);
+    ctx.fillStyle="#43a047"; ctx.fillRect(x-14,y-26,28*Math.max(0,o.hp/o.maxHp),4);
+  }
+  // 我
+  const px=me.x+ox,py=me.y+oy;
+  drawHumanoid(px,py,me.cls,{face:myFace,moving:myMoving,phase:myPhase,ring:inspect&&inspect.kind==="me"?"#ffd54f":"#ffffff66"});
+  ctx.fillStyle="#ffd54f"; ctx.font="bold 13px sans-serif"; ctx.textAlign="center";
+  ctx.fillText(`${me.name} Lv.${me.lv}`,px,py-32);
+
+  // 特效
+  for(const e of effects){
+    if(e.line){
+      ctx.strokeStyle=e.color; ctx.lineWidth=2; ctx.globalAlpha=Math.max(0,e.t/0.3);
+      ctx.beginPath(); ctx.moveTo(e.x+ox,e.y+oy); ctx.lineTo(e.line.x2+ox,e.line.y2+oy); ctx.stroke();
+      ctx.globalAlpha=1;
+    } else {
+      ctx.fillStyle=e.color; ctx.font=e.big?"bold 18px sans-serif":"bold 14px sans-serif";
+      ctx.fillText(e.text,e.x+ox,e.y+oy-((e.big?1.0:0.8)-e.t)*30);
+    }
+  }
+  // 小地圖
+  const MS=140, sc=Math.min(MS/M.w,MS/M.h), mx=cv.width-MS-10, my=cv.height-MS-10;
+  ctx.fillStyle="#000a"; ctx.fillRect(mx,my,M.w*sc,M.h*sc);
+  ctx.strokeStyle="#666"; ctx.strokeRect(mx,my,M.w*sc,M.h*sc);
+  for(const p of M.portals){ ctx.fillStyle="#4dd0e1"; ctx.fillRect(mx+p.x*sc-2,my+p.y*sc-2,5,5); }
+  if(M.tower){ ctx.fillStyle="#ffb300"; ctx.fillRect(mx+M.tower.x*sc-2,my+M.tower.y*sc-2,4,4); }
+  if(M.boss){ ctx.fillStyle="#d500f9"; ctx.fillRect(mx+M.boss.x*sc-3,my+M.boss.y*sc-3,6,6); }
+  for(const f of snap.hqs){ ctx.fillStyle=f.npc?"#6a1b9a":"#1976d2"; ctx.fillRect(mx+f.x*sc-2,my+f.y*sc-2,5,5); }
+  for(const o of others.values()){ ctx.fillStyle="#90caf9"; ctx.fillRect(mx+o.x*sc-1,my+o.y*sc-1,3,3); }
+  ctx.fillStyle="#fff"; ctx.fillRect(mx+me.x*sc-2,my+me.y*sc-2,4,4);
+}
+
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>星辰大陸 Online</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif; }
+  body { background:#0b0e14; color:#e8e8e8; overflow:hidden; }
+  #game { position:relative; width:100vw; height:100vh; }
+  canvas { display:block; background:#1a2f1a; }
+  .hud { position:absolute; pointer-events:none; }
+  #topbar {
+    top:0; left:0; right:0; height:64px; display:flex; align-items:center; gap:18px;
+    background:linear-gradient(#000c, #0006); padding:0 14px; pointer-events:auto; font-size:13px;
+  }
+  #topbar .stat b { color:#ffd54f; }
+  #hpbar,#mpbar,#expbar { width:150px; height:12px; background:#333; border-radius:6px; overflow:hidden; display:inline-block; vertical-align:middle; }
+  #hpfill { height:100%; background:#e53935; width:100%; }
+  #mpfill { height:100%; background:#1e88e5; width:100%; }
+  #expfill { height:100%; background:#8bc34a; width:0%; }
+  #btnbar { position:absolute; top:70px; right:10px; display:flex; flex-direction:column; gap:6px; pointer-events:auto; }
+  button {
+    background:#263238; color:#eee; border:1px solid #546e7a; border-radius:6px;
+    padding:7px 14px; cursor:pointer; font-size:13px;
+  }
+  button:hover { background:#37474f; }
+  button.gold { background:#5d4037; border-color:#ffb300; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  #log {
+    position:absolute; left:10px; bottom:10px; width:390px; max-height:180px; overflow-y:auto;
+    background:#000a; border:1px solid #444; border-radius:8px; padding:8px; font-size:12px; pointer-events:auto;
+  }
+  #log div { margin-bottom:2px; }
+  .modal {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:#161b26; border:2px solid #5c6bc0; border-radius:12px; padding:18px;
+    min-width:460px; max-width:720px; max-height:80vh; overflow-y:auto; z-index:50; pointer-events:auto;
+    box-shadow:0 10px 40px #000c;
+  }
+  .modal h2 { color:#ffd54f; margin-bottom:10px; font-size:18px; }
+  .modal .close { position:absolute; top:10px; right:12px; background:#b71c1c; }
+  .row { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid #2a3040; gap:10px; font-size:13px; }
+  .row:hover { background:#1f2634; }
+  .tag { font-size:11px; padding:1px 6px; border-radius:4px; background:#37474f; }
+  .tag.warrior { background:#b71c1c; } .tag.mage { background:#4527a0; } .tag.archer { background:#2e7d32; }
+  #classSelect { text-align:center; min-width:640px; }
+  .classCard {
+    display:inline-block; width:180px; margin:10px; padding:16px; background:#1e2636;
+    border:2px solid #3949ab; border-radius:10px; cursor:pointer; vertical-align:top;
+  }
+  .classCard:hover { border-color:#ffd54f; background:#26314a; }
+  .classCard h3 { color:#ffd54f; margin-bottom:8px; }
+  .classCard p { font-size:12px; color:#b0bec5; line-height:1.6; }
+  #skillbar { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); display:flex; gap:6px; pointer-events:auto; }
+  .skillslot {
+    width:52px; height:52px; background:#000a; border:1px solid #666; border-radius:8px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:10px; text-align:center;
+    position:relative; cursor:pointer;
+  }
+  .skillslot .key { position:absolute; top:1px; left:4px; color:#ffd54f; font-size:10px; }
+  .skillslot .cd { position:absolute; inset:0; background:#000b; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#ff8a65; font-size:14px; }
+  #bigMsg {
+    position:absolute; top:32%; left:50%; transform:translate(-50%,-50%); font-size:40px; font-weight:bold;
+    color:#ffd54f; text-shadow:0 0 20px #000; display:none; z-index:60; text-align:center;
+  }
+  .hidden { display:none !important; }
+  .small { font-size:11px; color:#90a4ae; }
+  input[type=text],input[type=number] { background:#0d1117; color:#eee; border:1px solid #555; border-radius:4px; padding:5px 8px; }
+  #towerCombat { text-align:center; }
+  .hpline { height:14px; background:#333; border-radius:7px; overflow:hidden; margin:4px 0 10px; }
+  .hpline > div { height:100%; background:#e53935; }
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="cv"></canvas>
+
+  <div id="topbar" class="hud hidden">
+    <span class="stat">🕐 <b id="uiTime">第1天 08:00</b></span>
+    <span class="stat">🟢 在線 <b id="uiOnline">0</b> / 1,000,000</span>
+    <span class="stat" id="uiName"></span>
+    <span class="stat">Lv.<b id="uiLv">1</b></span>
+    <span class="stat">❤️<span id="hpbar"><span id="hpfill" style="display:block"></span></span> <span id="uiHp"></span></span>
+    <span class="stat">🔷<span id="mpbar"><span id="mpfill" style="display:block"></span></span></span>
+    <span class="stat">EXP<span id="expbar"><span id="expfill" style="display:block"></span></span></span>
+    <span class="stat">💰 <b id="uiGold">0</b></span>
+    <span class="stat" id="uiZone">📍新手村</span>
+  </div>
+
+  <div id="btnbar" class="hud hidden">
+    <button onclick="openBag()">🎒 背包 (B)</button>
+    <button onclick="openShop()">🏪 商店</button>
+    <button onclick="openAuction()">🏛️ 拍賣行</button>
+    <button onclick="openTrade()">🤝 交易</button>
+    <button onclick="openParty()">👥 組隊 (P)</button>
+    <button onclick="openFaction()">🚩 陣營 (G)</button>
+    <button class="gold" onclick="tryEnterTower()">🗼 試煉塔 (E)</button>
+    <button onclick="openHelp()">❓ 說明</button>
+  </div>
+
+  <div id="skillbar" class="hud hidden"></div>
+  <div id="log" class="hud hidden"></div>
+  <div id="bigMsg"></div>
+
+  <!-- 職業選擇 -->
+  <div id="classSelect" class="modal">
+    <h2>⭐ 星辰大陸 Online ⭐</h2>
+    <p class="small">選擇你的職業開始冒險。技能與裝備有職業限制！</p>
+    <div class="classCard" onclick="startGame('warrior')">
+      <h3>⚔️ 戰士</h3>
+      <p>高血量、高防禦<br>近戰橫掃可打多隻怪<br>HP 150｜攻 12｜防 8</p>
+    </div>
+    <div class="classCard" onclick="startGame('mage')">
+      <h3>🔮 法師</h3>
+      <p>強力範圍魔法<br>火球與隕石群傷<br>HP 90｜攻 16｜防 3</p>
+    </div>
+    <div class="classCard" onclick="startGame('archer')">
+      <h3>🏹 弓箭手</h3>
+      <p>遠距離攻擊<br>多重射擊打多隻怪<br>HP 110｜攻 14｜防 5</p>
+    </div>
+    <p style="margin-top:8px"><input type="text" id="playerName" placeholder="輸入角色名稱" value="勇者"></p>
+  </div>
+
+  <div id="modalRoot"></div>
+</div>
+
+<script>
+"use strict";
+/* ============ 常數 ============ */
+const WORLD = 4400;                       // 世界大小
+const VILLAGE = {x1:1800, y1:1800, x2:2600, y2:2600}; // 新手村範圍
+const TIME_SCALE = 12;                    // 1真實秒 = 12遊戲秒
+const MON_RESPAWN = 10*60;                // 怪物刷新：10遊戲分
+const BOSS_RESPAWN = 15*60;               // Boss刷新：15遊戲分
+const SIEGE_INTERVAL = 60*60;             // 攻城：每1遊戲小時
+const TOWER_FEE = 100;
+const MAX_ONLINE = 1000000;
+const CLS = {
+  warrior:{name:"戰士", tag:"warrior", hp:150, mp:40, atk:12, def:8, range:70, color:"#ef5350"},
+  mage:{name:"法師", tag:"mage", hp:90, mp:100, atk:16, def:3, range:180, color:"#7e57c2"},
+  archer:{name:"弓箭手", tag:"archer", hp:110, mp:60, atk:14, def:5, range:220, color:"#66bb6a"},
+};
+
+/* ============ 技能表 (職業限定) ============ */
+const SKILLS = {
+  w1:{id:"w1",cls:"warrior",name:"重斬",lv:1,mp:5,cd:2,mult:1.8,aoe:1,price:0,desc:"對單體造成180%傷害"},
+  w2:{id:"w2",cls:"warrior",name:"橫掃千軍",lv:5,mp:12,cd:5,mult:1.3,aoe:5,price:300,desc:"對周圍最多5隻怪造成130%傷害"},
+  w3:{id:"w3",cls:"warrior",name:"戰吼",lv:15,mp:20,cd:12,mult:2.5,aoe:8,price:1500,desc:"對周圍8隻怪造成250%傷害"},
+  m1:{id:"m1",cls:"mage",name:"火球術",lv:1,mp:6,cd:2,mult:1.9,aoe:2,price:0,desc:"火球爆炸傷害2隻怪190%"},
+  m2:{id:"m2",cls:"mage",name:"冰霜新星",lv:5,mp:15,cd:5,mult:1.4,aoe:6,price:300,desc:"對周圍6隻怪造成140%傷害"},
+  m3:{id:"m3",cls:"mage",name:"隕石術",lv:15,mp:30,cd:12,mult:3,aoe:10,price:1500,desc:"隕石轟擊10隻怪300%傷害"},
+  a1:{id:"a1",cls:"archer",name:"穿雲箭",lv:1,mp:5,cd:2,mult:1.8,aoe:1,price:0,desc:"強力一箭180%傷害"},
+  a2:{id:"a2",cls:"archer",name:"多重射擊",lv:5,mp:12,cd:5,mult:1.2,aoe:5,price:300,desc:"射出5箭各120%傷害"},
+  a3:{id:"a3",cls:"archer",name:"箭雨",lv:15,mp:25,cd:12,mult:2.2,aoe:9,price:1500,desc:"箭雨覆蓋9隻怪220%傷害"},
+};
+
+/* ============ 裝備表 (職業/等級限定) ============ */
+const EQUIPS = [
+  {id:"e1",name:"鐵劍",cls:"warrior",slot:"weapon",lv:1,atk:5,def:0,hp:0,price:100},
+  {id:"e2",name:"騎士大劍",cls:"warrior",slot:"weapon",lv:10,atk:18,def:0,hp:0,price:800},
+  {id:"e3",name:"屠龍刀",cls:"warrior",slot:"weapon",lv:30,atk:55,def:0,hp:0,price:5000},
+  {id:"e4",name:"木杖",cls:"mage",slot:"weapon",lv:1,atk:6,def:0,hp:0,price:100},
+  {id:"e5",name:"祕法之杖",cls:"mage",slot:"weapon",lv:10,atk:22,def:0,hp:0,price:800},
+  {id:"e6",name:"賢者權杖",cls:"mage",slot:"weapon",lv:30,atk:65,def:0,hp:0,price:5000},
+  {id:"e7",name:"短弓",cls:"archer",slot:"weapon",lv:1,atk:5,def:0,hp:0,price:100},
+  {id:"e8",name:"精靈長弓",cls:"archer",slot:"weapon",lv:10,atk:20,def:0,hp:0,price:800},
+  {id:"e9",name:"風神之弓",cls:"archer",slot:"weapon",lv:30,atk:60,def:0,hp:0,price:5000},
+  {id:"e10",name:"皮甲",cls:"any",slot:"armor",lv:1,atk:0,def:4,hp:20,price:120},
+  {id:"e11",name:"鎖子甲",cls:"warrior",slot:"armor",lv:10,atk:0,def:15,hp:80,price:900},
+  {id:"e12",name:"法師長袍",cls:"mage",slot:"armor",lv:10,atk:8,def:8,hp:40,price:900},
+  {id:"e13",name:"遊俠披風",cls:"archer",slot:"armor",lv:10,atk:5,def:10,hp:60,price:900},
+  {id:"e14",name:"龍鱗鎧甲",cls:"any",slot:"armor",lv:30,atk:0,def:40,hp:250,price:6000},
+];
+const POTIONS = [
+  {id:"p1",name:"小型紅藥水",heal:60,price:30},
+  {id:"p2",name:"大型紅藥水",heal:250,price:100},
+  {id:"p3",name:"小型藍藥水",mana:40,price:30},
+  {id:"p4",name:"大型藍藥水",mana:120,price:100},
+];
+
+/* ============ 狀態 ============ */
+let P = null;             // 玩家
+let monsters = [];        // 怪物
+let bots = [];            // 模擬玩家
+let factions = [];        // 陣營
+let auctions = [];        // 拍賣行
+let gameSec = 8*3600;     // 遊戲時間(秒), 第1天08:00開始
+let gameDay = 1;
+let lastSiege = 8*3600;
+let online = 320000 + Math.floor(Math.random()*50000);
+let gameOver = false, victory = false;
+let keys = {};
+let cam = {x:0,y:0};
+let effects = [];         // 攻擊特效
+let inTower = false;
+let tower = null;         // 試煉塔狀態
+const TOWER_POS = {x:3400, y:1200};
+const BOSS_POS = {x:2200, y:900};   // 新手村北方 Boss 領地
+
+const BOT_NAMES = ["劍聖阿光","小魚兒","夜刃","風之子","蘿莉法師","大隻佬","神箭手","月影","狂戰士王","冰雪女王","小明","翻滾吧牛肉","龍傲天","路人甲","隱者","黑騎士","星塵","快樂修狗","貓貓拳","無名氏","閃電五連鞭","打錢仔","歐皇","非酋","肝帝"];
+
+const rand=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rand(a,b+1));
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const inVillage=(e)=>e.x>=VILLAGE.x1&&e.x<=VILLAGE.x2&&e.y>=VILLAGE.y1&&e.y<=VILLAGE.y2;
+const fmt=n=>n.toLocaleString("zh-Hant");
+
+/* ============ 世界生成 ============ */
+function monsterLevelAt(x,y){
+  if(x>=VILLAGE.x1&&x<=VILLAGE.x2&&y>=VILLAGE.y1&&y<=VILLAGE.y2) return ri(1,10); // 新手村 1-10級
+  // 村外：離村越遠(越深處)等級越高 1-100
+  const cx=(VILLAGE.x1+VILLAGE.x2)/2, cy=(VILLAGE.y1+VILLAGE.y2)/2;
+  const d=Math.hypot(x-cx,y-cy)-500;
+  const maxD=Math.hypot(WORLD/2,WORLD/2)-500;
+  return Math.max(1,Math.min(100, Math.round(1+ (d/maxD)*99 + rand(-5,5))));
+}
+function makeMonster(x,y,lv,isBoss){
+  return {x,y,homeX:x,homeY:y,lv,isBoss:!!isBoss,
+    maxHp:isBoss?lv*400:lv*22+30, hp:isBoss?lv*400:lv*22+30,
+    atk:isBoss?lv*1.6:lv*2+3, alive:true, respawnAt:0, aggro:false, atkCd:0,
+    siege:false,
+    name:isBoss?"新手村Boss·滅世魔龍":["野狼","哥布林","骷髏兵","巨蜘蛛","石像鬼","半獸人","暗影刺客","炎魔"][Math.min(7,Math.floor(lv/13))]};
+}
+function genWorld(){
+  monsters=[];
+  // 新手村內怪 (1-10級)
+  for(let i=0;i<25;i++){
+    let x,y;
+    do{ x=rand(VILLAGE.x1+40,VILLAGE.x2-40); y=rand(VILLAGE.y1+40,VILLAGE.y2-40);}
+    while(Math.hypot(x-2200,y-2500)<180); // 出生點附近淨空
+    monsters.push(makeMonster(x,y,ri(1,10)));
+  }
+  // 村外怪 (1-100級, 越深越強)
+  for(let i=0;i<220;i++){
+    let x,y;
+    do{ x=rand(80,WORLD-80); y=rand(80,WORLD-80); }
+    while((x>VILLAGE.x1-100&&x<VILLAGE.x2+100&&y>VILLAGE.y1-100&&y<VILLAGE.y2+100)||Math.hypot(x-TOWER_POS.x,y-TOWER_POS.y)<200||Math.hypot(x-BOSS_POS.x,y-BOSS_POS.y)<250);
+    monsters.push(makeMonster(x,y,monsterLevelAt(x,y)));
+  }
+  // 100級 Boss（獲勝目標）
+  monsters.push(makeMonster(BOSS_POS.x,BOSS_POS.y,100,true));
+  // 模擬玩家
+  bots=[];
+  for(let i=0;i<26;i++){
+    const c=["warrior","mage","archer"][ri(0,2)];
+    const inV=Math.random()<0.4;
+    const lv=inV?ri(1,9):ri(10,60);
+    bots.push({id:i,name:BOT_NAMES[i%BOT_NAMES.length]+(i>=BOT_NAMES.length?i:""),cls:c,lv,
+      x:inV?rand(VILLAGE.x1+50,VILLAGE.x2-50):rand(300,WORLD-300),
+      y:inV?rand(VILLAGE.y1+50,VILLAGE.y2-50):rand(300,WORLD-300),
+      hp:lv*30+80,maxHp:lv*30+80,atk:lv*2.5+5,
+      inParty:false,factionId:null,wt:0,dir:rand(0,Math.PI*2),atkCd:0,pvpTarget:null});
+  }
+  // 敵對陣營：暗影軍團
+  const enemyF={id:1,name:"暗影軍團",isPlayer:false,members:[],hq:{x:900,y:3600,hp:8000,maxHp:8000},alive:true};
+  factions.push(enemyF);
+  for(let i=0;i<4;i++){
+    const b=bots[i+20]; b.factionId=1; b.x=enemyF.hq.x+rand(-120,120); b.y=enemyF.hq.y+rand(-120,120); b.lv=ri(30,50);
+    enemyF.members.push(b.id);
+  }
+  genAuctions();
+}
+function genAuctions(){
+  auctions=[];
+  const pool=[...EQUIPS,...POTIONS];
+  for(let i=0;i<10;i++){
+    const it=pool[ri(0,pool.length-1)];
+    auctions.push({item:it,price:Math.round(it.price*rand(0.6,1.4)),seller:BOT_NAMES[ri(0,BOT_NAMES.length-1)],mine:false});
+  }
+}
+
+/* ============ 開始遊戲 ============ */
+function startGame(cls){
+  const c=CLS[cls];
+  const name=document.getElementById("playerName").value.trim()||"勇者";
+  P={name,cls,x:2200,y:2500,lv:1,exp:0,gold:200,
+    maxHp:c.hp,hp:c.hp,maxMp:c.mp,mp:c.mp,baseAtk:c.atk,baseDef:c.def,
+    skills:[Object.values(SKILLS).find(s=>s.cls===cls&&s.price===0).id],
+    cds:{},inv:[{...POTIONS[0],count:3}],equip:{weapon:null,armor:null},
+    party:[],factionId:null,speed:220};
+  document.getElementById("classSelect").classList.add("hidden");
+  document.querySelectorAll(".hud").forEach(e=>e.classList.remove("hidden"));
+  document.getElementById("uiName").textContent=`${name}（${c.name}）`;
+  genWorld();
+  renderSkillbar();
+  log(`歡迎來到星辰大陸，${name}！你出生在新手村。`,"#ffd54f");
+  log("新手村怪物為1~10級。等級達到10級以上才能離開新手村！");
+  log("提示：WASD移動、空白鍵攻擊、1~3技能、B背包、E在塔前進入試煉塔。");
+  log("🏆 獲勝條件：擊敗新手村北方領地的 100級Boss·滅世魔龍！","#ffd54f");
+  log("⚠️ 注意：在新手村外血量歸零將立刻輸掉遊戲！","#ff8a65");
+  requestAnimationFrame(loop);
+}
+
+/* ============ 屬性計算 ============ */
+function pAtk(){ let a=P.baseAtk+P.lv*2; for(const s of ["weapon","armor"]) if(P.equip[s]) a+=P.equip[s].atk; return a; }
+function pDef(){ let d=P.baseDef+P.lv; for(const s of ["weapon","armor"]) if(P.equip[s]) d+=P.equip[s].def; return d; }
+function pMaxHp(){ let h=CLS[P.cls].hp+ (P.lv-1)*18; for(const s of ["weapon","armor"]) if(P.equip[s]) h+=P.equip[s].hp; return h; }
+function expNeed(){ return P.lv*60; }
+function gainExp(n){
+  P.exp+=n;
+  while(P.exp>=expNeed()){
+    P.exp-=expNeed(); P.lv++;
+    P.maxHp=pMaxHp(); P.hp=P.maxHp;
+    P.maxMp=CLS[P.cls].mp+(P.lv-1)*6; P.mp=P.maxMp;
+    bigMsg(`🎉 升級！Lv.${P.lv}`);
+    log(`升到 Lv.${P.lv}！血魔全滿。`,"#8bc34a");
+    if(P.lv===10) log("你已達到10級，可以離開新手村了！","#ffd54f");
+  }
+}
+
+/* ============ 日誌/訊息 ============ */
+function log(msg,color){
+  const el=document.getElementById("log");
+  const d=document.createElement("div");
+  d.innerHTML=msg; if(color) d.style.color=color;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
+  while(el.children.length>60) el.removeChild(el.firstChild);
+}
+let bigT=null;
+function bigMsg(t,ms=1800){
+  const el=document.getElementById("bigMsg");
+  el.innerHTML=t; el.style.display="block";
+  clearTimeout(bigT); bigT=setTimeout(()=>el.style.display="none",ms);
+}
+
+/* ============ 輸入 ============ */
+addEventListener("keydown",e=>{
+  if(!P||gameOver) return;
+  keys[e.key.toLowerCase()]=true;
+  const k=e.key.toLowerCase();
+  if(k===" ") { e.preventDefault(); basicAttack(); }
+  if(k==="1"||k==="2"||k==="3") castSkill(+k-1);
+  if(k==="b") openBag();
+  if(k==="p") openParty();
+  if(k==="g") openFaction();
+  if(k==="e") tryEnterTower();
+  if(k==="q") pvpAttack();
+});
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+/* ============ 戰鬥 ============ */
+function aliveMonstersNear(range,max){
+  return monsters.filter(m=>m.alive&&dist(m,P)<=range).sort((a,b)=>dist(a,P)-dist(b,P)).slice(0,max);
+}
+function damageMonster(m,dmg,src){
+  m.hp-=dmg; m.aggro=true;
+  effects.push({x:m.x,y:m.y-20,t:0.8,text:`-${Math.round(dmg)}`,color:src==="skill"?"#ffd54f":"#fff"});
+  if(m.hp<=0){
+    m.alive=false; m.aggro=false;
+    m.respawnAt=gameSec+(m.isBoss?BOSS_RESPAWN:MON_RESPAWN);
+    const exp=m.lv*12+(m.isBoss?5000:0), gold=Math.round(m.lv*rand(3,7))+(m.isBoss?10000:0);
+    gainExp(exp); P.gold+=gold;
+    log(`擊敗 ${m.name}(Lv.${m.lv})！獲得 ${exp} 經驗、${gold} 金幣。`);
+    if(m.isBoss) winGame();
+  }
+}
+function basicAttack(){
+  const c=CLS[P.cls];
+  const targets=aliveMonstersNear(c.range, P.cls==="warrior"?3:1);
+  if(targets.length===0){ return; }
+  for(const m of targets){
+    const dmg=Math.max(1,pAtk()*rand(0.9,1.1));
+    damageMonster(m,dmg);
+    effects.push({x:P.x,y:P.y,t:0.3,line:{x2:m.x,y2:m.y},color:c.color});
+  }
+}
+function castSkill(idx){
+  const sid=P.skills[idx]; if(!sid) return;
+  const s=SKILLS[sid];
+  if((P.cds[sid]||0)>0){ log(`${s.name} 冷卻中…`); return; }
+  if(P.mp<s.mp){ log("魔力不足！","#64b5f6"); return; }
+  const targets=aliveMonstersNear(CLS[P.cls].range+80, s.aoe);
+  if(targets.length===0){ log("附近沒有怪物。"); return; }
+  P.mp-=s.mp; P.cds[sid]=s.cd;
+  for(const m of targets){
+    damageMonster(m, Math.max(1,pAtk()*s.mult*rand(0.95,1.05)),"skill");
+    effects.push({x:P.x,y:P.y,t:0.35,line:{x2:m.x,y2:m.y},color:"#ffd54f"});
+  }
+  log(`施放【${s.name}】命中 ${targets.length} 隻怪！`);
+}
+function pvpAttack(){ // 村外才能PvP
+  if(inVillage(P)){ log("🛡️ 新手村內禁止玩家打鬥！","#ff8a65"); return; }
+  const t=bots.filter(b=>b.hp>0&&!b.inParty&&dist(b,P)<CLS[P.cls].range+60).sort((a,b)=>dist(a,P)-dist(b,P))[0];
+  if(!t){ log("附近沒有可攻擊的玩家。"); return; }
+  const dmg=Math.max(1,pAtk()*rand(0.9,1.1));
+  t.hp-=dmg; t.pvpTarget="P";
+  effects.push({x:t.x,y:t.y-20,t:0.8,text:`-${Math.round(dmg)}`,color:"#ff5252"});
+  effects.push({x:P.x,y:P.y,t:0.3,line:{x2:t.x,y2:t.y},color:"#ff5252"});
+  if(t.hp<=0){
+    const g=ri(20,80)+t.lv*3; P.gold+=g;
+    log(`⚔️ 你在PvP中擊敗了 ${t.name}！奪得 ${g} 金幣。`,"#ff8a65");
+    t.hp=t.maxHp; t.x=rand(VILLAGE.x1+60,VILLAGE.x2-60); t.y=rand(VILLAGE.y1+60,VILLAGE.y2-60); t.pvpTarget=null;
+  }
+}
+
+/* ============ 勝負 ============ */
+function winGame(){
+  victory=true; gameOver=true;
+  const mates=P.party.map(id=>bots.find(b=>b.id===id)?.name).filter(Boolean);
+  let txt=`🏆 勝利！你擊敗了新手村的100級Boss！`;
+  if(mates.length) txt+=`<br><span style="font-size:20px">隊友 ${mates.join("、")} 也一同獲勝！</span>`;
+  bigMsg(txt,999999);
+  log("🏆 恭喜獲勝！所有參與挑戰的隊員都算獲勝！","#ffd54f");
+}
+function loseGame(reason){
+  gameOver=true;
+  bigMsg(`💀 你輸了！<br><span style="font-size:20px">${reason}</span><br><button onclick="location.reload()" style="font-size:16px;margin-top:10px">重新開始</button>`,999999);
+  log(`💀 ${reason}`,"#ff5252");
+}
+
+/* ============ 背包 ============ */
+function modal(html){ document.getElementById("modalRoot").innerHTML=html; }
+function closeModal(){ modal(""); }
+function openBag(){
+  let rows=P.inv.map((it,i)=>{
+    let act="";
+    if(it.heal||it.mana) act=`<button onclick="usePotion(${i})">使用</button>`;
+    else if(it.slot) act=`<button onclick="equipItem(${i})">裝備</button>`;
+    let info=it.heal?`回復${it.heal}HP`:it.mana?`回復${it.mana}MP`:`攻+${it.atk} 防+${it.def} HP+${it.hp}｜Lv.${it.lv} ${it.cls==="any"?"全職業":CLS[it.cls].name}`;
+    return `<div class="row"><span>${it.name}${it.count?` ×${it.count}`:""} <span class="small">${info}</span></span><span>${act} <button onclick="sellToAuction(${i})">上架拍賣</button></span></div>`;
+  }).join("")||"<p class='small'>背包是空的</p>";
+  const eq=s=>P.equip[s]?`${P.equip[s].name}`:"（無）";
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🎒 背包</h2>
+    <p class="small">武器：${eq("weapon")}｜防具：${eq("armor")}｜攻擊 ${Math.round(pAtk())}｜防禦 ${Math.round(pDef())}</p>
+    ${rows}</div>`);
+}
+function usePotion(i){
+  const it=P.inv[i];
+  if(it.heal){ P.hp=Math.min(P.maxHp,P.hp+it.heal); log(`使用${it.name}，回復${it.heal}HP。`); }
+  if(it.mana){ P.mp=Math.min(P.maxMp,P.mp+it.mana); log(`使用${it.name}，回復${it.mana}MP。`); }
+  it.count=(it.count||1)-1;
+  if(it.count<=0) P.inv.splice(i,1);
+  openBag();
+}
+function equipItem(i){
+  const it=P.inv[i];
+  if(it.cls!=="any"&&it.cls!==P.cls){ log(`❌ ${it.name} 是${CLS[it.cls].name}專用，你的職業無法裝備！`,"#ff8a65"); return; }
+  if(P.lv<it.lv){ log(`❌ 需要等級 Lv.${it.lv} 才能裝備 ${it.name}。`,"#ff8a65"); return; }
+  const old=P.equip[it.slot];
+  P.equip[it.slot]=it; P.inv.splice(i,1);
+  if(old) P.inv.push(old);
+  P.maxHp=pMaxHp(); P.hp=Math.min(P.hp,P.maxHp);
+  log(`已裝備 ${it.name}。`,"#8bc34a"); openBag();
+}
+
+/* ============ 商店 ============ */
+function openShop(){
+  const skillRows=Object.values(SKILLS).filter(s=>s.price>0).map(s=>{
+    const owned=P.skills.includes(s.id);
+    const can=s.cls===P.cls&&P.lv>=s.lv&&!owned&&P.gold>=s.price;
+    return `<div class="row"><span><span class="tag ${CLS[s.cls].tag}">${CLS[s.cls].name}</span> 【技能】${s.name} <span class="small">Lv.${s.lv}｜${s.desc}</span></span>
+      <span>💰${s.price} <button ${can?"":"disabled"} onclick="buySkill('${s.id}')">${owned?"已學會":"購買"}</button></span></div>`;
+  }).join("");
+  const eqRows=EQUIPS.map(e=>{
+    const can=(e.cls==="any"||e.cls===P.cls)&&P.gold>=e.price;
+    return `<div class="row"><span><span class="tag ${e.cls==="any"?"":CLS[e.cls].tag}">${e.cls==="any"?"全職業":CLS[e.cls].name}</span> ${e.name} <span class="small">Lv.${e.lv}｜攻+${e.atk} 防+${e.def} HP+${e.hp}</span></span>
+      <span>💰${e.price} <button ${can?"":"disabled"} onclick="buyEquip('${e.id}')">購買</button></span></div>`;
+  }).join("");
+  const potRows=POTIONS.map(p=>`<div class="row"><span>${p.name} <span class="small">${p.heal?`回${p.heal}HP`:`回${p.mana}MP`}</span></span>
+      <span>💰${p.price} <button ${P.gold>=p.price?"":"disabled"} onclick="buyPotion('${p.id}')">購買</button></span></div>`).join("");
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🏪 商店</h2><p class="small">💰 你的金幣：${fmt(P.gold)}｜技能與裝備有職業限制</p>
+    <h3 style="color:#90caf9;margin:8px 0 4px">技能書</h3>${skillRows}
+    <h3 style="color:#90caf9;margin:8px 0 4px">裝備</h3>${eqRows}
+    <h3 style="color:#90caf9;margin:8px 0 4px">藥水</h3>${potRows}</div>`);
+}
+function buySkill(id){
+  const s=SKILLS[id];
+  if(s.cls!==P.cls){ log("❌ 職業不符，無法學習此技能！","#ff8a65"); return; }
+  if(P.lv<s.lv){ log(`❌ 需要 Lv.${s.lv}。`,"#ff8a65"); return; }
+  if(P.gold<s.price) return;
+  P.gold-=s.price; P.skills.push(id);
+  log(`✨ 學會了新技能【${s.name}】！`,"#8bc34a");
+  renderSkillbar(); openShop();
+}
+function buyEquip(id){
+  const e=EQUIPS.find(x=>x.id===id);
+  if(P.gold<e.price) return;
+  P.gold-=e.price; P.inv.push({...e});
+  log(`購買了 ${e.name}，已放入背包。`); openShop();
+}
+function buyPotion(id){
+  const p=POTIONS.find(x=>x.id===id);
+  if(P.gold<p.price) return;
+  P.gold-=p.price;
+  const ex=P.inv.find(i=>i.id===p.id);
+  if(ex) ex.count=(ex.count||1)+1; else P.inv.push({...p,count:1});
+  log(`購買了 ${p.name}。`); openShop();
+}
+
+/* ============ 拍賣行 ============ */
+function openAuction(){
+  const rows=auctions.map((a,i)=>{
+    const info=a.item.heal?`回${a.item.heal}HP`:a.item.mana?`回${a.item.mana}MP`:`攻+${a.item.atk||0} 防+${a.item.def||0}`;
+    return `<div class="row"><span>${a.item.name} <span class="small">${info}｜賣家：${a.seller}${a.mine?"（你）":""}</span></span>
+      <span>💰${fmt(a.price)} ${a.mine?`<button onclick="cancelAuction(${i})">下架</button>`:`<button ${P.gold>=a.price?"":"disabled"} onclick="buyAuction(${i})">購買</button>`}</span></div>`;
+  }).join("")||"<p class='small'>目前沒有商品</p>";
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🏛️ 拍賣行</h2><p class="small">💰 你的金幣：${fmt(P.gold)}｜想賣東西？到背包點「上架拍賣」。<button onclick="genAuctions();openAuction()">🔄 刷新商品</button></p>
+    ${rows}</div>`);
+}
+function buyAuction(i){
+  const a=auctions[i];
+  if(P.gold<a.price) return;
+  P.gold-=a.price;
+  const it={...a.item}; if(it.heal||it.mana){ const ex=P.inv.find(x=>x.id===it.id); if(ex){ex.count=(ex.count||1)+1;} else {it.count=1;P.inv.push(it);} } else P.inv.push(it);
+  auctions.splice(i,1);
+  log(`從拍賣行買下 ${a.item.name}（${fmt(a.price)} 金幣）。`); openAuction();
+}
+function cancelAuction(i){
+  const a=auctions.splice(i,1)[0];
+  P.inv.push({...a.item}); log(`已下架 ${a.item.name}。`); openAuction();
+}
+function sellToAuction(i){
+  const it=P.inv[i];
+  const price=prompt(`為「${it.name}」定價（金幣）：`, it.price||100);
+  if(price===null) return;
+  const p=parseInt(price); if(!(p>0)){ log("價格無效。"); return; }
+  if(it.count&&it.count>1){ it.count--; } else P.inv.splice(i,1);
+  auctions.push({item:{...it,count:undefined},price:p,seller:P.name,mine:true,listedAt:gameSec});
+  log(`已將 ${it.name} 上架拍賣行，定價 ${fmt(p)}。`); openBag();
+}
+
+/* ============ 交易 ============ */
+function openTrade(){
+  const near=bots.filter(b=>b.hp>0&&dist(b,P)<300);
+  const rows=near.map(b=>`<div class="row"><span>${b.name} <span class="tag ${CLS[b.cls].tag}">${CLS[b.cls].name}</span> Lv.${b.lv}</span>
+    <button onclick="tradeWith(${b.id})">發起交易</button></div>`).join("")||"<p class='small'>附近300範圍內沒有玩家，走近一點吧。</p>";
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button><h2>🤝 交易</h2>${rows}</div>`);
+}
+function tradeWith(bid){
+  const b=bots.find(x=>x.id===bid);
+  if(Math.random()<0.25){ log(`${b.name} 拒絕了你的交易請求。`,"#ff8a65"); closeModal(); return; }
+  // 對方隨機出一件商品
+  const pool=[...EQUIPS,...POTIONS];
+  const offer=pool[ri(0,pool.length-1)];
+  const ask=Math.round(offer.price*rand(0.5,0.9));
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🤝 與 ${b.name} 交易</h2>
+    <p>${b.name}：「我用 <b style="color:#ffd54f">${offer.name}</b> 換你 <b style="color:#ffd54f">${fmt(ask)} 金幣</b>，如何？」</p>
+    <p style="margin-top:10px">
+      <button class="gold" ${P.gold>=ask?"":"disabled"} onclick="acceptTrade(${bid},'${offer.id}',${ask})">同意交易</button>
+      <button onclick="closeModal();log('你拒絕了交易。')">拒絕</button></p></div>`);
+}
+function acceptTrade(bid,itemId,ask){
+  const b=bots.find(x=>x.id===bid);
+  const it=[...EQUIPS,...POTIONS].find(x=>x.id===itemId);
+  P.gold-=ask;
+  if(it.heal||it.mana){ const ex=P.inv.find(x=>x.id===it.id); if(ex) ex.count=(ex.count||1)+1; else P.inv.push({...it,count:1}); }
+  else P.inv.push({...it});
+  log(`✅ 交易成功！用 ${fmt(ask)} 金幣換得 ${it.name}。`,"#8bc34a");
+  closeModal();
+}
+
+/* ============ 組隊 ============ */
+function openParty(){
+  const members=P.party.map(id=>bots.find(b=>b.id===id)).filter(Boolean);
+  const mRows=members.map(b=>`<div class="row"><span>👤 ${b.name} Lv.${b.lv} <span class="tag ${CLS[b.cls].tag}">${CLS[b.cls].name}</span></span>
+    <button onclick="kickParty(${b.id})">請離</button></div>`).join("")||"<p class='small'>目前沒有隊友</p>";
+  const near=bots.filter(b=>b.hp>0&&!b.inParty&&!b.factionId&&dist(b,P)<400);
+  const nRows=near.map(b=>`<div class="row"><span>${b.name} Lv.${b.lv} <span class="tag ${CLS[b.cls].tag}">${CLS[b.cls].name}</span></span>
+    <button onclick="inviteParty(${b.id})">邀請組隊</button></div>`).join("")||"<p class='small'>附近400範圍內沒有可邀請的玩家</p>";
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>👥 組隊（需雙方同意）</h2>
+    <h3 style="color:#90caf9">我的隊伍（${members.length}人）</h3>${mRows}
+    <h3 style="color:#90caf9;margin-top:10px">附近玩家</h3>${nRows}
+    <p class="small" style="margin-top:8px">隊友會跟隨你並協助攻擊怪物。組隊擊敗Boss時，全體隊員一同獲勝！</p></div>`);
+}
+function inviteParty(bid){
+  const b=bots.find(x=>x.id===bid);
+  if(Math.random()<0.75){
+    b.inParty=true; P.party.push(bid);
+    log(`✅ ${b.name} 同意加入你的隊伍！`,"#8bc34a");
+  } else {
+    log(`❌ ${b.name} 拒絕了你的組隊邀請。`,"#ff8a65");
+  }
+  openParty();
+}
+function kickParty(bid){
+  const b=bots.find(x=>x.id===bid);
+  b.inParty=false; P.party=P.party.filter(id=>id!==bid);
+  log(`${b.name} 離開了隊伍。`); openParty();
+}
+
+/* ============ 陣營 ============ */
+function playerFaction(){ return factions.find(f=>f.isPlayer); }
+function openFaction(){
+  const f=playerFaction();
+  if(!f){
+    const nearMon=monsters.filter(m=>m.alive&&dist(m,P)<350).length;
+    const inV=inVillage(P);
+    let why="";
+    if(inV) why="❌ 陣營只能建立在新手村外！";
+    else if(nearMon>0) why=`❌ 必須先清空周圍的怪物（350範圍內還有 ${nearMon} 隻）！`;
+    modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+      <h2>🚩 建立陣營</h2>
+      <p class="small">規則：<br>1. 建立前必須把周圍(350範圍)的怪物全部清空<br>2. 陣營只能建立在新手村外<br>3. 建立後可邀請其他玩家加入（對方可同意或拒絕）<br>4. 每1遊戲小時會有一次怪物攻城，請保護總部！<br>5. 陣營之間可以打鬥（地圖左下有敵對的「暗影軍團」總部）</p>
+      <p style="margin:10px 0"><input type="text" id="facName" placeholder="陣營名稱" value="${P.name}的軍團"></p>
+      ${why?`<p style="color:#ff8a65">${why}</p>`:`<button class="gold" onclick="createFaction()">在此建立陣營總部</button>`}
+      </div>`);
+    return;
+  }
+  const members=f.members.map(id=>bots.find(b=>b.id===id)).filter(Boolean);
+  const mRows=members.map(b=>`<div class="row"><span>🚩 ${b.name} Lv.${b.lv}</span></div>`).join("")||"<p class='small'>還沒有成員</p>";
+  const near=bots.filter(b=>b.hp>0&&!b.factionId&&!b.inParty&&dist(b,P)<500);
+  const nRows=near.map(b=>`<div class="row"><span>${b.name} Lv.${b.lv}</span><button onclick="inviteFaction(${b.id})">邀請加入</button></div>`).join("")||"<p class='small'>附近500範圍內沒有可邀請的玩家</p>";
+  const enemy=factions.find(x=>!x.isPlayer&&x.alive);
+  const nextSiege=Math.max(0,Math.ceil((lastSiege+SIEGE_INTERVAL-gameSec)/60));
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+    <h2>🚩 ${f.name}</h2>
+    <p class="small">總部血量：${Math.round(f.hq.hp)}/${f.hq.maxHp}｜下次怪物攻城：約 ${nextSiege} 遊戲分鐘後</p>
+    <h3 style="color:#90caf9">成員（${members.length}人）</h3>${mRows}
+    <h3 style="color:#90caf9;margin-top:10px">邀請玩家（對方可同意或拒絕）</h3>${nRows}
+    ${enemy?`<p style="margin-top:10px" class="small">⚔️ 敵對陣營「${enemy.name}」總部位於地圖左下方，摧毀可獲得大量金幣！</p>`:""}
+    </div>`);
+}
+function createFaction(){
+  if(inVillage(P)){ log("❌ 陣營只能建立在新手村外！","#ff8a65"); return; }
+  const nearMon=monsters.filter(m=>m.alive&&dist(m,P)<350).length;
+  if(nearMon>0){ log(`❌ 周圍還有 ${nearMon} 隻怪物，必須先清空才能建立陣營！`,"#ff8a65"); return; }
+  const name=document.getElementById("facName").value.trim()||`${P.name}的軍團`;
+  const f={id:factions.length+10,name,isPlayer:true,members:[],hq:{x:P.x,y:P.y,hp:5000,maxHp:5000},alive:true};
+  factions.push(f); P.factionId=f.id;
+  log(`🚩 陣營「${name}」建立成功！總部就在你腳下。每1遊戲小時會有怪物攻城，記得防守！`,"#ffd54f");
+  bigMsg(`🚩 陣營「${name}」成立！`);
+  closeModal();
+}
+function inviteFaction(bid){
+  const b=bots.find(x=>x.id===bid);
+  const f=playerFaction();
+  if(Math.random()<0.7){
+    b.factionId=f.id; f.members.push(bid);
+    log(`✅ ${b.name} 同意加入陣營「${f.name}」！他會協助防守總部。`,"#8bc34a");
+  } else {
+    log(`❌ ${b.name} 拒絕加入你的陣營。`,"#ff8a65");
+  }
+  openFaction();
+}
+
+/* ============ 試煉塔 ============ */
+function tryEnterTower(){
+  if(inTower) return;
+  if(dist(P,TOWER_POS)>200){ log(`🗼 試煉塔位於地圖右上方（金色高塔），走到塔前再按 E 進入。`,"#ffd54f"); return; }
+  if(P.gold<TOWER_FEE){ log(`❌ 進入試煉塔需支付 ${TOWER_FEE} 金幣，你的金幣不足。`,"#ff8a65"); return; }
+  P.gold-=TOWER_FEE;
+  inTower=true;
+  tower={floor:1,reward:0,mon:null,pHp:P.hp};
+  log(`🗼 支付 ${TOWER_FEE} 金幣，進入試煉塔！層數越高獎勵越多，怪物最高1000級！`);
+  towerNextFloor();
+}
+function towerMonster(floor){
+  const lv=Math.min(1000, floor*10);
+  return {name:`第${floor}層守衛`,lv,maxHp:lv*30+100,hp:lv*30+100,atk:lv*1.8+5};
+}
+function towerNextFloor(){
+  tower.mon=towerMonster(tower.floor);
+  renderTower();
+}
+function renderTower(){
+  const m=tower.mon;
+  const floorReward=tower.floor*tower.floor*5+50;
+  modal(`<div class="modal" id="towerCombat">
+    <h2>🗼 試煉塔 — 第 ${tower.floor} 層</h2>
+    <p>👹 <b>${m.name}</b>（Lv.${m.lv}）</p>
+    <div class="hpline"><div style="width:${Math.max(0,m.hp/m.maxHp*100)}%"></div></div>
+    <p>🧝 ${P.name}（Lv.${P.lv}）HP ${Math.max(0,Math.round(tower.pHp))}/${P.maxHp}</p>
+    <div class="hpline"><div style="width:${Math.max(0,tower.pHp/P.maxHp*100)}%;background:#43a047"></div></div>
+    <p class="small">已累積獎勵：💰${fmt(tower.reward)}｜本層通關可再得 💰${fmt(floorReward)}</p>
+    <p style="margin-top:10px">
+      <button class="gold" onclick="towerFight()">⚔️ 戰鬥！</button>
+      <button onclick="towerLeave()">🏃 領獎離開（帶走 ${fmt(tower.reward)} 金幣）</button></p>
+    <div id="towerLog" class="small" style="margin-top:8px;text-align:left;max-height:120px;overflow-y:auto"></div></div>`);
+}
+function towerFight(){
+  const m=tower.mon;
+  const tlogEl=()=>document.getElementById("towerLog");
+  // 玩家先攻
+  const pd=Math.max(1,pAtk()*rand(1.0,1.4));
+  m.hp-=pd;
+  let txt=`你造成 ${Math.round(pd)} 傷害。`;
+  if(m.hp<=0){
+    const floorReward=tower.floor*tower.floor*5+50;
+    tower.reward+=floorReward;
+    gainExp(m.lv*5);
+    if(Math.random()<0.15){
+      log(`🌟 神秘力量湧現……你在試煉塔的等級回饋到了現實！獲得「現實成就徽章」！`,"#ffd54f");
+    }
+    tower.floor++;
+    tower.pHp=Math.min(P.maxHp,tower.pHp+P.maxHp*0.25); // 過層回復25%
+    towerNextFloor();
+    return;
+  }
+  const md=Math.max(1, m.atk*rand(0.7,1.1)-pDef());
+  tower.pHp-=md;
+  txt+=` ${m.name} 反擊造成 ${Math.round(md)} 傷害。`;
+  if(tower.pHp<=0){
+    inTower=false; closeModal();
+    P.hp=1;
+    log(`💥 你在試煉塔第 ${tower.floor} 層倒下，被傳送出塔（獎勵沒收）。塔內失敗不算輸，但下次小心！`,"#ff8a65");
+    bigMsg(`🗼 試煉失敗於第 ${tower.floor} 層`);
+    return;
+  }
+  renderTower();
+  const el=tlogEl(); if(el){ el.innerHTML=`<div>${txt}</div>`+el.innerHTML; }
+}
+function towerLeave(){
+  P.gold+=tower.reward;
+  P.hp=Math.max(1,Math.round(tower.pHp));
+  log(`🗼 你通過了 ${tower.floor-1} 層試煉塔，獲得 ${fmt(tower.reward)} 金幣！`,"#ffd54f");
+  if(tower.floor>1&&Math.random()<0.3) log(`🌟 等級回饋到現實：你獲得了現實世界的「毅力+1」！`,"#ffd54f");
+  inTower=false; tower=null;
+  closeModal();
+}
+
+/* ============ 說明 ============ */
+function openHelp(){
+  modal(`<div class="modal"><button class="close" onclick="closeModal()">✕</button>
+  <h2>❓ 遊戲說明</h2>
+  <div style="font-size:13px;line-height:1.9">
+  <b>操作：</b>WASD/方向鍵移動｜空白鍵普攻（可打多隻怪）｜1~3技能｜Q攻擊玩家(PvP)｜B背包｜P組隊｜G陣營｜E進入試煉塔<br>
+  <b>新手村：</b>怪物1~10級，村內禁止玩家打鬥，等級10級以上才能離開。<br>
+  <b>村外：</b>怪物1~100級，離村越遠越強。可以PvP。<b style="color:#ff8a65">血量歸零立刻輸掉遊戲！</b><br>
+  <b>獲勝：</b>擊敗新手村北方領地的100級Boss·滅世魔龍（可單人或組隊，組隊成功全員獲勝）。<br>
+  <b>組隊：</b>邀請需對方同意，隊友會協助戰鬥。<br>
+  <b>陣營：</b>需先清空周圍怪物、只能建在村外、邀請需同意、每1遊戲小時怪物攻城、陣營間可開戰。<br>
+  <b>試煉塔：</b>入場100金幣，層數越高獎勵越多，塔內怪最高1000級。<br>
+  <b>刷新：</b>怪物每10遊戲分鐘、Boss每15遊戲分鐘重生。<br>
+  </div></div>`);
+}
+
+/* ============ 技能列 ============ */
+function renderSkillbar(){
+  const bar=document.getElementById("skillbar");
+  bar.innerHTML="";
+  P.skills.forEach((sid,i)=>{
+    const s=SKILLS[sid];
+    const d=document.createElement("div");
+    d.className="skillslot";
+    d.innerHTML=`<span class="key">${i+1}</span><span>${s.name}</span><span class="small">MP${s.mp}</span><div class="cd hidden"></div>`;
+    d.onclick=()=>castSkill(i);
+    bar.appendChild(d);
+  });
+}
+
+/* ============ 主迴圈 ============ */
+let lastT=performance.now();
+function loop(t){
+  const dt=Math.min(0.05,(t-lastT)/1000); lastT=t;
+  if(!gameOver){ update(dt); }
+  render();
+  requestAnimationFrame(loop);
+}
+
+function update(dt){
+  const gdt=dt*TIME_SCALE;
+  gameSec+=gdt;
+  if(gameSec>=24*3600){ gameSec-=24*3600; gameDay++; lastSiege-=24*3600; }
+
+  // 在線人數波動
+  if(Math.random()<0.02){
+    online=Math.max(1,Math.min(MAX_ONLINE, online+ri(-800,900)));
+  }
+
+  // 玩家移動
+  if(!inTower){
+    let dx=0,dy=0;
+    if(keys.w||keys.arrowup)dy-=1;
+    if(keys.s||keys.arrowdown)dy+=1;
+    if(keys.a||keys.arrowleft)dx-=1;
+    if(keys.d||keys.arrowright)dx+=1;
+    if(dx||dy){
+      const L=Math.hypot(dx,dy);
+      const nx=P.x+dx/L*P.speed*dt, ny=P.y+dy/L*P.speed*dt;
+      const wasIn=inVillage(P), willIn=nx>=VILLAGE.x1&&nx<=VILLAGE.x2&&ny>=VILLAGE.y1&&ny<=VILLAGE.y2;
+      if(wasIn&&!willIn&&P.lv<10){
+        log("🚧 等級未達10級，還不能離開新手村！先在村裡打怪練級吧。","#ff8a65");
+      } else {
+        P.x=Math.max(20,Math.min(WORLD-20,nx));
+        P.y=Math.max(20,Math.min(WORLD-20,ny));
+      }
+    }
+  }
+
+  // 冷卻/回復
+  for(const k in P.cds) P.cds[k]=Math.max(0,P.cds[k]-dt);
+  P.hp=Math.min(P.maxHp,P.hp+(inVillage(P)?8:1.5)*dt);
+  P.mp=Math.min(P.maxMp,P.mp+3*dt);
+
+  // 怪物 AI 與刷新
+  for(const m of monsters){
+    if(!m.alive){
+      if(gameSec>=m.respawnAt&&m.respawnAt>0){
+        m.alive=true; m.hp=m.maxHp; m.x=m.homeX; m.y=m.homeY; m.aggro=false; m.respawnAt=0;
+        if(m.isBoss) log("⚠️ 新手村Boss·滅世魔龍 重生了！","#ff8a65");
+      }
+      continue;
+    }
+    if(m.siege){ // 攻城怪：衝向玩家陣營總部
+      const f=playerFaction();
+      if(f&&f.alive){
+        const d=dist(m,f.hq);
+        if(d>60){ m.x+=(f.hq.x-m.x)/d*60*dt; m.y+=(f.hq.y-m.y)/d*60*dt; }
+        else { m.atkCd-=dt; if(m.atkCd<=0){ m.atkCd=1.5; f.hq.hp-=m.atk;
+          if(f.hq.hp<=0&&f.alive){ f.alive=false; P.factionId=null;
+            f.members.forEach(id=>{const b=bots.find(x=>x.id===id); if(b)b.factionId=null;});
+            const idx=factions.indexOf(f); factions.splice(idx,1);
+            log(`💥 你的陣營總部被怪物摧毀了！陣營「${f.name}」解散。`,"#ff5252");
+            bigMsg("💥 陣營總部被摧毀！");
+          } } }
+      }
+    }
+    const dToP=dist(m,P);
+    if(!inTower&&(m.aggro||dToP<120)&&dToP<600&&!m.siege){
+      m.aggro=true;
+      if(dToP>50){ const sp=m.isBoss?90:65; m.x+=(P.x-m.x)/dToP*sp*dt; m.y+=(P.y-m.y)/dToP*sp*dt; }
+      else {
+        m.atkCd-=dt;
+        if(m.atkCd<=0){
+          m.atkCd=m.isBoss?1:1.6;
+          const dmg=Math.max(1,m.atk*rand(0.8,1.1)-pDef());
+          P.hp-=dmg;
+          effects.push({x:P.x,y:P.y-24,t:0.7,text:`-${Math.round(dmg)}`,color:"#ff5252"});
+        }
+      }
+      if(dToP>600||dist(m,{x:m.homeX,y:m.homeY})>800) m.aggro=false;
+    } else if(!m.aggro&&!m.siege){
+      // 回家漫遊
+      const dh=dist(m,{x:m.homeX,y:m.homeY});
+      if(dh>10){ m.x+=(m.homeX-m.x)/dh*30*dt; m.y+=(m.homeY-m.y)/dh*30*dt; }
+    }
+  }
+
+  // 玩家死亡判定
+  if(P.hp<=0&&!inTower){
+    if(inVillage(P)){
+      P.hp=P.maxHp*0.5; P.x=2200; P.y=2500;
+      log("你在新手村暈倒了……村民把你救回廣場（新手村內死亡不算輸）。","#ff8a65");
+    } else {
+      loseGame("你在新手村外血量歸零，立刻輸掉了遊戲。");
+      return;
+    }
+  }
+
+  // 隊友 AI：跟隨並攻擊附近的怪
+  for(const id of P.party){
+    const b=bots.find(x=>x.id===id); if(!b||b.hp<=0) continue;
+    const d=dist(b,P);
+    if(d>120){ b.x+=(P.x-b.x)/d*200*dt; b.y+=(P.y-b.y)/d*200*dt; }
+    b.atkCd-=dt;
+    if(b.atkCd<=0){
+      const tg=monsters.filter(m=>m.alive&&dist(m,b)<260).sort((x,y)=>dist(x,b)-dist(y,b))[0];
+      if(tg){ b.atkCd=1.2; damageMonster(tg,Math.max(1,b.atk*rand(0.8,1.1)));
+        effects.push({x:b.x,y:b.y,t:0.3,line:{x2:tg.x,y2:tg.y},color:"#4fc3f7"}); }
+    }
+  }
+
+  // 一般 bot AI：漫遊
+  for(const b of bots){
+    if(b.inParty) continue;
+    if(b.hp<b.maxHp) b.hp=Math.min(b.maxHp,b.hp+5*dt);
+    if(b.pvpTarget==="P"&&!inVillage(b)&&!inVillage(P)&&dist(b,P)<500){
+      const d=dist(b,P);
+      if(d>55){ b.x+=(P.x-b.x)/d*150*dt; b.y+=(P.y-b.y)/d*150*dt; }
+      else { b.atkCd-=dt; if(b.atkCd<=0){ b.atkCd=1.5;
+        const dmg=Math.max(1,b.atk*rand(0.8,1.1)-pDef()); P.hp-=dmg;
+        effects.push({x:P.x,y:P.y-24,t:0.7,text:`-${Math.round(dmg)}`,color:"#ff5252"}); } }
+      if(dist(b,P)>600) b.pvpTarget=null;
+      continue;
+    }
+    b.wt-=dt;
+    if(b.wt<=0){ b.wt=rand(1,4); b.dir=rand(0,Math.PI*2); }
+    let nx=b.x+Math.cos(b.dir)*60*dt, ny=b.y+Math.sin(b.dir)*60*dt;
+    // 陣營成員留守總部附近
+    if(b.factionId!==null){
+      const f=factions.find(x=>x.id===b.factionId);
+      if(f&&f.alive&&dist(b,f.hq)>250){ const d=dist(b,f.hq); nx=b.x+(f.hq.x-b.x)/d*80*dt; ny=b.y+(f.hq.y-b.y)/d*80*dt; }
+    }
+    // 低等bot不出村
+    if(b.lv<10&&!(nx>=VILLAGE.x1&&nx<=VILLAGE.x2&&ny>=VILLAGE.y1&&ny<=VILLAGE.y2)){ b.dir+=Math.PI; continue; }
+    b.x=Math.max(20,Math.min(WORLD-20,nx)); b.y=Math.max(20,Math.min(WORLD-20,ny));
+  }
+
+  // 陣營成員協防攻城怪
+  const pf=playerFaction();
+  if(pf&&pf.alive){
+    for(const id of pf.members){
+      const b=bots.find(x=>x.id===id); if(!b) continue;
+      b.atkCd-=dt;
+      if(b.atkCd<=0){
+        const tg=monsters.filter(m=>m.alive&&m.siege&&dist(m,b)<300).sort((x,y)=>dist(x,b)-dist(y,b))[0];
+        if(tg){ b.atkCd=1.2; damageMonster(tg,Math.max(1,b.atk*rand(0.8,1.1))); }
+      }
+    }
+    // 攻城事件
+    if(gameSec-lastSiege>=SIEGE_INTERVAL){
+      lastSiege=gameSec;
+      const n=ri(4,7);
+      for(let i=0;i<n;i++){
+        const ang=rand(0,Math.PI*2);
+        const m=makeMonster(pf.hq.x+Math.cos(ang)*600,pf.hq.y+Math.sin(ang)*600,ri(15,40));
+        m.siege=true; m.respawnAt=-1; monsters.push(m);
+      }
+      log(`⚔️ 怪物攻城開始！${n} 隻怪物正在進攻你的陣營總部，快去防守！`,"#ff5252");
+      bigMsg("⚔️ 怪物攻城！");
+    }
+  } else {
+    lastSiege=gameSec; // 沒有陣營時不累積
+  }
+
+  // 敵對陣營總部可被攻擊（陣營打鬥）
+  const ef=factions.find(f=>!f.isPlayer&&f.alive);
+  if(ef&&pf&&pf.alive&&keys[" "]===true&&dist(P,ef.hq)<CLS[P.cls].range+40){
+    ef.hq.hp-=pAtk()*dt*2;
+    if(ef.hq.hp<=0){
+      ef.alive=false;
+      const reward=20000;
+      P.gold+=reward;
+      ef.members.forEach(id=>{const b=bots.find(x=>x.id===id); if(b)b.factionId=null;});
+      log(`🏆 你的陣營摧毀了「${ef.name}」總部！奪得 ${fmt(reward)} 金幣戰利品！`,"#ffd54f");
+      bigMsg(`🏆 摧毀敵對陣營「${ef.name}」！`);
+    }
+  }
+
+  // 拍賣行：你上架的商品有機會賣出
+  for(let i=auctions.length-1;i>=0;i--){
+    const a=auctions[i];
+    if(a.mine&&Math.random()<0.0015){
+      P.gold+=a.price;
+      log(`🏛️ 拍賣行通知：你的 ${a.item.name} 以 ${fmt(a.price)} 金幣售出！`,"#8bc34a");
+      auctions.splice(i,1);
+    }
+  }
+
+  // 特效
+  for(let i=effects.length-1;i>=0;i--){ effects[i].t-=dt; if(effects[i].t<=0) effects.splice(i,1); }
+
+  // HUD
+  updateHUD();
+}
+
+function updateHUD(){
+  const h=Math.floor(gameSec/3600), mi=Math.floor(gameSec%3600/60);
+  document.getElementById("uiTime").textContent=`第${gameDay}天 ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`;
+  document.getElementById("uiOnline").textContent=fmt(online);
+  document.getElementById("uiLv").textContent=P.lv;
+  document.getElementById("uiHp").textContent=`${Math.max(0,Math.round(P.hp))}/${P.maxHp}`;
+  document.getElementById("hpfill").style.width=Math.max(0,P.hp/P.maxHp*100)+"%";
+  document.getElementById("mpfill").style.width=Math.max(0,P.mp/P.maxMp*100)+"%";
+  document.getElementById("expfill").style.width=(P.exp/expNeed()*100)+"%";
+  document.getElementById("uiGold").textContent=fmt(P.gold);
+  document.getElementById("uiZone").textContent=inVillage(P)?"📍新手村（安全區，禁止PvP）":"📍荒野（危險！死亡即輸）";
+  // 技能冷卻顯示
+  const slots=document.querySelectorAll(".skillslot");
+  P.skills.forEach((sid,i)=>{
+    const cd=P.cds[sid]||0;
+    const el=slots[i]?.querySelector(".cd");
+    if(el){ if(cd>0){ el.classList.remove("hidden"); el.textContent=cd.toFixed(1);} else el.classList.add("hidden"); }
+  });
+}
+
+/* ============ 繪圖 ============ */
+const cv=document.getElementById("cv");
+const ctx=cv.getContext("2d");
+function resize(){ cv.width=innerWidth; cv.height=innerHeight; }
+addEventListener("resize",resize); resize();
+
+function render(){
+  if(!P) return;
+  cam.x=P.x-cv.width/2; cam.y=P.y-cv.height/2;
+  cam.x=Math.max(0,Math.min(WORLD-cv.width,cam.x));
+  cam.y=Math.max(0,Math.min(WORLD-cv.height,cam.y));
+  const ox=-cam.x, oy=-cam.y;
+
+  // 背景：村外深淺
+  ctx.fillStyle="#16321a"; ctx.fillRect(0,0,cv.width,cv.height);
+  // 深處漸暗
+  const cx=(VILLAGE.x1+VILLAGE.x2)/2+ox, cy=(VILLAGE.y1+VILLAGE.y2)/2+oy;
+  const g=ctx.createRadialGradient(cx,cy,400,cx,cy,2600);
+  g.addColorStop(0,"rgba(0,0,0,0)"); g.addColorStop(1,"rgba(0,0,30,0.55)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+
+  // 新手村
+  ctx.fillStyle="#3e5a2e";
+  ctx.fillRect(VILLAGE.x1+ox,VILLAGE.y1+oy,VILLAGE.x2-VILLAGE.x1,VILLAGE.y2-VILLAGE.y1);
+  ctx.strokeStyle="#ffd54f"; ctx.lineWidth=4;
+  ctx.strokeRect(VILLAGE.x1+ox,VILLAGE.y1+oy,VILLAGE.x2-VILLAGE.x1,VILLAGE.y2-VILLAGE.y1);
+  ctx.fillStyle="#ffd54f"; ctx.font="bold 22px sans-serif"; ctx.textAlign="center";
+  ctx.fillText("🏡 新手村（安全區）", (VILLAGE.x1+VILLAGE.x2)/2+ox, VILLAGE.y1+oy+30);
+
+  // 試煉塔
+  ctx.fillStyle="#ffb300";
+  ctx.fillRect(TOWER_POS.x-30+ox,TOWER_POS.y-70+oy,60,110);
+  ctx.font="bold 16px sans-serif";
+  ctx.fillText("🗼 試煉塔（E進入·100金幣）",TOWER_POS.x+ox,TOWER_POS.y-84+oy);
+
+  // Boss 領地
+  ctx.strokeStyle="#ff5252"; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+  ctx.beginPath(); ctx.arc(BOSS_POS.x+ox,BOSS_POS.y+oy,220,0,7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle="#ff8a80"; ctx.font="bold 15px sans-serif";
+  ctx.fillText("☠️ Boss領地（擊敗即獲勝）",BOSS_POS.x+ox,BOSS_POS.y-240+oy);
+
+  // 陣營總部
+  for(const f of factions){
+    if(!f.alive) continue;
+    const hx=f.hq.x+ox, hy=f.hq.y+oy;
+    ctx.fillStyle=f.isPlayer?"#1976d2":"#6a1b9a";
+    ctx.fillRect(hx-35,hy-35,70,70);
+    ctx.fillStyle="#fff"; ctx.font="bold 13px sans-serif";
+    ctx.fillText(`🚩${f.name}`,hx,hy-44);
+    ctx.fillStyle="#333"; ctx.fillRect(hx-35,hy+40,70,7);
+    ctx.fillStyle="#e53935"; ctx.fillRect(hx-35,hy+40,70*Math.max(0,f.hq.hp/f.hq.maxHp),7);
+  }
+
+  // 怪物
+  ctx.font="11px sans-serif";
+  for(const m of monsters){
+    if(!m.alive) continue;
+    const x=m.x+ox,y=m.y+oy;
+    if(x<-80||y<-80||x>cv.width+80||y>cv.height+80) continue;
+    const r=m.isBoss?34:10+m.lv*0.1;
+    ctx.beginPath();
+    ctx.fillStyle=m.isBoss?"#d500f9":m.siege?"#ff6e40":m.lv<=10?"#8d6e63":m.lv<=40?"#ef5350":m.lv<=70?"#ab47bc":"#212121";
+    ctx.arc(x,y,r,0,7); ctx.fill();
+    if(m.isBoss){ ctx.strokeStyle="#ffd54f"; ctx.lineWidth=3; ctx.stroke(); }
+    ctx.fillStyle=m.isBoss?"#ffd54f":"#ffcdd2";
+    ctx.fillText(`${m.name} Lv.${m.lv}`,x,y-r-14);
+    ctx.fillStyle="#333"; ctx.fillRect(x-16,y-r-10,32,4);
+    ctx.fillStyle="#e53935"; ctx.fillRect(x-16,y-r-10,32*Math.max(0,m.hp/m.maxHp),4);
+  }
+
+  // 模擬玩家
+  for(const b of bots){
+    const x=b.x+ox,y=b.y+oy;
+    if(x<-50||y<-50||x>cv.width+50||y>cv.height+50) continue;
+    ctx.beginPath();
+    ctx.fillStyle=b.inParty?"#4fc3f7":b.factionId===1?"#8e24aa":CLS[b.cls].color;
+    ctx.arc(x,y,9,0,7); ctx.fill();
+    ctx.fillStyle=b.inParty?"#4fc3f7":"#b0bec5";
+    ctx.fillText(`${b.inParty?"👥":""}${b.name} Lv.${b.lv}`,x,y-16);
+  }
+
+  // 玩家
+  const px=P.x+ox,py=P.y+oy;
+  ctx.beginPath(); ctx.fillStyle=CLS[P.cls].color;
+  ctx.arc(px,py,12,0,7); ctx.fill();
+  ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle="#ffd54f"; ctx.font="bold 13px sans-serif";
+  ctx.fillText(`${P.name} Lv.${P.lv}`,px,py-20);
+
+  // 特效
+  for(const e of effects){
+    if(e.line){
+      ctx.strokeStyle=e.color; ctx.lineWidth=2; ctx.globalAlpha=Math.max(0,e.t/0.3);
+      ctx.beginPath(); ctx.moveTo(e.x+ox,e.y+oy); ctx.lineTo(e.line.x2+ox,e.line.y2+oy); ctx.stroke();
+      ctx.globalAlpha=1;
+    } else if(e.text){
+      ctx.fillStyle=e.color; ctx.font="bold 14px sans-serif";
+      ctx.fillText(e.text,e.x+ox,e.y+oy-(0.8-e.t)*30);
+    }
+  }
+
+  // 小地圖
+  const MS=150, sc=MS/WORLD, mx=cv.width-MS-10, my=cv.height-MS-10;
+  ctx.fillStyle="#000a"; ctx.fillRect(mx,my,MS,MS);
+  ctx.strokeStyle="#666"; ctx.strokeRect(mx,my,MS,MS);
+  ctx.fillStyle="#3e5a2e";
+  ctx.fillRect(mx+VILLAGE.x1*sc,my+VILLAGE.y1*sc,(VILLAGE.x2-VILLAGE.x1)*sc,(VILLAGE.y2-VILLAGE.y1)*sc);
+  ctx.fillStyle="#ffb300"; ctx.fillRect(mx+TOWER_POS.x*sc-2,my+TOWER_POS.y*sc-2,4,4);
+  ctx.fillStyle="#d500f9"; ctx.fillRect(mx+BOSS_POS.x*sc-3,my+BOSS_POS.y*sc-3,6,6);
+  for(const f of factions){ if(f.alive){ ctx.fillStyle=f.isPlayer?"#1976d2":"#6a1b9a"; ctx.fillRect(mx+f.hq.x*sc-2,my+f.hq.y*sc-2,5,5); } }
+  ctx.fillStyle="#fff"; ctx.fillRect(mx+P.x*sc-2,my+P.y*sc-2,4,4);
+}
+</script>
+</body>
+</html>

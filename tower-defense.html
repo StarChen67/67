@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>要塞防線 — 無限塔防</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#241a42 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:820px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+h1{font-size:21px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),#ff9d2e,#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+.stats-top{display:flex;gap:8px;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:6px 11px;text-align:center;min-width:64px}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.pill.warn .v{color:var(--red)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.panel h2{font-size:12px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px}
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:9px 14px;font-size:13px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.35;cursor:not-allowed}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-purple{background:linear-gradient(135deg,#d14bff,#8b5cff)}
+.b-green{background:linear-gradient(135deg,#3ddc97,#22a173);color:#062a1c}
+.b-red{background:linear-gradient(135deg,#ff5d73,#c8324a)}
+.b-blue{background:linear-gradient(135deg,#5aa9ff,#3a7fd1)}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:7px 11px;font-size:12px;border-radius:8px}
+.flex{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grow{flex:1}
+.center{text-align:center}
+
+/* 畫布捲動容器 */
+#mapWrap{width:100%;max-height:64vh;overflow:auto;border-radius:12px;border:1px solid var(--line);
+  background:#080a12;position:relative;touch-action:pan-x pan-y}
+#gameCanvas{display:block;cursor:crosshair}
+.zoomBar{display:flex;gap:6px;justify-content:flex-end;margin:6px 0}
+
+/* 塔商店 */
+#shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.tcard{background:var(--panel2);border:2px solid var(--line);border-radius:11px;padding:8px 6px;
+       text-align:center;cursor:pointer;position:relative;user-select:none}
+.tcard.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.tcard.afford0{opacity:.4;cursor:not-allowed}
+.tcard .ic{font-size:22px;line-height:1}
+.tcard .nm{font-size:11px;font-weight:700;margin-top:3px}
+.tcard .ct{font-size:10.5px;color:var(--gold);margin-top:1px;font-variant-numeric:tabular-nums}
+
+/* 選中塔資訊面板 */
+#towerInfo{display:none}
+#towerInfo .row{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;
+  border-bottom:1px solid #23294560}
+#towerInfo .row:last-child{border-bottom:none}
+#towerInfo .row>span:first-child{color:var(--dim)}
+
+/* 波次橫幅 */
+#waveBanner{display:none;text-align:center;padding:10px;background:var(--panel2);
+  border:1px solid var(--gold);border-radius:12px;margin-bottom:10px}
+#waveBanner .big{font-size:18px;font-weight:800;color:var(--gold);margin-bottom:6px}
+
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);cursor:pointer;user-select:none}
+.sw{width:34px;height:20px;border-radius:11px;background:var(--panel2);border:1px solid var(--line);
+    position:relative;transition:.15s;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+           background:var(--dim);transition:.15s}
+.toggle.on .sw{background:var(--green);border-color:transparent}
+.toggle.on .sw::after{left:16px;background:#fff}
+
+/* 模態視窗 */
+.modal-mask{position:fixed;inset:0;background:rgba(4,5,10,.78);display:flex;align-items:center;
+  justify-content:center;z-index:50;padding:16px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;
+  max-width:460px;width:100%;max-height:88vh;overflow:auto}
+.modal h2{font-size:18px;margin-bottom:4px;color:var(--gold)}
+.modal .desc{font-size:12px;color:var(--dim);margin-bottom:14px}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.opt{background:var(--panel2);border:2px solid var(--line);border-radius:11px;padding:10px;cursor:pointer;text-align:center}
+.opt.sel{border-color:var(--gold)}
+.opt .t{font-weight:800;font-size:14px}
+.opt .d{font-size:10.5px;color:var(--dim);margin-top:3px;line-height:1.5}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.7;margin-top:6px}
+.hint b{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>要塞防線</h1>
+      <div class="sub">十塔 · 無限升級 · 無限波次 · 100×120 戰場</div>
+    </div>
+    <div class="stats-top">
+      <div class="pill"><div class="k">金幣</div><div class="v" id="stGold">0</div></div>
+      <div class="pill warn"><div class="k">生命</div><div class="v" id="stLives">0</div></div>
+      <div class="pill"><div class="k">波次</div><div class="v" id="stWave">0</div></div>
+      <div class="pill"><div class="k">擊殺</div><div class="v" id="stKills">0</div></div>
+    </div>
+  </header>
+
+  <div id="waveBanner">
+    <div class="big" id="waveBannerText">第 1 波完成！</div>
+    <div class="flex center" style="justify-content:center">
+      <button class="b-gold b-sm" id="btnNextWave">開始下一波</button>
+      <label class="toggle" id="autoToggle"><span class="sw"></span>自動開始下一波</label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="flex" style="justify-content:space-between">
+      <h2 style="margin-bottom:0">戰場</h2>
+      <div class="flex">
+        <button class="b-ghost b-sm" id="btnPause">暫停</button>
+        <button class="b-ghost b-sm" id="btnSpeed">速度 x1</button>
+        <button class="b-red b-sm" id="btnRestart">重新開始</button>
+      </div>
+    </div>
+    <div class="zoomBar">
+      <button class="b-ghost b-sm" data-zoom="1">100%</button>
+      <button class="b-ghost b-sm" data-zoom="0.7">70%</button>
+      <button class="b-ghost b-sm" data-zoom="0.5">50%</button>
+    </div>
+    <div id="mapWrap"><canvas id="gameCanvas"></canvas></div>
+  </div>
+
+  <div class="panel" id="towerInfo">
+    <h2>塔資訊</h2>
+    <div class="row"><span>名稱</span><span id="tiName">-</span></div>
+    <div class="row"><span>等級</span><span id="tiLevel">-</span></div>
+    <div class="row"><span>傷害</span><span id="tiDmg">-</span></div>
+    <div class="row"><span>射程</span><span id="tiRange">-</span></div>
+    <div class="row"><span>射速</span><span id="tiRate">-</span></div>
+    <div class="flex" style="margin-top:10px">
+      <button class="b-purple grow" id="btnUpgrade">升級</button>
+      <button class="b-red" id="btnSell">賣出</button>
+      <button class="b-ghost" id="btnDeselect">取消選取</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>塔商店（點選後點地圖建造）</h2>
+    <div id="shop"></div>
+    <div class="hint" id="shopDesc">點選一種塔查看說明。</div>
+  </div>
+</div>
+
+<div class="modal-mask" id="startModal">
+  <div class="modal">
+    <h2>開始新的防線</h2>
+    <div class="desc">選擇難度與地圖複雜度，波次會越來越難，塔可以無限升級。</div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:6px">難度</div>
+    <div class="opt-grid" id="diffGrid"></div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:6px">地圖複雜度</div>
+    <div class="opt-grid" id="mapGrid"></div>
+    <div class="hint" id="bestHint"></div>
+    <button class="b-gold" style="width:100%;margin-top:14px;padding:12px" id="btnStart">開始遊戲</button>
+  </div>
+</div>
+
+<div class="modal-mask" id="overModal" style="display:none">
+  <div class="modal center">
+    <h2>防線失守</h2>
+    <div class="desc" id="overText">你撐到了第 X 波</div>
+    <button class="b-gold" style="width:100%;padding:12px" id="btnAgain">重新選擇</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const COLS=100, ROWS=120, CELL=12;
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+canvas.width=COLS*CELL; canvas.height=ROWS*CELL;
+
+/* ---------------- 塔定義 ---------------- */
+const TOWER_DEFS=[
+ {id:'arrow',name:'箭塔',icon:'🏹',color:'#6ad1ff',cost:50,dmg:9,range:5.5,rate:650,
+  dmgGrowth:1.12,rangeGrowth:1.006,rateGrowth:0.990,minRate:220,costGrowth:1.16,special:'basic',
+  desc:'均衡型單體攻擊，射速快，適合前期主力。'},
+ {id:'cannon',name:'炮塔',icon:'💣',color:'#ff9d4a',cost:95,dmg:26,range:4.8,rate:1500,
+  dmgGrowth:1.13,rangeGrowth:1.004,rateGrowth:0.992,minRate:650,costGrowth:1.18,special:'splash',
+  splash:1.4,splashGrowth:1.02,desc:'範圍爆炸傷害，適合對付密集小怪。'},
+ {id:'frost',name:'冰霜塔',icon:'❄️',color:'#7fe6ff',cost:75,dmg:4,range:4.5,rate:850,
+  dmgGrowth:1.08,rangeGrowth:1.005,rateGrowth:0.990,minRate:300,costGrowth:1.15,special:'slow',
+  slowFactor:0.55,slowDur:1.3,desc:'降低命中敵人的移動速度。'},
+ {id:'poison',name:'毒素塔',icon:'☠️',color:'#8be05a',cost:85,dmg:4,range:4.6,rate:950,
+  dmgGrowth:1.09,rangeGrowth:1.005,rateGrowth:0.990,minRate:320,costGrowth:1.16,special:'poison',
+  desc:'疊加中毒效果（最多 5 層），持續掉血。'},
+ {id:'lightning',name:'雷電塔',icon:'⚡',color:'#f4e04a',cost:125,dmg:12,range:5.2,rate:1050,
+  dmgGrowth:1.11,rangeGrowth:1.005,rateGrowth:0.990,minRate:400,costGrowth:1.17,special:'chain',
+  chainRange:2.4,desc:'命中後連鎖彈射至附近敵人。'},
+ {id:'sniper',name:'狙擊塔',icon:'🎯',color:'#ff5d73',cost:160,dmg:70,range:9,rate:2200,
+  dmgGrowth:1.14,rangeGrowth:1.004,rateGrowth:0.995,minRate:900,costGrowth:1.19,special:'sniper',
+  armorPierce:0.5,desc:'超遠射程、單體高爆發，並穿透部分護甲。'},
+ {id:'flame',name:'火焰塔',icon:'🔥',color:'#ff7040',cost:105,dmg:5,range:2.8,rate:150,
+  dmgGrowth:1.10,rangeGrowth:1.003,rateGrowth:1,minRate:150,costGrowth:1.16,special:'flame',
+  desc:'近距離持續燃燒，對範圍內所有敵人造成傷害。'},
+ {id:'debuff',name:'磁力塔',icon:'🧲',color:'#c77dff',cost:95,dmg:14,range:4.6,rate:300,
+  dmgGrowth:1.09,rangeGrowth:1.005,rateGrowth:1,minRate:300,costGrowth:1.15,special:'debuff',
+  debuffCap:70,desc:'降低範圍內敵人的護甲，讓其他塔傷害更高。'},
+ {id:'multishot',name:'散射塔',icon:'🎇',color:'#ff9de0',cost:115,dmg:8,range:4.7,rate:950,
+  dmgGrowth:1.10,rangeGrowth:1.005,rateGrowth:0.992,minRate:400,costGrowth:1.17,special:'multi',
+  baseTargets:2,desc:'同時攻擊多個目標，適合對付大量小怪。'},
+ {id:'laser',name:'雷射塔',icon:'💠',color:'#6affc0',cost:210,dmg:9,range:5,rate:120,
+  dmgGrowth:1.115,rangeGrowth:1.004,rateGrowth:1,minRate:120,costGrowth:1.20,special:'laser',
+  desc:'持續光束攻擊，可貫穿命中第二個目標，後期主力輸出。'}
+];
+const TOWER_MAP={}; TOWER_DEFS.forEach(d=>TOWER_MAP[d.id]=d);
+
+function towerStats(def,level){
+  const dmg=def.dmg*Math.pow(def.dmgGrowth,level-1);
+  const range=def.range*Math.pow(def.rangeGrowth,level-1);
+  const rate=Math.max(def.minRate, def.rate*Math.pow(def.rateGrowth,level-1));
+  const splash=def.splash?def.splash*Math.pow(def.splashGrowth||1.02,level-1):0;
+  return {dmg,range,rate,splash};
+}
+function upgradeCost(def,level){ return Math.round(def.cost*Math.pow(def.costGrowth,level)); }
+
+/* ---------------- 敵人定義 ---------------- */
+const ENEMY_TYPES={
+ normal:{hp:30,speed:1.6,armor:2,reward:4,color:'#e9ecff'},
+ fast:{hp:16,speed:3.0,armor:0,reward:5,color:'#ffe14a'},
+ tank:{hp:120,speed:0.9,armor:9,reward:9,color:'#9b8cff'},
+ regen:{hp:60,speed:1.3,armor:3,reward:7,regen:3,color:'#7ee06a'},
+ boss:{hp:900,speed:1.0,armor:12,reward:80,color:'#ff5d73'}
+};
+
+const DIFF_PRESETS={
+ easy:{name:'簡單',startGold:320,startLives:25,hpMult:0.8,goldMult:1.15,desc:'較多資源與生命，適合熟悉玩法。'},
+ normal:{name:'普通',startGold:220,startLives:20,hpMult:1.0,goldMult:1.0,desc:'標準難度與資源配置。'},
+ hard:{name:'困難',startGold:160,startLives:15,hpMult:1.35,goldMult:0.9,desc:'敵人更強韌，資源更緊張。'},
+ hell:{name:'地獄',startGold:120,startLives:10,hpMult:1.8,goldMult:0.8,desc:'極限挑戰，一步錯就崩盤。'}
+};
+const MAP_PRESETS={
+ simple:{name:'簡單',lanes:4,maxOffset:0,toothChance:0,toothMax:0,desc:'路線平直，較少轉彎。'},
+ medium:{name:'中等',lanes:7,maxOffset:2,toothChance:0.06,toothMax:2,desc:'多段轉折，適中迷宮感。'},
+ complex:{name:'複雜',lanes:10,maxOffset:3,toothChance:0.12,toothMax:3,desc:'長距離蜿蜒路線，考驗布局。'}
+};
+
+/* ---------------- 路徑產生 ---------------- */
+function buildLanePass(row0,colFrom,colTo,maxOffset,toothChance,toothMax){
+  const dir=colTo>colFrom?1:-1;
+  const cells=[]; let row=row0,col=colFrom,toothLeft=0,toothDir=0;
+  while(true){
+    cells.push({col,row});
+    if(col===colTo) break;
+    const remaining=Math.abs(colTo-col);
+    col+=dir;
+    if(remaining<=3){ row += row>row0?-1:(row<row0?1:0); }
+    else if(toothLeft>0){ row+=toothDir; toothLeft--; }
+    else if(maxOffset>0 && Math.random()<toothChance){
+      toothDir=Math.random()<0.5?1:-1; toothLeft=1+Math.floor(Math.random()*toothMax); row+=toothDir;
+    } else if(row!==row0){ row += row>row0?-1:1; }
+    row=Math.max(row0-maxOffset,Math.min(row0+maxOffset,row));
+  }
+  if(cells[cells.length-1].row!==row0) cells[cells.length-1].row=row0;
+  return cells;
+}
+function buildConnector(col,rowFrom,rowTo){
+  const dir=rowTo>rowFrom?1:-1; const cells=[];
+  for(let r=rowFrom;;r+=dir){ cells.push({col,row:r}); if(r===rowTo) break; }
+  return cells;
+}
+function generatePath(mapKey){
+  const preset=MAP_PRESETS[mapKey];
+  const marginLeft=3, marginRight=3, marginTop=4, marginBottom=4;
+  const leftCol=marginLeft, rightCol=COLS-1-marginRight;
+  const usableRows=ROWS-marginTop-marginBottom;
+  const lanes=preset.lanes;
+  const laneRows=[];
+  for(let i=0;i<lanes;i++) laneRows.push(marginTop+Math.round(i*(usableRows-1)/(lanes-1)));
+  const spacing=usableRows/(lanes-1);
+  const maxOffset=Math.min(preset.maxOffset, Math.max(0,Math.floor(spacing/2)-1));
+
+  let full=[];
+  for(let i=0;i<lanes;i++){
+    const even=i%2===0;
+    const colFrom=even?leftCol:rightCol, colTo=even?rightCol:leftCol;
+    const pass=buildLanePass(laneRows[i],colFrom,colTo,maxOffset,preset.toothChance,preset.toothMax);
+    full=full.concat(pass);
+    if(i+1<lanes){
+      const connCol=even?rightCol:leftCol;
+      const conn=buildConnector(connCol,laneRows[i],laneRows[i+1]);
+      full=full.concat(conn.slice(1));
+    }
+  }
+  // 去除連續重複格
+  const dedup=[full[0]];
+  for(let i=1;i<full.length;i++){
+    const a=dedup[dedup.length-1], b=full[i];
+    if(a.col!==b.col||a.row!==b.row) dedup.push(b);
+  }
+  const cellSet=new Set(dedup.map(c=>c.row*COLS+c.col));
+  const points=dedup.map(c=>({x:(c.col+0.5)*CELL,y:(c.row+0.5)*CELL}));
+  const cumDist=[0];
+  for(let i=1;i<points.length;i++){
+    const dx=points[i].x-points[i-1].x, dy=points[i].y-points[i-1].y;
+    cumDist.push(cumDist[i-1]+Math.sqrt(dx*dx+dy*dy));
+  }
+  return {cells:dedup, cellSet, points, cumDist, total:cumDist[cumDist.length-1]};
+}
+
+/* ---------------- 遊戲狀態 ---------------- */
+let S=null; // 目前對局狀態
+let running=false, paused=false, speedMult=1;
+let selectedShopType=null;
+let selectedTowerRef=null;
+let hoverCell=null;
+let zoom=1;
+let towerIdSeq=1;
+
+function newGameState(diffKey,mapKey){
+  const path=generatePath(mapKey);
+  return {
+    diffKey, mapKey, path,
+    gold:DIFF_PRESETS[diffKey].startGold,
+    lives:DIFF_PRESETS[diffKey].startLives,
+    wave:1, kills:0,
+    towers:[], enemies:[], projectiles:[], fx:[],
+    spawnQueue:[], spawnElapsed:0, waveActive:false, waveClearedBanner:false,
+    autoNext:false, gameOver:false
+  };
+}
+
+/* ---------------- 波次產生 ---------------- */
+function genWave(n,diffKey){
+  const dm=DIFF_PRESETS[diffKey];
+  const hpScale=dm.hpMult*Math.pow(1.075,n-1);
+  const baseDelay=Math.max(280,650-n*4);
+  const count=Math.round(6+n*1.2+Math.sqrt(n)*1.5);
+  const unlockFast=n>=3, unlockTank=n>=5, unlockRegen=n>=9;
+  const list=[];
+  for(let i=0;i<count;i++){
+    let type='normal'; const r=Math.random();
+    if(unlockRegen && r<0.12) type='regen';
+    else if(unlockTank && r<0.30) type='tank';
+    else if(unlockFast && r<0.55) type='fast';
+    list.push(makeSpawn(type,hpScale,dm,i*baseDelay,false));
+  }
+  if(n%10===0) list.push(makeSpawn('boss',hpScale,dm,count*baseDelay+500,true));
+  return list;
+}
+function makeSpawn(type,hpScale,dm,delay,isBoss){
+  const base=ENEMY_TYPES[type];
+  const hp=Math.round(base.hp*hpScale*(isBoss?6:1));
+  const reward=Math.round(base.reward*dm.goldMult*(isBoss?5:1)*(1+(hpScale-1)*0.15));
+  return {type,hp,speed:base.speed,armor:base.armor,reward,regen:base.regen||0,delay,isBoss};
+}
+
+/* ---------------- 敵人 / 塔 邏輯 ---------------- */
+function spawnEnemy(spec){
+  S.enemies.push({
+    type:spec.type, hp:spec.hp, maxHp:spec.hp, speed:spec.speed, armor:spec.armor,
+    reward:spec.reward, regen:spec.regen, isBoss:spec.isBoss,
+    traveled:0, segIdx:0, x:S.path.points[0].x, y:S.path.points[0].y,
+    slowUntil:0, slowFactor:1, poisonStacks:0, poisonDmg:0, poisonUntil:0,
+    armorReduction:0, armorReductionUntil:0
+  });
+}
+function enemyEffectiveArmor(e){
+  const red = (e.armorReductionUntil>performance.now())? e.armorReduction:0;
+  return Math.max(0, e.armor*(1-red));
+}
+function applyDamage(e,dmg,ignoreArmorFrac){
+  const armor=enemyEffectiveArmor(e)*(1-(ignoreArmorFrac||0));
+  const dealt=Math.max(1,dmg-armor);
+  e.hp-=dealt;
+}
+function findTargets(tower,def,stats,count){
+  const rangePx=stats.range*CELL;
+  const cands=[];
+  for(const e of S.enemies){
+    const dx=e.x-tower.x, dy=e.y-tower.y;
+    if(dx*dx+dy*dy<=rangePx*rangePx) cands.push(e);
+  }
+  cands.sort((a,b)=>b.traveled-a.traveled);
+  return cands.slice(0,count);
+}
+function spawnProjectile(tower,def,stats,target,extra){
+  S.projectiles.push(Object.assign({
+    x:tower.x,y:tower.y,target,dmg:stats.dmg,color:def.color,
+    speed:(def.id==='sniper'?15:def.id==='cannon'?6:9)*CELL,
+    special:def.special, stats
+  },extra||{}));
+}
+function killEnemy(e){
+  S.gold+=e.reward; S.kills++;
+  S.enemies.splice(S.enemies.indexOf(e),1);
+}
+function updateTowers(dt,now){
+  for(const t of S.towers){
+    const def=TOWER_MAP[t.type];
+    const stats=towerStats(def,t.level);
+    t.cooldown-=dt*1000;
+    if(def.special==='flame'){
+      if(t.cooldown<=0){
+        t.cooldown=stats.rate;
+        const rangePx=stats.range*CELL; let hit=false;
+        for(const e of S.enemies){
+          const dx=e.x-t.x, dy=e.y-t.y;
+          if(dx*dx+dy*dy<=rangePx*rangePx){ applyDamage(e,stats.dmg,0); hit=true; }
+        }
+        if(hit) S.fx.push({type:'aoe',x:t.x,y:t.y,r:rangePx,color:def.color,ttl:0.12,maxTtl:0.12});
+      }
+      continue;
+    }
+    if(def.special==='debuff'){
+      if(t.cooldown<=0){
+        t.cooldown=stats.rate;
+        const rangePx=stats.range*CELL;
+        const amount=Math.min(def.debuffCap,stats.dmg)/100;
+        let hit=false;
+        for(const e of S.enemies){
+          const dx=e.x-t.x, dy=e.y-t.y;
+          if(dx*dx+dy*dy<=rangePx*rangePx){
+            e.armorReduction=Math.max(e.armorReductionUntil>now?e.armorReduction:0, amount);
+            e.armorReductionUntil=now+600; hit=true;
+          }
+        }
+        if(hit) S.fx.push({type:'aoe',x:t.x,y:t.y,r:rangePx,color:def.color,ttl:0.2,maxTtl:0.2});
+      }
+      continue;
+    }
+    if(def.special==='laser'){
+      if(t.cooldown<=0){
+        t.cooldown=stats.rate;
+        const targets=findTargets(t,def,stats,2);
+        if(targets.length){
+          targets.forEach(e=>applyDamage(e,stats.dmg,0));
+          S.fx.push({type:'beam',x1:t.x,y1:t.y,x2:targets[0].x,y2:targets[0].y,color:def.color,ttl:0.08,maxTtl:0.08});
+        }
+      }
+      continue;
+    }
+    // 一般發射型（含 chain / multi / sniper / splash / slow / poison / basic）
+    if(t.cooldown<=0){
+      const count = def.special==='multi' ? (def.baseTargets+Math.floor(t.level/5)) : 1;
+      const targets=findTargets(t,def,stats,count);
+      if(targets.length){
+        t.cooldown=stats.rate;
+        for(const target of targets) spawnProjectile(t,def,stats,target,{towerLevel:t.level,towerDef:def});
+      }
+    }
+  }
+}
+function resolveHit(p){
+  const def=p.towerDef, e=p.target;
+  if(!e||!S.enemies.includes(e)) return;
+  const stats=p.stats;
+  if(def.special==='splash'){
+    const rad=stats.splash*CELL;
+    for(const other of S.enemies){
+      const dx=other.x-e.x, dy=other.y-e.y;
+      if(dx*dx+dy*dy<=rad*rad) applyDamage(other,stats.dmg,0);
+    }
+    S.fx.push({type:'aoe',x:e.x,y:e.y,r:rad,color:def.color,ttl:0.18,maxTtl:0.18});
+  } else if(def.special==='slow'){
+    applyDamage(e,stats.dmg,0);
+    e.slowUntil=performance.now()+def.slowDur*1000;
+    e.slowFactor=Math.min(e.slowFactor<1&&e.slowUntil>performance.now()?e.slowFactor:1, def.slowFactor);
+  } else if(def.special==='poison'){
+    applyDamage(e,stats.dmg,0);
+    const now=performance.now();
+    e.poisonStacks=Math.min(5,(e.poisonUntil>now?e.poisonStacks:0)+1);
+    e.poisonDmg=stats.dmg*0.4;
+    e.poisonUntil=now+3000;
+  } else if(def.special==='chain'){
+    applyDamage(e,stats.dmg,0);
+    const chainCount=1+Math.floor(p.towerLevel/6);
+    let lastEnemy=e, dmg=stats.dmg, hitSet=new Set([e]);
+    for(let i=0;i<chainCount;i++){
+      dmg*=0.7;
+      let best=null,bestD=Infinity;
+      for(const other of S.enemies){
+        if(hitSet.has(other)) continue;
+        const dx=other.x-lastEnemy.x, dy=other.y-lastEnemy.y, d=dx*dx+dy*dy;
+        const maxD=(def.chainRange*CELL)*(def.chainRange*CELL);
+        if(d<=maxD && d<bestD){ best=other; bestD=d; }
+      }
+      if(!best) break;
+      applyDamage(best,dmg,0); hitSet.add(best);
+      S.fx.push({type:'line',x1:lastEnemy.x,y1:lastEnemy.y,x2:best.x,y2:best.y,color:def.color,ttl:0.12,maxTtl:0.12});
+      lastEnemy=best;
+    }
+  } else if(def.special==='sniper'){
+    applyDamage(e,stats.dmg,def.armorPierce);
+  } else {
+    applyDamage(e,stats.dmg,0);
+  }
+}
+function updateEnemies(dt,now){
+  for(let i=S.enemies.length-1;i>=0;i--){
+    const e=S.enemies[i];
+    if(e.poisonUntil>now && e.poisonStacks>0) e.hp-=e.poisonStacks*e.poisonDmg*dt;
+    if(e.regen>0) e.hp=Math.min(e.maxHp, e.hp+e.regen*dt);
+    if(e.hp<=0){ killEnemy(e); continue; }
+    const speedMultCur=(e.slowUntil>now)?e.slowFactor:1;
+    e.traveled+=e.speed*CELL*speedMultCur*dt;
+    if(e.traveled>=S.path.total){
+      S.lives-=(e.isBoss?5:1);
+      S.enemies.splice(i,1);
+      continue;
+    }
+    while(e.segIdx<S.path.cumDist.length-2 && S.path.cumDist[e.segIdx+1]<e.traveled) e.segIdx++;
+    const a=S.path.points[e.segIdx], b=S.path.points[e.segIdx+1]||a;
+    const segLen=S.path.cumDist[e.segIdx+1]-S.path.cumDist[e.segIdx]||1;
+    const localT=Math.max(0,Math.min(1,(e.traveled-S.path.cumDist[e.segIdx])/segLen));
+    e.x=a.x+(b.x-a.x)*localT; e.y=a.y+(b.y-a.y)*localT;
+  }
+}
+function updateProjectiles(dt){
+  for(let i=S.projectiles.length-1;i>=0;i--){
+    const p=S.projectiles[i];
+    if(!p.target||!S.enemies.includes(p.target)){ S.projectiles.splice(i,1); continue; }
+    const dx=p.target.x-p.x, dy=p.target.y-p.y, dist=Math.sqrt(dx*dx+dy*dy);
+    const step=p.speed*dt;
+    if(step>=dist){ resolveHit(p); S.projectiles.splice(i,1); }
+    else { p.x+=dx/dist*step; p.y+=dy/dist*step; }
+  }
+}
+function updateFx(dt){
+  for(let i=S.fx.length-1;i>=0;i--){ S.fx[i].ttl-=dt; if(S.fx[i].ttl<=0) S.fx.splice(i,1); }
+}
+function updateWaveSpawning(dt){
+  if(S.spawnQueue.length===0) return;
+  S.spawnElapsed+=dt*1000;
+  while(S.spawnQueue.length && S.spawnQueue[0].delay<=S.spawnElapsed){
+    spawnEnemy(S.spawnQueue.shift());
+  }
+}
+function checkWaveClear(){
+  if(S.waveActive && S.spawnQueue.length===0 && S.enemies.length===0){
+    S.waveActive=false;
+    S.gold+=20+S.wave*3;
+    const best=getBest();
+    if(S.wave>(best[S.diffKey]||0)){ best[S.diffKey]=S.wave; saveBest(best); }
+    S.wave++;
+    S.waveClearedBanner=true;
+  }
+}
+function startNextWave(){
+  if(S.waveActive||S.gameOver) return;
+  S.spawnQueue=genWave(S.wave,S.diffKey);
+  S.spawnElapsed=0; S.waveActive=true; S.waveClearedBanner=false;
+  updateBanner();
+}
+
+/* ---------------- 主迴圈 ---------------- */
+let lastT=null;
+function frame(t){
+  requestAnimationFrame(frame);
+  if(lastT==null) lastT=t;
+  let dt=(t-lastT)/1000; lastT=t;
+  dt=Math.min(dt,0.05);
+  if(S && running && !paused && !S.gameOver){
+    const gdt=dt*speedMult; const now=performance.now();
+    updateWaveSpawning(gdt);
+    updateTowers(gdt,now);
+    updateProjectiles(gdt);
+    updateEnemies(gdt,now);
+    updateFx(gdt);
+    checkWaveClear();
+    if(S.lives<=0){ S.gameOver=true; endGame(); }
+    updateHud();
+  }
+  render();
+}
+requestAnimationFrame(frame);
+
+/* ---------------- 繪製 ---------------- */
+function render(){
+  ctx.fillStyle='#0a0c16'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(!S) return;
+  // 網格
+  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+  for(let c=0;c<=COLS;c+=5){ ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,ROWS*CELL); ctx.stroke(); }
+  for(let r=0;r<=ROWS;r+=5){ ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(COLS*CELL,r*CELL); ctx.stroke(); }
+  // 路徑
+  ctx.fillStyle='#2a2f52';
+  for(const c of S.path.cells) ctx.fillRect(c.col*CELL,c.row*CELL,CELL,CELL);
+  ctx.strokeStyle='#4a5290'; ctx.lineWidth=1;
+  for(const c of S.path.cells) ctx.strokeRect(c.col*CELL+0.5,c.row*CELL+0.5,CELL-1,CELL-1);
+  // 起點/終點
+  const sp=S.path.points[0], ep=S.path.points[S.path.points.length-1];
+  ctx.fillStyle='#3ddc97'; ctx.beginPath(); ctx.arc(sp.x,sp.y,CELL*0.7,0,7); ctx.fill();
+  ctx.fillStyle='#ff5d73'; ctx.beginPath(); ctx.arc(ep.x,ep.y,CELL*0.7,0,7); ctx.fill();
+
+  // 建造預覽
+  if(selectedShopType && hoverCell){
+    const key=hoverCell.row*COLS+hoverCell.col;
+    const occupied=S.path.cellSet.has(key)||S.towers.some(tw=>tw.col===hoverCell.col&&tw.row===hoverCell.row);
+    const def=TOWER_MAP[selectedShopType];
+    const canAfford=S.gold>=def.cost;
+    ctx.fillStyle=(occupied||!canAfford)?'rgba(255,93,115,0.35)':'rgba(61,220,151,0.35)';
+    ctx.fillRect(hoverCell.col*CELL,hoverCell.row*CELL,CELL,CELL);
+    const stats=towerStats(def,1);
+    ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.beginPath();
+    ctx.arc((hoverCell.col+0.5)*CELL,(hoverCell.row+0.5)*CELL,stats.range*CELL,0,7); ctx.stroke();
+  }
+
+  // 塔
+  for(const t of S.towers){
+    const def=TOWER_MAP[t.type];
+    if(selectedTowerRef===t){
+      const stats=towerStats(def,t.level);
+      ctx.strokeStyle='rgba(255,200,74,0.5)'; ctx.beginPath();
+      ctx.arc(t.x,t.y,stats.range*CELL,0,7); ctx.stroke();
+    }
+    ctx.fillStyle=def.color; ctx.beginPath(); ctx.arc(t.x,t.y,CELL*0.62,0,7); ctx.fill();
+    ctx.font=(CELL*1.1)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(def.icon,t.x,t.y+1);
+    if(t.level>1){
+      ctx.fillStyle='#0009'; ctx.beginPath(); ctx.arc(t.x+CELL*0.55,t.y-CELL*0.55,CELL*0.42,0,7); ctx.fill();
+      ctx.fillStyle='#ffc84a'; ctx.font='bold '+(CELL*0.55)+'px sans-serif';
+      ctx.fillText(t.level,t.x+CELL*0.55,t.y-CELL*0.53);
+    }
+  }
+  // 特效
+  for(const f of S.fx){
+    const a=Math.max(0,f.ttl/f.maxTtl);
+    if(f.type==='aoe'){
+      ctx.strokeStyle=hexA(f.color,a); ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(f.x,f.y,f.r*(1.05-a*0.05),0,7); ctx.stroke();
+    } else if(f.type==='beam'||f.type==='line'){
+      ctx.strokeStyle=hexA(f.color,a); ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(f.x1,f.y1); ctx.lineTo(f.x2,f.y2); ctx.stroke();
+    }
+  }
+  // 投射物
+  for(const p of S.projectiles){
+    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,CELL*0.22,0,7); ctx.fill();
+  }
+  // 敵人
+  for(const e of S.enemies){
+    const base=ENEMY_TYPES[e.type];
+    ctx.fillStyle=base.color;
+    const rad=e.isBoss?CELL*0.85:CELL*0.42;
+    ctx.beginPath(); ctx.arc(e.x,e.y,rad,0,7); ctx.fill();
+    if(e.poisonStacks>0){ ctx.strokeStyle='#8be05a'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(e.x,e.y,rad+2,0,7); ctx.stroke(); }
+    if(e.slowUntil>performance.now()){ ctx.strokeStyle='#7fe6ff'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(e.x,e.y,rad+4,0,7); ctx.stroke(); }
+    const w=rad*2.2,h=4;
+    ctx.fillStyle='#000a'; ctx.fillRect(e.x-w/2,e.y-rad-9,w,h);
+    ctx.fillStyle= (e.hp/e.maxHp>0.5)?'#3ddc97':(e.hp/e.maxHp>0.2?'#ffc84a':'#ff5d73');
+    ctx.fillRect(e.x-w/2,e.y-rad-9,w*Math.max(0,e.hp/e.maxHp),h);
+  }
+}
+function hexA(hex,a){
+  const n=parseInt(hex.slice(1),16);
+  const r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+/* ---------------- HUD / UI ---------------- */
+function updateHud(){
+  document.getElementById('stGold').textContent=Math.floor(S.gold);
+  document.getElementById('stLives').textContent=Math.max(0,S.lives);
+  document.getElementById('stWave').textContent=S.wave;
+  document.getElementById('stKills').textContent=S.kills;
+  renderShop();
+  if(selectedTowerRef) renderTowerInfo();
+  if(S.waveClearedBanner) updateBanner();
+}
+function updateBanner(){
+  const banner=document.getElementById('waveBanner');
+  if(S.waveClearedBanner && !S.waveActive){
+    banner.style.display='block';
+    document.getElementById('waveBannerText').textContent=
+      S.wave===1 ? '準備好了嗎？' : `第 ${S.wave-1} 波完成！`;
+  } else {
+    banner.style.display='none';
+  }
+}
+
+function renderShop(){
+  const shop=document.getElementById('shop');
+  [...shop.children].forEach(el=>{
+    const def=TOWER_MAP[el.dataset.id];
+    const afford=S.gold>=def.cost;
+    el.classList.toggle('afford0',!afford);
+    el.classList.toggle('sel',selectedShopType===def.id);
+  });
+}
+function buildShop(){
+  const shop=document.getElementById('shop'); shop.innerHTML='';
+  TOWER_DEFS.forEach(def=>{
+    const el=document.createElement('div');
+    el.className='tcard'; el.dataset.id=def.id;
+    el.innerHTML=`<div class="ic">${def.icon}</div><div class="nm">${def.name}</div><div class="ct">${def.cost} 金</div>`;
+    el.addEventListener('click',()=>{
+      document.getElementById('shopDesc').textContent=def.desc;
+      if(selectedShopType===def.id){ selectedShopType=null; }
+      else { selectedShopType=def.id; deselectTower(); }
+      renderShop();
+    });
+    shop.appendChild(el);
+  });
+}
+
+function renderTowerInfo(){
+  const t=selectedTowerRef; if(!t) return;
+  const def=TOWER_MAP[t.type]; const stats=towerStats(def,t.level);
+  document.getElementById('towerInfo').style.display='block';
+  document.getElementById('tiName').textContent=def.icon+' '+def.name;
+  document.getElementById('tiLevel').textContent=t.level;
+  document.getElementById('tiDmg').textContent=stats.dmg.toFixed(1)+(def.special==='splash'?` (範圍 ${stats.splash.toFixed(1)}格)`:'');
+  document.getElementById('tiRange').textContent=stats.range.toFixed(1)+' 格';
+  document.getElementById('tiRate').textContent=(stats.rate/1000).toFixed(2)+' 秒/次';
+  const cost=upgradeCost(def,t.level);
+  const btn=document.getElementById('btnUpgrade');
+  btn.textContent=`升級（${cost} 金）`;
+  btn.disabled=S.gold<cost;
+  document.getElementById('btnSell').textContent=`賣出（+${Math.round(t.invested*0.5)}）`;
+}
+function selectTower(t){ selectedTowerRef=t; selectedShopType=null; renderShop(); renderTowerInfo(); }
+function deselectTower(){ selectedTowerRef=null; document.getElementById('towerInfo').style.display='none'; }
+
+/* ---------------- 輸入處理 ---------------- */
+function canvasCellFromEvent(evt){
+  const rect=canvas.getBoundingClientRect();
+  const cx=(evt.clientX-rect.left)*(canvas.width/rect.width);
+  const cy=(evt.clientY-rect.top)*(canvas.height/rect.height);
+  return {col:Math.floor(cx/CELL), row:Math.floor(cy/CELL)};
+}
+canvas.addEventListener('mousemove',(evt)=>{ hoverCell=canvasCellFromEvent(evt); });
+canvas.addEventListener('mouseleave',()=>{ hoverCell=null; });
+canvas.addEventListener('click',(evt)=>{
+  if(!S||S.gameOver) return;
+  const cell=canvasCellFromEvent(evt);
+  if(cell.col<0||cell.col>=COLS||cell.row<0||cell.row>=ROWS) return;
+  const existing=S.towers.find(tw=>tw.col===cell.col&&tw.row===cell.row);
+  if(selectedShopType){
+    const def=TOWER_MAP[selectedShopType];
+    const onPath=S.path.cellSet.has(cell.row*COLS+cell.col);
+    if(existing||onPath||S.gold<def.cost) return;
+    S.gold-=def.cost;
+    S.towers.push({id:towerIdSeq++,type:def.id,level:1,col:cell.col,row:cell.row,
+      x:(cell.col+0.5)*CELL,y:(cell.row+0.5)*CELL,cooldown:0,invested:def.cost});
+    updateHud();
+  } else if(existing){
+    selectTower(existing);
+  } else {
+    deselectTower();
+  }
+});
+
+document.getElementById('btnUpgrade').addEventListener('click',()=>{
+  const t=selectedTowerRef; if(!t) return;
+  const def=TOWER_MAP[t.type]; const cost=upgradeCost(def,t.level);
+  if(S.gold<cost) return;
+  S.gold-=cost; t.invested+=cost; t.level++;
+  renderTowerInfo(); updateHud();
+});
+document.getElementById('btnSell').addEventListener('click',()=>{
+  const t=selectedTowerRef; if(!t) return;
+  S.gold+=Math.round(t.invested*0.5);
+  S.towers.splice(S.towers.indexOf(t),1);
+  deselectTower(); updateHud();
+});
+document.getElementById('btnDeselect').addEventListener('click',deselectTower);
+
+document.getElementById('btnNextWave').addEventListener('click',()=>{ startNextWave(); });
+document.getElementById('autoToggle').addEventListener('click',function(){
+  S.autoNext=!S.autoNext; this.classList.toggle('on',S.autoNext);
+});
+document.getElementById('btnPause').addEventListener('click',function(){
+  paused=!paused; this.textContent=paused?'繼續':'暫停';
+});
+document.getElementById('btnSpeed').addEventListener('click',function(){
+  speedMult = speedMult===1?2:(speedMult===2?3:1);
+  this.textContent='速度 x'+speedMult;
+});
+document.getElementById('btnRestart').addEventListener('click',()=>{ openStartModal(); });
+document.querySelectorAll('.zoomBar button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    zoom=parseFloat(b.dataset.zoom);
+    canvas.style.width=(COLS*CELL*zoom)+'px';
+    canvas.style.height=(ROWS*CELL*zoom)+'px';
+  });
+});
+
+// 自動下一波輪詢
+setInterval(()=>{
+  if(S && S.autoNext && !S.waveActive && S.waveClearedBanner && !S.gameOver){
+    startNextWave();
+  }
+},600);
+
+/* ---------------- 開始 / 結束 流程 ---------------- */
+function getBest(){ try{ return JSON.parse(localStorage.getItem('td_bestwave_v1')||'{}'); }catch(e){ return {}; } }
+function saveBest(obj){ localStorage.setItem('td_bestwave_v1', JSON.stringify(obj)); }
+
+let chosenDiff='normal', chosenMap='medium';
+function buildOptionGrids(){
+  const diffGrid=document.getElementById('diffGrid'); diffGrid.innerHTML='';
+  Object.entries(DIFF_PRESETS).forEach(([key,p])=>{
+    const el=document.createElement('div'); el.className='opt'+(key===chosenDiff?' sel':'');
+    el.innerHTML=`<div class="t">${p.name}</div><div class="d">${p.desc}</div>`;
+    el.addEventListener('click',()=>{ chosenDiff=key; buildOptionGrids(); });
+    diffGrid.appendChild(el);
+  });
+  const mapGrid=document.getElementById('mapGrid'); mapGrid.innerHTML='';
+  Object.entries(MAP_PRESETS).forEach(([key,p])=>{
+    const el=document.createElement('div'); el.className='opt'+(key===chosenMap?' sel':'');
+    el.innerHTML=`<div class="t">${p.name}</div><div class="d">${p.desc}</div>`;
+    el.addEventListener('click',()=>{ chosenMap=key; buildOptionGrids(); });
+    mapGrid.appendChild(el);
+  });
+  const best=getBest();
+  document.getElementById('bestHint').innerHTML=
+    Object.entries(DIFF_PRESETS).map(([k,p])=>`<b>${p.name}</b> 最高波次：${best[k]||0}`).join('　');
+}
+function openStartModal(){
+  running=false;
+  document.getElementById('overModal').style.display='none';
+  document.getElementById('startModal').style.display='flex';
+  document.getElementById('waveBanner').style.display='none';
+  buildOptionGrids();
+}
+document.getElementById('btnStart').addEventListener('click',()=>{
+  S=newGameState(chosenDiff,chosenMap);
+  paused=false; speedMult=1; selectedShopType=null; selectedTowerRef=null; hoverCell=null;
+  document.getElementById('btnPause').textContent='暫停';
+  document.getElementById('btnSpeed').textContent='速度 x1';
+  document.getElementById('autoToggle').classList.remove('on');
+  deselectTower();
+  document.getElementById('startModal').style.display='none';
+  canvas.style.width=(COLS*CELL)+'px'; canvas.style.height=(ROWS*CELL)+'px';
+  running=true;
+  S.waveClearedBanner=true;
+  updateBanner();
+  updateHud();
+});
+document.getElementById('btnAgain').addEventListener('click',openStartModal);
+function endGame(){
+  document.getElementById('overText').textContent=`你在「${DIFF_PRESETS[S.diffKey].name}」難度撐到了第 ${S.wave} 波，共擊殺 ${S.kills} 隻敵人。`;
+  document.getElementById('overModal').style.display='flex';
+}
+
+buildShop();
+openStartModal();
+})();
+</script>
+</body>
+</html>

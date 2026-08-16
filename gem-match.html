@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>寶石消除 — Gem Match</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#241a42 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:520px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),#ff9d2e,#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+.stats-top{display:flex;gap:8px;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:64px}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.7;margin-bottom:10px}
+.hint b{color:var(--gold)}
+
+#board{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;aspect-ratio:1;width:100%}
+.cell{position:relative;border-radius:8px;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-size:clamp(16px,4vw,26px);transition:transform .1s}
+.cell:active{transform:scale(.94)}
+.cell.sel{box-shadow:0 0 0 3px #fff,0 0 14px #ffffff88;z-index:3}
+.cell.clearing{animation:matchOut .26s forwards}
+@keyframes matchOut{0%{transform:scale(1);opacity:1}100%{transform:scale(.15);opacity:0}}
+.cell.pop{animation:pop .28s cubic-bezier(.2,.9,.3,1)}
+@keyframes pop{0%{transform:scale(.2);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+.cell.shake{animation:shake .3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+.flex{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.grow{flex:1}
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;
+  background:var(--panel2);border:1px solid var(--gold);border-radius:10px;padding:10px 18px;
+  font-size:13px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;max-width:92vw;text-align:center}
+#toast.on{opacity:1;bottom:36px}
+
+.modal-bg{position:fixed;inset:0;background:#05070ecc;z-index:80;display:flex;
+  align-items:center;justify-content:center;padding:20px}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:22px;max-width:340px;width:100%;text-align:center}
+.modal-box .n{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;
+  background:linear-gradient(90deg,var(--gold),#d14bff);-webkit-background-clip:text;background-clip:text;color:transparent;
+  margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>寶石消除</h1>
+      <div class="sub">Gem Match · 交換相鄰寶石，連成三個以上消除</div>
+    </div>
+    <div class="stats-top">
+      <div class="pill"><div class="k">⭐ 分數</div><div class="v" id="s-score" style="color:var(--gold)">0</div></div>
+      <div class="pill"><div class="k">🏆 最高</div><div class="v" id="s-best" style="color:var(--green)">0</div></div>
+      <div class="pill"><div class="k">👣 步數</div><div class="v" id="s-moves">30</div></div>
+    </div>
+  </header>
+
+  <div class="card-panel">
+    <div class="hint">點擊選取一顆寶石，再點擊<b>相鄰</b>的寶石即可交換位置。橫向或直向連成 <b>3 顆以上</b>相同寶石就會消除得分，連鎖消除分數更高！步數用完遊戲結束。</div>
+    <div id="board"></div>
+    <div class="flex">
+      <button class="b-gold grow" id="btn-restart" onclick="restartGame()">🔄 重新開始</button>
+      <button class="b-ghost grow b-sm" onclick="shuffleBoard(true)">🔀 洗牌</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   寶石消除 Gem Match — 經典三消益智遊戲
+   規則：
+     · 8x8 棋盤，6 種寶石隨機生成（初始盤面不含現成連線）
+     · 點擊兩顆相鄰寶石交換，交換後若能形成 3 連以上則生效並消耗 1 步數
+     · 消除後上方寶石落下、頂部補新寶石，若補滿後又形成連線 → 連鎖加分
+     · 步數歸零時遊戲結束，最高分記錄於本機
+   ========================================================================== */
+
+const ROWS = 8, COLS = 8;
+const START_MOVES = 30;
+const SAVE_KEY = 'gem_match_best_v1';
+
+const TYPES = [
+  { emoji:'🔴', bg:'linear-gradient(135deg,#ff8a9d,#ff5d73)' },
+  { emoji:'🔵', bg:'linear-gradient(135deg,#7cc4ff,#5aa9ff)' },
+  { emoji:'🟢', bg:'linear-gradient(135deg,#6be8b8,#3ddc97)' },
+  { emoji:'🟡', bg:'linear-gradient(135deg,#ffe58a,#ffd53d)' },
+  { emoji:'🟣', bg:'linear-gradient(135deg,#e69bff,#d14bff)' },
+  { emoji:'🟠', bg:'linear-gradient(135deg,#ffbf7a,#ff9d2e)' },
+];
+
+const $ = id => document.getElementById(id);
+const idx = (r,c) => r*COLS+c;
+const randType = () => Math.floor(Math.random()*TYPES.length);
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+let board = [];
+let score = 0;
+let moves = START_MOVES;
+let best = Number(localStorage.getItem(SAVE_KEY) || 0);
+let selected = null;
+let busy = false;
+let gameOver = false;
+
+/* ---------- 音效 ---------- */
+let ac = null;
+function sfx(freq, dur, type='sine', vol=0.05){
+  try{
+    ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + dur);
+  }catch(e){}
+}
+
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('on'), 2000);
+}
+
+/* ---------- 棋盤生成 ---------- */
+function createBoard(){
+  let bd;
+  do{
+    bd = new Array(ROWS*COLS);
+    for(let r=0;r<ROWS;r++){
+      for(let c=0;c<COLS;c++){
+        let t;
+        do{ t = randType(); }
+        while(
+          (c>=2 && bd[idx(r,c-1)]===t && bd[idx(r,c-2)]===t) ||
+          (r>=2 && bd[idx(r-1,c)]===t && bd[idx(r-2,c)]===t)
+        );
+        bd[idx(r,c)] = t;
+      }
+    }
+  } while(!hasAnyMove(bd));
+  return bd;
+}
+
+function findMatches(bd){
+  const matched = new Set();
+  for(let r=0;r<ROWS;r++){
+    let runStart = 0;
+    for(let c=1;c<=COLS;c++){
+      const same = c<COLS && bd[idx(r,c)]===bd[idx(r,runStart)];
+      if(!same){
+        if(c-runStart>=3) for(let k=runStart;k<c;k++) matched.add(idx(r,k));
+        runStart = c;
+      }
+    }
+  }
+  for(let c=0;c<COLS;c++){
+    let runStart = 0;
+    for(let r=1;r<=ROWS;r++){
+      const same = r<ROWS && bd[idx(r,c)]===bd[idx(runStart,c)];
+      if(!same){
+        if(r-runStart>=3) for(let k=runStart;k<r;k++) matched.add(idx(k,c));
+        runStart = r;
+      }
+    }
+  }
+  return matched;
+}
+
+function hasAnyMove(bd){
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const i = idx(r,c);
+      if(c<COLS-1){
+        const j = idx(r,c+1);
+        [bd[i],bd[j]] = [bd[j],bd[i]];
+        const m = findMatches(bd).size>0;
+        [bd[i],bd[j]] = [bd[j],bd[i]];
+        if(m) return true;
+      }
+      if(r<ROWS-1){
+        const j = idx(r+1,c);
+        [bd[i],bd[j]] = [bd[j],bd[i]];
+        const m = findMatches(bd).size>0;
+        [bd[i],bd[j]] = [bd[j],bd[i]];
+        if(m) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function collapseAndRefill(bd, cleared){
+  for(let c=0;c<COLS;c++){
+    const col = [];
+    for(let r=ROWS-1;r>=0;r--){
+      if(!cleared.has(idx(r,c))) col.push(bd[idx(r,c)]);
+    }
+    while(col.length < ROWS) col.push(randType());
+    for(let i=0;i<ROWS;i++) bd[idx(ROWS-1-i, c)] = col[i];
+  }
+}
+
+function isAdjacent(a,b){
+  const ra=Math.floor(a/COLS), ca=a%COLS, rb=Math.floor(b/COLS), cb=b%COLS;
+  return (ra===rb && Math.abs(ca-cb)===1) || (ca===cb && Math.abs(ra-rb)===1);
+}
+
+/* ---------- 互動 ---------- */
+function cellClick(i){
+  if(busy || gameOver) return;
+  if(selected===null){ selected=i; render(); return; }
+  if(selected===i){ selected=null; render(); return; }
+  if(isAdjacent(selected,i)) trySwap(selected,i);
+  else { selected=i; render(); }
+}
+
+async function trySwap(a,b){
+  busy = true;
+  [board[a],board[b]] = [board[b],board[a]];
+  const matches = findMatches(board);
+  if(matches.size){
+    selected = null;
+    moves--;
+    sfx(520,.09,'sine',.05);
+    render();
+    await sleep(120);
+    await resolveBoard(1);
+  } else {
+    render({shake:[a,b]});
+    sfx(220,.12,'sawtooth',.04);
+    await sleep(300);
+    [board[a],board[b]] = [board[b],board[a]];
+    selected = null;
+    render();
+    busy = false;
+  }
+}
+
+async function resolveBoard(comboStart){
+  let combo = comboStart;
+  for(;;){
+    const matches = findMatches(board);
+    if(!matches.size) break;
+    render({ clearing: matches });
+    const gain = matches.size * 10 * combo;
+    score += gain;
+    if(combo>1) toast(`🔥 連鎖 x${combo}！ +${gain}`);
+    sfx(660 + combo*60, .14, 'triangle', .06);
+    await sleep(260);
+    collapseAndRefill(board, matches);
+    render({ popAll:true });
+    await sleep(220);
+    combo++;
+  }
+  updateStats();
+  if(!gameOver && !hasAnyMove(board)){
+    board = createBoard();
+    render();
+    toast('♻️ 沒有可行的交換，已重新洗牌');
+  }
+  if(moves<=0) endGame();
+  busy = false;
+}
+
+function shuffleBoard(manual){
+  if(busy || gameOver) return;
+  board = createBoard();
+  selected = null;
+  render();
+  if(manual) toast('🔀 已重新洗牌');
+}
+
+function endGame(){
+  gameOver = true;
+  if(score > best){
+    best = score;
+    localStorage.setItem(SAVE_KEY, String(best));
+  }
+  sfx(300,.3,'sawtooth',.05);
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal-box">
+    <div style="font-size:13px;color:var(--dim)">遊戲結束</div>
+    <div class="n">${score}</div>
+    <div style="font-size:12px;color:var(--dim)">最高分：${best}</div>
+    <button class="b-gold" style="width:100%;margin-top:16px" onclick="this.closest('.modal-bg').remove();restartGame()">🔄 再玩一次</button>
+  </div>`;
+  document.body.appendChild(bg);
+}
+
+function restartGame(){
+  document.querySelectorAll('.modal-bg').forEach(el=>el.remove());
+  score = 0;
+  moves = START_MOVES;
+  selected = null;
+  gameOver = false;
+  busy = false;
+  board = createBoard();
+  render();
+}
+
+/* ---------- 畫面 ---------- */
+function render(opts){
+  opts = opts || {};
+  const clearing = opts.clearing || new Set();
+  const shake = opts.shake || [];
+  const html = board.map((t,i)=>{
+    const type = TYPES[t];
+    const cls = ['cell'];
+    if(selected===i) cls.push('sel');
+    if(clearing.has(i)) cls.push('clearing');
+    if(shake.includes(i)) cls.push('shake');
+    if(opts.popAll) cls.push('pop');
+    return `<div class="${cls.join(' ')}" style="background:${type.bg}" onclick="cellClick(${i})">${type.emoji}</div>`;
+  }).join('');
+  $('board').innerHTML = html;
+  updateStats();
+}
+
+function updateStats(){
+  $('s-score').textContent = score;
+  $('s-best').textContent = best;
+  $('s-moves').textContent = Math.max(0, moves);
+}
+
+/* ---------- 啟動 ---------- */
+board = createBoard();
+render();
+</script>
+</body>
+</html>

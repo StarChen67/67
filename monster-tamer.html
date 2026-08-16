@@ -1,0 +1,1585 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>星痕御獸錄 · Monster Tamer</title>
+<style>
+:root{
+  --bg:#0d1017; --bg2:#151a25; --panel:#1b2231; --panel2:#232c3f;
+  --line:#2e3950; --fg:#e6ecf7; --dim:#8b98b0; --acc:#5cc8ff; --gold:#ffd166;
+  --ok:#4ecb71; --bad:#ff5d6c; --warn:#ffb03a;
+  --t-normal:#b9b6a8; --t-fire:#ff6b3d; --t-water:#3da5ff; --t-grass:#4ecb71;
+  --t-elec:#ffd63d; --t-rock:#c08a4e; --t-mystic:#c07dff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:radial-gradient(1200px 700px at 50% -10%,#1b2740 0%,var(--bg) 60%);
+  color:var(--fg);font:14px/1.5 "Segoe UI","Microsoft JhengHei",system-ui,sans-serif;
+  overflow:hidden;user-select:none;
+}
+#app{max-width:860px;margin:0 auto;height:100%;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+canvas{image-rendering:auto;display:block}
+.hide{display:none!important}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#1a2233,#141a26)}
+.logo{font-weight:800;letter-spacing:2px;font-size:15px;
+  background:linear-gradient(90deg,#7de2ff,#c07dff,#ffd166);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hstat{margin-left:auto;display:flex;gap:14px;font-size:13px;align-items:center}
+.hstat b{color:var(--gold)}
+.badges{display:flex;gap:3px}
+.bdg{width:14px;height:14px;border-radius:50%;border:1px solid var(--line);background:#0e131d}
+.bdg.on{background:radial-gradient(circle at 35% 30%,#fff6c8,#ffb62e);border-color:#ffd166;box-shadow:0 0 8px #ffb62e88}
+
+/* ---------- tabs ---------- */
+nav{display:flex;border-bottom:1px solid var(--line);background:#121826}
+nav button{flex:1;padding:11px 4px;font-size:13px;color:var(--dim);border-bottom:2px solid transparent}
+nav button.on{color:var(--fg);border-bottom-color:var(--acc);background:#182136}
+main{flex:1;overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}
+main::-webkit-scrollbar{width:8px}
+main::-webkit-scrollbar-thumb{background:#2c3850;border-radius:4px}
+
+.card{background:linear-gradient(180deg,var(--panel),#182031);border:1px solid var(--line);
+  border-radius:12px;padding:12px;margin-bottom:10px}
+.card h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
+.muted{color:var(--dim);font-size:12px}
+.row{display:flex;gap:8px;align-items:center}
+.grid{display:grid;gap:8px}
+.btn{background:linear-gradient(180deg,#2d3a54,#222c42);border:1px solid #3b4a68;border-radius:9px;
+  padding:9px 14px;font-size:13px;transition:.12s;white-space:nowrap}
+.btn:hover{filter:brightness(1.2)}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:linear-gradient(180deg,#2a6fa8,#1d4f7c);border-color:#4a95d0}
+.btn.gold{background:linear-gradient(180deg,#7a5c1c,#5c4413);border-color:#b58a2a;color:#ffe9a8}
+.btn.dan{background:linear-gradient(180deg,#8a2b38,#65202a);border-color:#c04a5a}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ---------- type chips ---------- */
+.tp{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:700;color:#0e1017}
+.tp.normal{background:var(--t-normal)}.tp.fire{background:var(--t-fire)}.tp.water{background:var(--t-water)}
+.tp.grass{background:var(--t-grass)}.tp.elec{background:var(--t-elec)}.tp.rock{background:var(--t-rock)}
+.tp.mystic{background:var(--t-mystic)}
+
+/* ---------- hp bars ---------- */
+.bar{height:7px;border-radius:5px;background:#0d1220;overflow:hidden;border:1px solid #29334a}
+.bar>i{display:block;height:100%;border-radius:5px;transition:width .45s cubic-bezier(.4,0,.2,1);background:var(--ok)}
+.bar.exp>i{background:linear-gradient(90deg,#5cc8ff,#7de2ff);transition:width .3s}
+.bar.exp{height:4px}
+
+/* ---------- monster rows ---------- */
+.mon{display:flex;gap:10px;align-items:center;background:#1a2233;border:1px solid var(--line);
+  border-radius:11px;padding:8px 10px;cursor:pointer;transition:.12s}
+.mon:hover{border-color:#46587c;background:#1f293c}
+.mon.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.mon.fnt{opacity:.45;filter:grayscale(.8)}
+.mon .nm{font-weight:600;font-size:13px}
+.mon .mid{flex:1;min-width:0}
+.avatar{width:58px;height:58px;flex:none;border-radius:10px;
+  background:radial-gradient(circle at 50% 75%,#26314a,#141a27);border:1px solid #2b3752}
+.stx{display:inline-block;font-size:10px;padding:0 5px;border-radius:4px;font-weight:700;color:#111}
+.stx.burn{background:#ff7a45}.stx.para{background:#ffd63d}.stx.psn{background:#c07dff}.stx.slp{background:#8fa3c7}
+
+/* ---------- explore ---------- */
+.areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.area{border:1px solid var(--line);border-radius:11px;padding:10px;background:#182031;cursor:pointer;position:relative;overflow:hidden}
+.area.on{background:#1d2a41;border-color:var(--acc)}
+.area.lock{opacity:.42;cursor:not-allowed}
+.area b{font-size:13px}
+.area .lv{font-size:11px;color:var(--dim)}
+.area .glow{position:absolute;inset:-40% -20% auto auto;width:120px;height:120px;border-radius:50%;filter:blur(28px);opacity:.35}
+
+#feed{max-height:210px;overflow:auto;font-size:12.5px;line-height:1.7}
+#feed div{padding:2px 0;border-bottom:1px dashed #232c3f;color:var(--dim)}
+#feed div b{color:var(--fg)}
+
+/* ---------- battle ---------- */
+#bt{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;
+  background:radial-gradient(900px 500px at 50% 20%,#1d2b45,#080b12 75%)}
+#bt.wild{background:radial-gradient(900px 500px at 50% 20%,#16321f,#080b12 75%)}
+#bt.boss{background:radial-gradient(900px 500px at 50% 20%,#3a1a2a,#080b12 75%)}
+.field{flex:1;position:relative;max-width:860px;width:100%;margin:0 auto;min-height:0}
+.slot{position:absolute;display:flex;flex-direction:column;align-items:center}
+.slot.foe{top:5%;right:5%}
+.slot.mine{bottom:6%;left:5%}
+.slot canvas{filter:drop-shadow(0 8px 14px #0009)}
+.info{background:#121a29e6;border:1px solid #35435e;border-radius:10px;padding:6px 10px;min-width:172px;backdrop-filter:blur(6px)}
+.slot.foe .info{margin-bottom:4px}
+.slot.mine .info{margin-top:4px}
+.info .l1{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600}
+.info .l1 .lv{margin-left:auto;color:var(--dim);font-weight:400;font-size:11px}
+.info .hpn{text-align:right;font-size:10.5px;color:var(--dim);margin-top:1px}
+.ball-row{display:flex;gap:3px;justify-content:flex-end;margin-top:3px}
+.pb{width:9px;height:9px;border-radius:50%;background:#3a465e;border:1px solid #556a8d}
+.pb.alive{background:radial-gradient(circle at 35% 30%,#fff,#ff5d6c);border-color:#ff8b96}
+.pb.dead{background:#28313f;border-color:#3a465e}
+
+.logbox{background:#0b0f18e8;border-top:1px solid #2b3752;padding:10px 14px;min-height:62px;
+  max-width:860px;width:100%;margin:0 auto;font-size:13.5px;line-height:1.55}
+.cmds{background:#111825;border-top:1px solid #2b3752;padding:10px;max-width:860px;width:100%;margin:0 auto}
+.cmd4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mv{border:1px solid #3b4a68;border-radius:10px;padding:8px 10px;text-align:left;
+  background:linear-gradient(180deg,#243147,#1b2436)}
+.mv:hover{filter:brightness(1.25)}
+.mv .t{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.mv .p{font-size:11px;color:var(--dim);display:flex;gap:8px;margin-top:2px}
+.mv.no{opacity:.4}
+.shake{animation:shk .35s}
+@keyframes shk{0%,100%{transform:translate(0)}20%{transform:translate(-8px,3px)}40%{transform:translate(7px,-3px)}60%{transform:translate(-5px,2px)}80%{transform:translate(4px,-1px)}}
+.flash{animation:fls .3s}
+@keyframes fls{0%,100%{filter:none}50%{filter:brightness(3) saturate(0)}}
+.fade{animation:fdo .5s forwards}
+@keyframes fdo{to{opacity:0;transform:translateY(26px) scale(.7)}}
+.enter{animation:ent .4s}
+@keyframes ent{from{opacity:0;transform:translateY(-20px) scale(.6)}}
+
+/* ---------- overlay ---------- */
+#ov{position:fixed;inset:0;z-index:80;background:#060910dd;display:flex;align-items:center;
+  justify-content:center;padding:18px;backdrop-filter:blur(3px)}
+.dlg{background:linear-gradient(180deg,#1e2739,#151c2b);border:1px solid #3b4a68;border-radius:16px;
+  padding:18px;max-width:420px;width:100%;text-align:center;box-shadow:0 24px 60px #000a}
+.dlg h2{margin:0 0 6px;font-size:18px}
+.dlg .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.starter{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.stc{border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;background:#182031;flex:1}
+.stc:hover{border-color:var(--acc)}
+input.txt{background:#0e1420;border:1px solid #35435e;border-radius:8px;padding:9px 11px;color:var(--fg);
+  font:inherit;width:100%;text-align:center}
+#toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);z-index:90;display:flex;
+  flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:#0f1725ee;border:1px solid #3b4a68;border-radius:20px;padding:7px 16px;font-size:12.5px;
+  animation:tin .3s;box-shadow:0 8px 24px #0007}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}}
+.itemrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:10px;background:#182031;margin-bottom:6px}
+.itemrow .ic{width:30px;height:30px;flex:none;border-radius:8px;display:grid;place-items:center;font-size:16px;background:#232c3f}
+.dexg{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.dexc{border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center;background:#182031;cursor:pointer}
+.dexc.unk{opacity:.35}
+.dexc .n{font-size:11px;margin-top:2px}
+.sbar{display:grid;grid-template-columns:34px 1fr 30px;gap:6px;align-items:center;font-size:11px;margin-bottom:3px}
+.sbar .b{height:6px;background:#0d1220;border-radius:4px;overflow:hidden}
+.sbar .b i{display:block;height:100%;background:linear-gradient(90deg,#5cc8ff,#c07dff)}
+@media(max-width:560px){
+  .slot.foe{top:3%;right:3%}.slot.mine{bottom:3%;left:3%}
+  .info{min-width:150px}
+  main{padding:10px}
+}
+</style>
+
+<div id="app">
+  <header>
+    <span class="logo">★ 星痕御獸錄</span>
+    <div class="hstat">
+      <span id="hName" class="muted"></span>
+      <span>💰<b id="hGold">0</b></span>
+      <span class="badges" id="hBadges"></span>
+    </div>
+  </header>
+  <nav>
+    <button data-t="explore" class="on">🗺️ 探索</button>
+    <button data-t="team">🐾 隊伍</button>
+    <button data-t="bag">🎒 背包</button>
+    <button data-t="shop">🏪 商店</button>
+    <button data-t="dex">📖 圖鑑</button>
+  </nav>
+  <main id="main"></main>
+</div>
+<div id="toast"></div>
+<div id="ov" class="hide"></div>
+<div id="bt" class="hide"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   星痕御獸錄  —  單檔御獸養成 RPG
+   ============================================================ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const chance=p=>Math.random()<p;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------------- 屬性 ---------------- */
+const TYPE={normal:'常',fire:'火',water:'水',grass:'草',elec:'雷',rock:'岩',mystic:'幻'};
+const TCOL={normal:'#b9b6a8',fire:'#ff6b3d',water:'#3da5ff',grass:'#4ecb71',elec:'#ffd63d',rock:'#c08a4e',mystic:'#c07dff'};
+// 完美循環:每個屬性剛好被兩種屬性剋制
+const EFF={
+  normal:{},
+  fire  :{grass:2,mystic:2,water:.5,fire:.5,rock:.5},
+  water :{fire:2,rock:2,water:.5,grass:.5},
+  grass :{water:2,rock:2,fire:.5,grass:.5,elec:.5},
+  elec  :{water:2,mystic:2,rock:.5,grass:.5,elec:.5},
+  rock  :{fire:2,elec:2,water:.5,mystic:.5},
+  mystic:{grass:2,elec:2,fire:.5,mystic:.5}
+};
+const eff=(a,d)=>(EFF[a]&&EFF[a][d])||1;
+
+/* ---------------- 技能 ---------------- */
+// p=威力 pp=次數 acc=命中 pri=先制 fx=附加效果
+const SK={
+ tackle    :{n:'撞擊',      t:'normal',p:40 ,pp:35,acc:100},
+ slam      :{n:'猛撞',      t:'normal',p:80 ,pp:15,acc:85},
+ starshot  :{n:'高速星星',  t:'normal',p:60 ,pp:20,acc:999},
+ sharpen   :{n:'磨爪',      t:'normal',p:0  ,pp:20,acc:100,fx:{buff:'atk',st:1}},
+ harden    :{n:'硬化',      t:'normal',p:0  ,pp:20,acc:100,fx:{buff:'def',st:1}},
+ agility   :{n:'疾風步',    t:'normal',p:0  ,pp:15,acc:100,fx:{buff:'spd',st:2}},
+ recover   :{n:'治癒波動',  t:'normal',p:0  ,pp:10,acc:100,fx:{heal:.5}},
+ lullaby   :{n:'催眠曲',    t:'normal',p:0  ,pp:10,acc:60 ,fx:{inflict:'slp',ch:1}},
+
+ ember     :{n:'火花',      t:'fire',  p:45 ,pp:25,acc:100,fx:{inflict:'burn',ch:.1}},
+ fireclaw  :{n:'烈焰爪',    t:'fire',  p:70 ,pp:20,acc:100},
+ flamethrow:{n:'火焰噴射',  t:'fire',  p:90 ,pp:12,acc:95 ,fx:{inflict:'burn',ch:.15}},
+ inferno   :{n:'大字爆炎',  t:'fire',  p:120,pp:5 ,acc:82 ,fx:{inflict:'burn',ch:.2}},
+
+ watergun  :{n:'水槍',      t:'water', p:45 ,pp:25,acc:100},
+ bubble    :{n:'泡沫',      t:'water', p:45 ,pp:20,acc:100,fx:{debuff:'spd',st:-1,ch:.5}},
+ aquapulse :{n:'水波',      t:'water', p:80 ,pp:15,acc:100},
+ hydro     :{n:'水炮',      t:'water', p:120,pp:5 ,acc:82},
+ tidalheal :{n:'潮汐治癒',  t:'water', p:0  ,pp:10,acc:100,fx:{heal:.5}},
+
+ vinewhip  :{n:'藤鞭',      t:'grass', p:45 ,pp:25,acc:100},
+ absorb    :{n:'吸取',      t:'grass', p:50 ,pp:15,acc:100,fx:{drain:.5}},
+ razorleaf :{n:'飛葉快刀',  t:'grass', p:70 ,pp:20,acc:95 ,fx:{crit:.18}},
+ spore     :{n:'孢子',      t:'grass', p:0  ,pp:12,acc:88 ,fx:{inflict:'psn',ch:1}},
+ petalstorm:{n:'花瓣風暴',  t:'grass', p:120,pp:5 ,acc:82},
+
+ shock     :{n:'電擊',      t:'elec',  p:45 ,pp:25,acc:100,fx:{inflict:'para',ch:.1}},
+ quickspark:{n:'電光一閃',  t:'elec',  p:40 ,pp:25,acc:100,pri:1},
+ thunderbol:{n:'十萬伏特',  t:'elec',  p:90 ,pp:12,acc:95 ,fx:{inflict:'para',ch:.15}},
+ thunderwav:{n:'電磁波',    t:'elec',  p:0  ,pp:15,acc:90 ,fx:{inflict:'para',ch:1}},
+ thunder   :{n:'打雷',      t:'elec',  p:120,pp:5 ,acc:78 ,fx:{inflict:'para',ch:.3}},
+
+ rockthrow :{n:'落石',      t:'rock',  p:50 ,pp:25,acc:95},
+ rocktomb  :{n:'岩石封鎖',  t:'rock',  p:55 ,pp:15,acc:95 ,fx:{debuff:'spd',st:-1,ch:1}},
+ rockcannon:{n:'岩石炮',    t:'rock',  p:85 ,pp:12,acc:90},
+ ironwall  :{n:'鐵壁',      t:'rock',  p:0  ,pp:12,acc:100,fx:{buff:'def',st:2}},
+ fissure   :{n:'地裂衝擊',  t:'rock',  p:120,pp:5 ,acc:78},
+
+ glimmer   :{n:'幻光',      t:'mystic',p:45 ,pp:25,acc:100},
+ mystify   :{n:'幻惑',      t:'mystic',p:0  ,pp:15,acc:100,fx:{debuff:'atk',st:-1,ch:1}},
+ psyshock  :{n:'精神衝擊',  t:'mystic',p:85 ,pp:12,acc:95 ,fx:{debuff:'def',st:-1,ch:.3}},
+ hypnobeam :{n:'催眠光',    t:'mystic',p:0  ,pp:10,acc:65 ,fx:{inflict:'slp',ch:1}},
+ moonheal  :{n:'月光治癒',  t:'mystic',p:0  ,pp:10,acc:100,fx:{heal:.5}},
+ starburst :{n:'星爆',      t:'mystic',p:120,pp:5 ,acc:82}
+};
+
+/* ---------------- 種族 ---------------- */
+// b=種族值 rate=捕獲率 xp=經驗基數 evo=進化 ls=學習表 art=外觀
+const SP={
+/* --- 御三家:火 --- */
+emberfox:{n:'焰狐',t:'fire',b:{hp:44,atk:60,def:42,spd:66},rate:150,xp:64,evo:{to:'blazefox',lv:16},
+  art:{body:'quad',c1:'#ff8a4d',c2:'#ffe0b0',ear:'tall',tail:'bushy',eye:'#3a1c0c'},
+  ls:[[1,'tackle'],[1,'ember'],[6,'sharpen'],[11,'fireclaw'],[17,'agility'],[23,'flamethrow'],[31,'slam'],[40,'inferno']]},
+blazefox:{n:'烈焰狐',t:'fire',b:{hp:60,atk:82,def:58,spd:88},rate:75,xp:142,evo:{to:'infernofox',lv:34},
+  art:{body:'quad',c1:'#ff6a2c',c2:'#ffd08a',c3:'#ffe66b',ear:'tall',tail:'flame',eye:'#5c1a06',size:1.1},
+  ls:[[1,'tackle'],[1,'ember'],[1,'sharpen'],[13,'fireclaw'],[19,'agility'],[26,'flamethrow'],[34,'slam'],[42,'inferno']]},
+infernofox:{n:'炎獄天狐',t:'fire',b:{hp:80,atk:112,def:78,spd:112},rate:35,xp:238,
+  art:{body:'quad',c1:'#ff4d18',c2:'#ffc46b',c3:'#fff0a0',ear:'tall',tail:'flame',horn:2,eye:'#ffe9a8',size:1.28},
+  ls:[[1,'fireclaw'],[1,'agility'],[1,'sharpen'],[34,'flamethrow'],[40,'slam'],[46,'starshot'],[52,'inferno']]},
+
+/* --- 御三家:水 --- */
+bubbleturtle:{n:'沫龜',t:'water',b:{hp:52,atk:50,def:66,spd:40},rate:150,xp:64,evo:{to:'tideturtle',lv:16},
+  art:{body:'quad',c1:'#4fb3ff',c2:'#d3efff',ear:'none',tail:'thin',shell:'#2f6f9e',eye:'#0d2c4a'},
+  ls:[[1,'tackle'],[1,'watergun'],[6,'harden'],[11,'bubble'],[17,'aquapulse'],[24,'tidalheal'],[31,'slam'],[40,'hydro']]},
+tideturtle:{n:'潮汐龜',t:'water',b:{hp:70,atk:70,def:92,spd:54},rate:75,xp:142,evo:{to:'abyssturtle',lv:34},
+  art:{body:'quad',c1:'#3a9be0',c2:'#c2e9ff',ear:'fin',tail:'fin',shell:'#20567f',eye:'#08243d',size:1.1},
+  ls:[[1,'tackle'],[1,'watergun'],[1,'harden'],[13,'bubble'],[20,'aquapulse'],[27,'tidalheal'],[34,'ironwall'],[42,'hydro']]},
+abyssturtle:{n:'深淵海龜',t:'water',b:{hp:94,atk:94,def:122,spd:68},rate:35,xp:238,
+  art:{body:'quad',c1:'#2477bd',c2:'#a8dcff',c3:'#7de2ff',ear:'fin',tail:'fin',shell:'#123a5c',horn:2,eye:'#9fe8ff',size:1.3},
+  ls:[[1,'aquapulse'],[1,'ironwall'],[1,'tidalheal'],[34,'rockcannon'],[41,'slam'],[48,'hydro']]},
+
+/* --- 御三家:草 --- */
+sproutcat:{n:'芽貓',t:'grass',b:{hp:48,atk:56,def:50,spd:60},rate:150,xp:64,evo:{to:'vinecat',lv:16},
+  art:{body:'quad',c1:'#6fd47f',c2:'#e6ffd9',ear:'leaf',tail:'leaf',eye:'#173d1c'},
+  ls:[[1,'tackle'],[1,'vinewhip'],[6,'absorb'],[12,'razorleaf'],[18,'spore'],[24,'sharpen'],[31,'slam'],[40,'petalstorm']]},
+vinecat:{n:'藤蔓貓',t:'grass',b:{hp:66,atk:78,def:70,spd:80},rate:75,xp:142,evo:{to:'forestiger',lv:34},
+  art:{body:'quad',c1:'#4cbb62',c2:'#dcffca',c3:'#ffe066',ear:'leaf',tail:'vine',eye:'#0f2f14',size:1.1},
+  ls:[[1,'tackle'],[1,'vinewhip'],[1,'absorb'],[14,'razorleaf'],[20,'spore'],[27,'sharpen'],[34,'slam'],[42,'petalstorm']]},
+forestiger:{n:'森靈虎',t:'grass',b:{hp:88,atk:106,def:94,spd:100},rate:35,xp:238,
+  art:{body:'quad',c1:'#31a24d',c2:'#d0ffbb',c3:'#ffd166',ear:'leaf',tail:'vine',horn:2,stripe:1,eye:'#f3ffb0',size:1.3},
+  ls:[[1,'razorleaf'],[1,'spore'],[1,'sharpen'],[34,'slam'],[41,'absorb'],[48,'petalstorm']]},
+
+/* --- 野生 --- */
+zaprat:{n:'電鼠',t:'elec',b:{hp:40,atk:54,def:38,spd:76},rate:190,xp:56,evo:{to:'thunderrat',lv:20},
+  art:{body:'round',c1:'#ffe066',c2:'#fff8d0',ear:'tall',tail:'spark',eye:'#3a2c00'},
+  ls:[[1,'tackle'],[1,'shock'],[7,'quickspark'],[13,'thunderwav'],[20,'agility'],[27,'thunderbol'],[36,'thunder']]},
+thunderrat:{n:'雷霆鼠',t:'elec',b:{hp:58,atk:82,def:56,spd:104},rate:70,xp:150,
+  art:{body:'round',c1:'#ffd42e',c2:'#fff4b0',c3:'#ff8a3d',ear:'tall',tail:'spark',eye:'#4a3200',size:1.15},
+  ls:[[1,'quickspark'],[1,'shock'],[1,'thunderwav'],[22,'agility'],[29,'thunderbol'],[38,'starshot'],[45,'thunder']]},
+
+rockbug:{n:'石甲蟲',t:'rock',b:{hp:52,atk:52,def:78,spd:32},rate:180,xp:60,evo:{to:'armorbug',lv:22},
+  art:{body:'bug',c1:'#a8834f',c2:'#e0c79a',ear:'none',eye:'#2a1c0a'},
+  ls:[[1,'tackle'],[1,'rockthrow'],[8,'harden'],[15,'rocktomb'],[22,'ironwall'],[29,'rockcannon'],[38,'fissure']]},
+armorbug:{n:'岩鎧甲蟲',t:'rock',b:{hp:74,atk:78,def:118,spd:44},rate:60,xp:160,
+  art:{body:'bug',c1:'#8a6a3c',c2:'#d4b57e',c3:'#6f7f8f',horn:2,eye:'#150e04',size:1.2},
+  ls:[[1,'rockthrow'],[1,'harden'],[1,'rocktomb'],[24,'ironwall'],[31,'rockcannon'],[40,'slam'],[47,'fissure']]},
+
+wispling:{n:'幻靈',t:'mystic',b:{hp:44,atk:58,def:44,spd:62},rate:170,xp:62,evo:{to:'dreamwisp',lv:24},
+  art:{body:'blob',c1:'#b07dff',c2:'#efe0ff',eye:'#fff'},
+  ls:[[1,'glimmer'],[1,'mystify'],[9,'hypnobeam'],[16,'starshot'],[24,'psyshock'],[32,'moonheal'],[40,'starburst']]},
+dreamwisp:{n:'幻夢靈',t:'mystic',b:{hp:64,atk:88,def:66,spd:88},rate:55,xp:158,
+  art:{body:'blob',c1:'#8f4dff',c2:'#e2c8ff',c3:'#7de2ff',horn:1,eye:'#fff8d0',size:1.2},
+  ls:[[1,'glimmer'],[1,'mystify'],[1,'hypnobeam'],[26,'psyshock'],[33,'moonheal'],[41,'starshot'],[48,'starburst']]},
+
+cinderlizard:{n:'火蜥',t:'fire',b:{hp:50,atk:66,def:48,spd:52},rate:160,xp:62,evo:{to:'magmalizard',lv:22},
+  art:{body:'quad',c1:'#e05a2c',c2:'#ffc188',ear:'none',tail:'thin',eye:'#ffd166'},
+  ls:[[1,'tackle'],[1,'ember'],[9,'sharpen'],[16,'fireclaw'],[23,'harden'],[30,'flamethrow'],[39,'inferno']]},
+magmalizard:{n:'熔岩蜥',t:'fire',b:{hp:72,atk:96,def:72,spd:66},rate:55,xp:162,
+  art:{body:'quad',c1:'#c93c14',c2:'#ff9a4d',c3:'#ffe066',ear:'none',tail:'flame',horn:2,stripe:1,eye:'#fff0a0',size:1.22},
+  ls:[[1,'fireclaw'],[1,'ember'],[1,'harden'],[24,'flamethrow'],[32,'rockcannon'],[40,'slam'],[47,'inferno']]},
+
+jellypup:{n:'水母仔',t:'water',b:{hp:56,atk:46,def:52,spd:58},rate:180,xp:58,evo:{to:'abyssjelly',lv:20},
+  art:{body:'blob',c1:'#5fd0e8',c2:'#d9fbff',tent:1,eye:'#0b3a45'},
+  ls:[[1,'watergun'],[1,'bubble'],[8,'harden'],[14,'aquapulse'],[20,'tidalheal'],[28,'psyshock'],[37,'hydro']]},
+abyssjelly:{n:'深海水母',t:'water',b:{hp:82,atk:70,def:78,spd:82},rate:60,xp:155,
+  art:{body:'blob',c1:'#2f9fc4',c2:'#bff4ff',c3:'#c07dff',tent:1,eye:'#e7fbff',size:1.2},
+  ls:[[1,'aquapulse'],[1,'bubble'],[1,'tidalheal'],[22,'psyshock'],[30,'glimmer'],[38,'starburst'],[45,'hydro']]},
+
+budeer:{n:'花苞鹿',t:'grass',b:{hp:56,atk:54,def:56,spd:56},rate:175,xp:60,evo:{to:'bloomdeer',lv:22},
+  art:{body:'quad',c1:'#8fce6a',c2:'#f2ffe0',c3:'#ff8fb0',ear:'tall',tail:'thin',horn:2,eye:'#2b3a12'},
+  ls:[[1,'tackle'],[1,'vinewhip'],[8,'absorb'],[15,'razorleaf'],[22,'recover'],[30,'spore'],[38,'petalstorm']]},
+bloomdeer:{n:'花冠鹿',t:'grass',b:{hp:80,atk:78,def:82,spd:80},rate:58,xp:158,
+  art:{body:'quad',c1:'#6cb84a',c2:'#eaffd4',c3:'#ff6fa0',ear:'leaf',tail:'leaf',horn:2,eye:'#1c2f0a',size:1.22},
+  ls:[[1,'razorleaf'],[1,'absorb'],[1,'recover'],[24,'spore'],[32,'starshot'],[40,'slam'],[47,'petalstorm']]},
+
+sparkbird:{n:'雷雀',t:'elec',b:{hp:44,atk:58,def:40,spd:80},rate:170,xp:60,evo:{to:'stormhawk',lv:24},
+  art:{body:'bird',c1:'#ffd63d',c2:'#fff5c4',c3:'#5cc8ff',wing:1,eye:'#3a2c00'},
+  ls:[[1,'tackle'],[1,'shock'],[8,'quickspark'],[15,'starshot'],[22,'agility'],[29,'thunderbol'],[38,'thunder']]},
+stormhawk:{n:'暴雷鷹',t:'elec',b:{hp:68,atk:96,def:64,spd:106},rate:50,xp:168,
+  art:{body:'bird',c1:'#f2b21e',c2:'#fff0b0',c3:'#7de2ff',wing:1,horn:1,eye:'#fff',size:1.25},
+  ls:[[1,'quickspark'],[1,'shock'],[1,'agility'],[26,'thunderbol'],[34,'starshot'],[42,'slam'],[50,'thunder']]},
+
+sandbeast:{n:'砂岩獸',t:'rock',b:{hp:66,atk:70,def:70,spd:44},rate:160,xp:64,evo:{to:'titanbeast',lv:30},
+  art:{body:'quad',c1:'#c9a468',c2:'#f0dfb8',ear:'round',tail:'thin',stripe:1,eye:'#3a2a0e'},
+  ls:[[1,'tackle'],[1,'rockthrow'],[10,'harden'],[17,'rocktomb'],[25,'slam'],[33,'rockcannon'],[42,'fissure']]},
+titanbeast:{n:'巨岩獸',t:'rock',b:{hp:100,atk:104,def:108,spd:56},rate:35,xp:222,
+  art:{body:'quad',c1:'#9c7c46',c2:'#e2cd9c',c3:'#7e8c9c',ear:'round',tail:'thin',horn:2,stripe:1,eye:'#ffd166',size:1.35},
+  ls:[[1,'rockcannon'],[1,'ironwall'],[1,'rocktomb'],[32,'slam'],[40,'sharpen'],[48,'fissure']]},
+
+starbunny:{n:'星光兔',t:'mystic',b:{hp:48,atk:50,def:48,spd:70},rate:180,xp:58,evo:{to:'lunarabbit',lv:26},
+  art:{body:'round',c1:'#dcd0ff',c2:'#fff',c3:'#ffd166',ear:'tall',tail:'puff',eye:'#4a3a72'},
+  ls:[[1,'tackle'],[1,'glimmer'],[8,'agility'],[15,'starshot'],[21,'moonheal'],[28,'psyshock'],[36,'starburst']]},
+lunarabbit:{n:'月華兔',t:'mystic',b:{hp:72,atk:82,def:72,spd:100},rate:50,xp:168,
+  art:{body:'round',c1:'#b9a8ff',c2:'#fffbe8',c3:'#ffe066',ear:'tall',tail:'puff',horn:1,eye:'#2e2050',size:1.2},
+  ls:[[1,'glimmer'],[1,'agility'],[1,'moonheal'],[28,'psyshock'],[36,'starshot'],[44,'hypnobeam'],[52,'starburst']]},
+
+astradragon:{n:'星辰龍',t:'mystic',b:{hp:106,atk:120,def:100,spd:114},rate:4,xp:320,
+  art:{body:'serp',c1:'#6a5cff',c2:'#c8bcff',c3:'#ffe066',wing:1,horn:2,eye:'#fff'},
+  ls:[[1,'glimmer'],[1,'psyshock'],[1,'agility'],[1,'moonheal'],[45,'thunderbol'],[52,'starburst'],[58,'hydro']]},
+volcanor:{n:'炎獄魔像',t:'rock',b:{hp:110,atk:118,def:112,spd:60},rate:6,xp:310,
+  art:{body:'quad',c1:'#7a4a2a',c2:'#ff7a3d',c3:'#ffd166',horn:2,stripe:1,ear:'none',tail:'flame',eye:'#ffe066',size:1.4},
+  ls:[[1,'rockcannon'],[1,'fireclaw'],[1,'ironwall'],[1,'flamethrow'],[48,'fissure'],[55,'inferno']]}
+};
+const SPIDS=Object.keys(SP);
+
+/* ---------------- 道具 ---------------- */
+const ITEM={
+ ball      :{n:'精靈球',  ic:'🔴',price:200 ,d:'基本捕獸球',            k:'ball',m:1},
+ greatball :{n:'高級球',  ic:'🔵',price:600 ,d:'捕獲率 ×1.5',           k:'ball',m:1.5},
+ ultraball :{n:'超級球',  ic:'🟡',price:1300,d:'捕獲率 ×2.2',           k:'ball',m:2.2},
+ masterball:{n:'大師球',  ic:'🟣',price:0   ,d:'必定捕獲,無法購買',    k:'ball',m:255},
+ potion    :{n:'傷藥',    ic:'🧪',price:300 ,d:'回復 60 HP',            k:'heal',v:60},
+ spotion   :{n:'好傷藥',  ic:'💉',price:800 ,d:'回復 180 HP',           k:'heal',v:180},
+ hpotion   :{n:'全滿藥',  ic:'🍶',price:1800,d:'回復全部 HP',           k:'heal',v:9999},
+ antidote  :{n:'萬能藥',  ic:'🍬',price:400 ,d:'解除所有異常狀態',      k:'cure'},
+ revive    :{n:'復活草',  ic:'🌿',price:2000,d:'讓瀕死御獸以半血復活',  k:'revive'},
+ ether     :{n:'秘藥',    ic:'🫙',price:900 ,d:'全技能回復 10 PP',      k:'ether'},
+ candy     :{n:'神奇糖果',ic:'🍭',price:5000,d:'等級 +1',               k:'candy'}
+};
+const SHOP=['ball','greatball','ultraball','potion','spotion','hpotion','antidote','revive','ether','candy'];
+
+/* ---------------- 區域 ---------------- */
+const AREAS=[
+ {n:'新綠草原',c:'#4ecb71',lv:[3,6],
+  mon:['emberfox','bubbleturtle','sproutcat','zaprat','starbunny','budeer'],
+  boss:{n:'新手訓練家 小雨',money:900,team:[['zaprat',8],['budeer',9]]}},
+ {n:'微光森林',c:'#8fce6a',lv:[9,14],
+  mon:['sproutcat','budeer','wispling','zaprat','sparkbird','starbunny','vinecat'],
+  boss:{n:'森林守衛 阿藤',money:1600,team:[['vinecat',16],['bloomdeer',15],['wispling',15]]}},
+ {n:'熔岩洞窟',c:'#ff6b3d',lv:[16,22],
+  mon:['cinderlizard','rockbug','sandbeast','emberfox','blazefox','armorbug'],
+  boss:{n:'岩火鬥士 赤炎',money:2600,team:[['magmalizard',23],['armorbug',22],['blazefox',24]]}},
+ {n:'深海遺跡',c:'#3da5ff',lv:[24,30],
+  mon:['jellypup','abyssjelly','bubbleturtle','tideturtle','wispling','dreamwisp'],
+  boss:{n:'潮汐術士 海琳',money:3800,team:[['abyssjelly',30],['tideturtle',31],['dreamwisp',30]]}},
+ {n:'雷鳴高原',c:'#ffd63d',lv:[32,38],
+  mon:['sparkbird','stormhawk','thunderrat','sandbeast','titanbeast','lunarabbit'],
+  boss:{n:'雷神使 疾風',money:5200,team:[['stormhawk',38],['thunderrat',37],['titanbeast',38],['lunarabbit',37]]}},
+ {n:'星辰之巔',c:'#c07dff',lv:[40,48],
+  mon:['infernofox','abyssturtle','forestiger','titanbeast','lunarabbit','stormhawk','astradragon','volcanor'],
+  boss:{n:'冠軍 星野',money:9000,team:[['infernofox',46],['abyssturtle',46],['forestiger',46],['stormhawk',45],['astradragon',48]]}}
+];
+
+/* ============================================================
+   存檔
+   ============================================================ */
+const KEY='star_tamer_save_v1';
+let S=null;
+function newSave(name){
+  return {name:name||'訓練家',money:1500,badges:0,area:0,unlock:1,
+    party:[],box:[],bag:{ball:8,potion:4},dex:{},wins:0,caught:0,steps:0};
+}
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
+function load(){ try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null;}catch(e){return null;} }
+
+/* ============================================================
+   御獸實例
+   ============================================================ */
+let UID=1;
+function makeMon(spid,lv,opt){
+  opt=opt||{};
+  const sp=SP[spid];
+  const m={u:'m'+(UID++)+'_'+Date.now().toString(36),sp:spid,lv:lv,xp:0,
+    iv:{hp:rnd(0,31),atk:rnd(0,31),def:rnd(0,31),spd:rnd(0,31)},
+    st:null, mv:[], hp:0, nick:null, shiny:chance(1/220)};
+  // 依等級決定技能(取最後 4 個習得的)
+  const learn=sp.ls.filter(x=>x[0]<=lv).map(x=>x[1]);
+  const uniq=[...new Set(learn)].slice(-4);
+  m.mv=uniq.map(id=>({id,pp:SK[id].pp}));
+  if(!m.mv.length) m.mv=[{id:'tackle',pp:35}];
+  m.hp=maxHP(m);
+  return m;
+}
+function maxHP(m){const sp=SP[m.sp];return Math.floor((2*sp.b.hp+m.iv.hp)*m.lv/100)+m.lv+10;}
+function stat(m,k){
+  const sp=SP[m.sp];
+  let v=Math.floor((2*sp.b[k]+m.iv[k])*m.lv/100)+5;
+  if(m.st==='burn'&&k==='atk') v=Math.floor(v*.55);
+  if(m.st==='para'&&k==='spd') v=Math.floor(v*.55);
+  return v;
+}
+function name(m){return m.nick||SP[m.sp].n;}
+function xpNext(m){return Math.floor(Math.pow(m.lv+1,3)*0.72);}
+function alive(m){return m.hp>0;}
+function healAll(){ (S.party||[]).forEach(m=>{m.hp=maxHP(m);m.st=null;m.mv.forEach(v=>v.pp=SK[v.id].pp);}); }
+function dexSee(spid){ if(!S.dex[spid])S.dex[spid]={s:0,c:0}; S.dex[spid].s=1; }
+function dexCatch(spid){ dexSee(spid); S.dex[spid].c=1; }
+
+/* ============================================================
+   Sprite —— 程序化繪製
+   ============================================================ */
+function shade(hex,f){
+  const n=parseInt(hex.slice(1),16);
+  let r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  if(f>0){r+= (255-r)*f; g+=(255-g)*f; b+=(255-b)*f;}
+  else{r*=1+f;g*=1+f;b*=1+f;}
+  return '#'+[r,g,b].map(v=>clamp(Math.round(v),0,255).toString(16).padStart(2,'0')).join('');
+}
+function ell(c,x,y,rx,ry,col){c.fillStyle=col;c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fill();}
+function tri(c,pts,col){c.fillStyle=col;c.beginPath();c.moveTo(pts[0],pts[1]);c.lineTo(pts[2],pts[3]);c.lineTo(pts[4],pts[5]);c.closePath();c.fill();}
+function rrect(c,x,y,w,h,r,col){c.fillStyle=col;c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.fill();}
+
+function drawEye(c,x,y,r,col){
+  ell(c,x,y,r,r*1.12,'#fff');
+  ell(c,x+r*.15,y+r*.1,r*.62,r*.72,col||'#20140a');
+  ell(c,x+r*.42,y-r*.38,r*.24,r*.24,'#fff');
+}
+function drawTail(c,a,x,y,dir){
+  const d=dir||-1, dk=shade(a.c1,-.18);
+  if(a.tail==='bushy'){ell(c,x,y,13,11,dk);ell(c,x-4*d,y+2,8,7,a.c2);}
+  else if(a.tail==='flame'){
+    tri(c,[x+8*d,y+6,x-14*d,y-16,x-2*d,y+8],a.c3||'#ffb03a');
+    tri(c,[x+5*d,y+5,x-9*d,y-9,x-1*d,y+7],'#fff0a0');
+  }
+  else if(a.tail==='leaf'){ell(c,x-3*d,y-4,10,6,shade(a.c1,.1));ell(c,x-11*d,y-11,8,5,a.c2);}
+  else if(a.tail==='vine'){
+    c.strokeStyle=dk;c.lineWidth=4;c.beginPath();c.moveTo(x+6*d,y);
+    c.quadraticCurveTo(x-14*d,y+6,x-16*d,y-14);c.stroke();
+    ell(c,x-16*d,y-16,6,4,a.c2);
+  }
+  else if(a.tail==='spark'){
+    c.fillStyle=a.c3||'#ffd166';c.beginPath();
+    c.moveTo(x+6*d,y+4);c.lineTo(x-6*d,y-2);c.lineTo(x-2*d,y-6);
+    c.lineTo(x-16*d,y-20);c.lineTo(x-6*d,y-12);c.lineTo(x-10*d,y-6);c.closePath();c.fill();
+  }
+  else if(a.tail==='puff'){ell(c,x,y,9,9,a.c2);}
+  else if(a.tail==='fin'){tri(c,[x+6*d,y+4,x-14*d,y-10,x-12*d,y+8],a.c3||shade(a.c1,.2));}
+  else if(a.tail==='thin'){c.strokeStyle=dk;c.lineWidth=5;c.lineCap='round';c.beginPath();
+    c.moveTo(x+5*d,y);c.quadraticCurveTo(x-12*d,y+4,x-16*d,y-10);c.stroke();}
+}
+function drawEar(c,a,x,y,d){
+  if(a.ear==='tall'){
+    tri(c,[x,y,x-7*d,y-24,x+7*d,y-6],a.c1);
+    tri(c,[x,y-2,x-4*d,y-18,x+4*d,y-6],a.c2);
+  }else if(a.ear==='round'){ell(c,x,y-6,8,8,a.c1);ell(c,x,y-5,4.5,4.5,a.c2);}
+  else if(a.ear==='leaf'){ell(c,x-3*d,y-10,9,5,shade(a.c1,.15));ell(c,x+4*d,y-13,7,4,a.c2);}
+  else if(a.ear==='fin'){tri(c,[x,y,x-3*d,y-16,x+9*d,y-4],a.c3||shade(a.c1,.25));}
+}
+function drawHorn(c,a,x,y,d){
+  const col=a.c3||'#ffe0a0';
+  tri(c,[x-4*d,y,x-10*d,y-20,x+1*d,y-4],col);
+  tri(c,[x+9*d,y-2,x+7*d,y-20,x+15*d,y-4],col);
+}
+function drawWing(c,a,x,y,d,t){
+  const col=a.c3||shade(a.c1,.3), f=Math.sin(t/220)*5;
+  c.save();c.globalAlpha=.92;
+  tri(c,[x,y,x-26*d,y-26+f,x-6*d,y+14],col);
+  tri(c,[x,y,x-18*d,y-30+f,x-2*d,y+2],shade(col,.25));
+  c.restore();
+}
+
+/* body 各型 —— 設計空間 100×100,面向右 */
+const BODY={
+ quad(c,a,t){
+  const dk=shade(a.c1,-.2);
+  drawTail(c,a,20,58,-1);
+  // 後腿
+  rrect(c,32,64,11,22,5,dk); rrect(c,58,64,11,22,5,dk);
+  // 身
+  ell(c,50,58,29,21,a.c1);
+  if(a.stripe){c.save();c.globalAlpha=.35;c.fillStyle=shade(a.c1,-.35);
+    [40,50,60].forEach(x=>{c.fillRect(x,40,4,20);});c.restore();}
+  ell(c,50,66,20,11,a.c2);
+  if(a.shell){ell(c,48,50,25,17,a.shell);ell(c,48,50,18,12,shade(a.shell,.22));}
+  // 前腿
+  rrect(c,44,66,11,20,5,shade(a.c1,-.08)); rrect(c,66,66,10,19,5,shade(a.c1,-.08));
+  // 頭
+  if(a.ear&&a.ear!=='none'){drawEar(c,a,64,26,1);drawEar(c,a,76,26,1);}
+  ell(c,72,34,19,17,a.c1);
+  if(a.horn)drawHorn(c,a,72,20,1);
+  ell(c,85,40,9,7,a.c2);
+  ell(c,89,38,2.4,2,shade(a.c1,-.45));
+  drawEye(c,78,31,4.4,a.eye);
+  drawEye(c,66,32,3.6,a.eye);
+ },
+ round(c,a,t){
+  drawTail(c,a,24,62,-1);
+  if(a.ear&&a.ear!=='none'){drawEar(c,a,40,32,-1);drawEar(c,a,60,32,1);}
+  ell(c,50,62,27,26,a.c1);
+  ell(c,50,70,18,16,a.c2);
+  if(a.horn)drawHorn(c,a,50,34,1);
+  rrect(c,36,82,12,8,4,shade(a.c1,-.2)); rrect(c,53,82,12,8,4,shade(a.c1,-.2));
+  ell(c,26,60,8,7,a.c1); ell(c,74,60,8,7,a.c1);
+  drawEye(c,42,56,5,a.eye); drawEye(c,60,56,5,a.eye);
+  c.fillStyle=shade(a.c1,-.45);c.beginPath();c.arc(51,68,5,.15*Math.PI,.85*Math.PI);c.fill();
+  if(a.c3){ell(c,34,66,5,3.4,a.c3);ell(c,68,66,5,3.4,a.c3);}
+ },
+ blob(c,a,t){
+  const f=Math.sin(t/300)*2;
+  c.save();c.globalAlpha=.9;
+  ell(c,50,52+f,25,27,a.c1);
+  c.restore();
+  ell(c,50,58+f,17,17,a.c2);
+  if(a.horn)drawHorn(c,a,50,26+f,1);
+  if(a.tent){
+    c.strokeStyle=a.c3||shade(a.c1,.2);c.lineWidth=3.5;c.lineCap='round';
+    for(let i=0;i<5;i++){const x=32+i*9;
+      c.beginPath();c.moveTo(x,72+f);
+      c.quadraticCurveTo(x+Math.sin(t/240+i)*7,82+f,x+Math.sin(t/200+i)*5,92+f);c.stroke();}
+  }else{
+    c.save();c.globalAlpha=.55;
+    for(let i=0;i<4;i++)ell(c,36+i*9,80+f+Math.sin(t/260+i)*3,5,6,a.c1);
+    c.restore();
+  }
+  drawEye(c,42,48+f,5,a.eye); drawEye(c,59,48+f,5,a.eye);
+  if(a.c3){ell(c,50,20+f,4,4,a.c3);}
+ },
+ bird(c,a,t){
+  const dk=shade(a.c1,-.2);
+  // 尾羽
+  tri(c,[36,58,10,44,14,68],dk); tri(c,[36,60,12,58,16,74],shade(a.c1,.1));
+  ell(c,48,58,21,23,a.c1);
+  ell(c,50,66,14,15,a.c2);
+  if(a.wing)drawWing(c,a,46,52,1,t);
+  // 腿
+  c.strokeStyle='#e0a83a';c.lineWidth=3;c.lineCap='round';
+  c.beginPath();c.moveTo(44,79);c.lineTo(43,90);c.moveTo(56,79);c.lineTo(58,90);c.stroke();
+  c.beginPath();c.moveTo(38,90);c.lineTo(48,90);c.moveTo(53,90);c.lineTo(63,90);c.stroke();
+  // 頭
+  ell(c,64,32,16,15,a.c1);
+  if(a.horn){tri(c,[58,20,64,4,70,20],a.c3||'#ffe066');}
+  tri(c,[76,30,92,36,76,41],'#f0a83a');
+  drawEye(c,70,29,4.6,a.eye);
+  if(a.c3){ell(c,56,26,5,4,a.c3);}
+ },
+ bug(c,a,t){
+  const dk=shade(a.c1,-.22);
+  // 腿
+  c.strokeStyle=dk;c.lineWidth=3.5;c.lineCap='round';
+  for(let i=0;i<3;i++){const x=34+i*15;
+    c.beginPath();c.moveTo(x,70);c.lineTo(x-6,88);c.stroke();
+    c.beginPath();c.moveTo(x+8,70);c.lineTo(x+14,88);c.stroke();}
+  ell(c,40,60,17,16,dk);
+  ell(c,56,58,21,19,a.c1);
+  ell(c,56,58,15,13,a.c2);
+  if(a.c3){ell(c,56,52,16,9,a.c3);}
+  // 頭
+  ell(c,78,50,14,13,a.c1);
+  if(a.horn){tri(c,[74,40,80,22,86,40],a.c3||'#e8d8a0');}
+  c.strokeStyle=dk;c.lineWidth=2.5;
+  c.beginPath();c.moveTo(74,42);c.quadraticCurveTo(66,26,58,26);c.stroke();
+  c.beginPath();c.moveTo(84,42);c.quadraticCurveTo(84,24,94,22);c.stroke();
+  drawEye(c,83,48,4.2,a.eye); drawEye(c,73,49,3.4,a.eye);
+ },
+ serp(c,a,t){
+  const dk=shade(a.c1,-.22), f=Math.sin(t/280)*3;
+  // 身體 S 曲線
+  c.strokeStyle=a.c1;c.lineWidth=17;c.lineCap='round';c.lineJoin='round';
+  c.beginPath();c.moveTo(20,86);
+  c.bezierCurveTo(14,60,44,72+f,44,50);
+  c.bezierCurveTo(44,32,62,30+f,68,36);
+  c.stroke();
+  c.strokeStyle=a.c2;c.lineWidth=7;
+  c.beginPath();c.moveTo(22,84);
+  c.bezierCurveTo(18,62,46,70+f,46,50);
+  c.stroke();
+  if(a.wing){drawWing(c,a,48,44+f,1,t);drawWing(c,a,54,42+f,-1,t);}
+  ell(c,72,32+f,17,15,a.c1);
+  if(a.horn)drawHorn(c,a,72,18+f,1);
+  ell(c,86,37+f,8,6,a.c2);
+  drawEye(c,79,29+f,4.4,a.eye);
+  drawEye(c,67,30+f,3.6,a.eye);
+  if(a.c3){ell(c,60,24+f,3.6,3.6,a.c3);ell(c,30,66,3,3,a.c3);}
+ }
+};
+
+function drawMon(cv,spid,o){
+  o=o||{};
+  const c=cv.getContext('2d'), W=cv.width, H=cv.height, sp=SP[spid];
+  c.clearRect(0,0,W,H);
+  if(!sp)return;
+  const a=sp.art, t=o.t||0, s=W/100;
+  c.save();
+  if(o.flip){c.translate(W,0);c.scale(-1,1);}
+  c.scale(s,s);
+  // 影子
+  c.save();c.globalAlpha=.3;ell(c,50,93,28,6,'#000');c.restore();
+  const sz=(a.size||1)*(o.scale||1), bob=Math.sin(t/420)*1.6;
+  c.translate(50,96);c.scale(sz,sz);c.translate(-50,-96+bob);
+  if(o.shiny){c.save();c.shadowColor='#ffe066';c.shadowBlur=14;}
+  (BODY[a.body]||BODY.quad)(c,a,t);
+  if(o.shiny)c.restore();
+  c.restore();
+  if(o.faint){
+    c.globalCompositeOperation='saturation';c.fillStyle='#808080';c.fillRect(0,0,W,H);
+    c.globalCompositeOperation='source-over';
+  }
+}
+function monCanvas(spid,size,opt){
+  const cv=document.createElement('canvas');
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.width=size*dpr;cv.height=size*dpr;
+  cv.style.width=size+'px';cv.style.height=size+'px';
+  drawMon(cv,spid,Object.assign({t:0},opt||{}));
+  return cv;
+}
+
+/* ============================================================
+   UI 基礎
+   ============================================================ */
+function toast(txt,ms){
+  const d=document.createElement('div');d.innerHTML=txt;$('#toast').appendChild(d);
+  setTimeout(()=>{d.style.transition='.3s';d.style.opacity=0;setTimeout(()=>d.remove(),300);},ms||1900);
+}
+function dialog(html,opts){
+  return new Promise(res=>{
+    const ov=$('#ov');ov.classList.remove('hide');
+    ov.innerHTML='<div class="dlg">'+html+'</div>';
+    ov._res=v=>{ov.classList.add('hide');ov.innerHTML='';res(v);};
+    (opts&&opts.after||function(){})(ov);
+  });
+}
+function closeDlg(v){const ov=$('#ov');if(ov._res)ov._res(v);}
+function tpChip(t){return '<span class="tp '+t+'">'+TYPE[t]+'</span>';}
+function hpColor(r){return r>.5?'#4ecb71':r>.2?'#ffb03a':'#ff5d6c';}
+const STN={burn:'燒傷',para:'麻痺',psn:'中毒',slp:'睡眠'};
+
+/* ============================================================
+   主畫面
+   ============================================================ */
+let TAB='explore';
+function renderHeader(){
+  $('#hName').textContent=S.name;
+  $('#hGold').textContent=S.money.toLocaleString();
+  $('#hBadges').innerHTML=AREAS.map((a,i)=>'<span class="bdg'+(i<S.badges?' on':'')+'" title="'+a.n+'"></span>').join('');
+}
+function renderAll(){renderHeader();renderTab();save();}
+function renderTab(){
+  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===TAB));
+  const m=$('#main');m.scrollTop=0;
+  ({explore:vExplore,team:vTeam,bag:vBag,shop:vShop,dex:vDex})[TAB](m);
+}
+$$('nav button').forEach(b=>b.onclick=()=>{TAB=b.dataset.t;renderTab();});
+
+/* ---------------- 探索 ---------------- */
+let FEED=[];
+function feed(t){FEED.unshift(t);FEED=FEED.slice(0,40);const f=$('#feed');if(f)f.innerHTML=FEED.map(x=>'<div>'+x+'</div>').join('');}
+
+function vExplore(m){
+  const A=AREAS[S.area];
+  m.innerHTML=`
+  <div class="card">
+    <h3>🗺️ 選擇區域 <span class="muted">— 徽章 ${S.badges}/6</span></h3>
+    <div class="areas">${AREAS.map((a,i)=>{
+      const lock=i>=S.unlock;
+      return `<div class="area ${i===S.area?'on':''} ${lock?'lock':''}" data-a="${i}">
+        <div class="glow" style="background:${a.c}"></div>
+        <b>${lock?'🔒 ???':a.n}</b><div class="lv">${lock?'需擊敗前一位頭目':'Lv.'+a.lv[0]+'–'+a.lv[1]}</div>
+      </div>`;}).join('')}</div>
+  </div>
+  <div class="card">
+    <h3>📍 ${A.n}</h3>
+    <div class="row" style="flex-wrap:wrap">
+      <button class="btn pri" id="bExp">🔍 探索 (前進)</button>
+      <button class="btn" id="bExp5">⏩ 連續探索 ×5</button>
+      <button class="btn gold" id="bBoss">⚔️ 挑戰 ${A.boss.n}</button>
+      <button class="btn" id="bHeal">🏥 治療所(免費)</button>
+    </div>
+    <div class="muted" style="margin-top:8px">出沒:${A.mon.map(x=>SP[x].n).join('、')}</div>
+  </div>
+  <div class="card"><h3>📜 紀錄</h3><div id="feed"></div></div>`;
+
+  $$('.area').forEach(el=>el.onclick=()=>{
+    const i=+el.dataset.a;
+    if(i>=S.unlock){toast('🔒 尚未解鎖');return;}
+    S.area=i;renderAll();
+  });
+  $('#feed').innerHTML=FEED.map(x=>'<div>'+x+'</div>').join('');
+  $('#bExp').onclick=()=>explore();
+  $('#bExp5').onclick=async()=>{for(let i=0;i<5;i++){if(await explore())break;}};
+  $('#bBoss').onclick=()=>bossFight();
+  $('#bHeal').onclick=()=>{
+    if(!S.party.length){toast('隊伍是空的');return;}
+    healAll();toast('✨ 全隊已完全回復');feed('在<b>治療所</b>休息,全隊恢復。');renderAll();
+  };
+}
+
+async function explore(){
+  if(!S.party.some(alive)){toast('❗ 全隊無法戰鬥,先去治療所');return true;}
+  S.steps++;
+  const A=AREAS[S.area], r=Math.random();
+  if(r<.68){
+    const spid=weightedWild(A);
+    const lv=rnd(A.lv[0],A.lv[1]);
+    const wild=makeMon(spid,lv);
+    feed(`草叢晃動…野生的 <b>${SP[spid].n}</b> Lv.${lv} 出現了!`);
+    await startBattle({wild:wild});
+    renderAll();
+    return true;
+  }else if(r<.90){
+    const pool=['ball','ball','ball','potion','greatball','antidote','ether','spotion'];
+    const it=S.area>=3?pick(pool.concat(['ultraball','revive','spotion'])):pick(pool);
+    S.bag[it]=(S.bag[it]||0)+1;
+    feed(`撿到了 ${ITEM[it].ic} <b>${ITEM[it].n}</b>!`);
+    toast(`${ITEM[it].ic} 獲得 ${ITEM[it].n}`);
+  }else{
+    const g=rnd(60,120)*(S.area+1);
+    S.money+=g;
+    feed(`在地上發現了 💰<b>${g}</b> 金幣。`);
+    toast('💰 +'+g);
+  }
+  save();renderHeader();
+  return false;
+}
+function weightedWild(A){
+  // 稀有種降低出現率
+  const pool=[];
+  A.mon.forEach(id=>{const w=SP[id].rate<10?1:SP[id].rate<70?4:10;for(let i=0;i<w;i++)pool.push(id);});
+  return pick(pool);
+}
+async function bossFight(){
+  const A=AREAS[S.area], B=A.boss;
+  if(!S.party.some(alive)){toast('❗ 全隊無法戰鬥');return;}
+  const go=await dialog(`<h2>⚔️ ${B.n}</h2>
+    <div class="muted">隊伍:${B.team.map(t=>SP[t[0]].n+' Lv.'+t[1]).join('、')}</div>
+    <div class="muted" style="margin-top:6px">獲勝獎勵 💰${B.money}${S.badges===S.area?' + 徽章':''}</div>
+    <div class="btns"><button class="btn pri" onclick="closeDlg(1)">開戰</button>
+    <button class="btn" onclick="closeDlg(0)">再準備一下</button></div>`);
+  if(!go)return;
+  const team=B.team.map(t=>makeMon(t[0],t[1]));
+  const win=await startBattle({trainer:{name:B.n,team:team,money:B.money},boss:true});
+  if(win){
+    S.money+=B.money;
+    if(S.badges===S.area){
+      S.badges++;
+      if(S.unlock<AREAS.length)S.unlock=Math.min(AREAS.length,S.unlock+1);
+      feed(`擊敗 <b>${B.n}</b>!獲得徽章與 💰${B.money}。`);
+      if(S.badges>=AREAS.length){
+        S.bag.masterball=(S.bag.masterball||0)+1;
+        await dialog(`<h2>👑 你成為了冠軍!</h2>
+          <div class="muted">六枚徽章齊聚,星痕的光照亮了你。<br>獲得傳說道具 🟣 <b>大師球</b>!</div>
+          <div class="muted" style="margin-top:8px">星辰之巔仍可繼續探索,傳說御獸 <b>星辰龍</b> 與 <b>炎獄魔像</b> 在等著你。</div>
+          <div class="btns"><button class="btn pri" onclick="closeDlg(1)">繼續旅程</button></div>`);
+      }else{
+        await dialog(`<h2>🏅 獲得徽章!</h2><div class="muted">新區域「${AREAS[S.unlock-1].n}」已解鎖!</div>
+          <div class="btns"><button class="btn pri" onclick="closeDlg(1)">好</button></div>`);
+      }
+    }else{
+      feed(`再次擊敗 <b>${B.n}</b>,獲得 💰${B.money}。`);
+    }
+  }
+  renderAll();
+}
+
+/* ---------------- 隊伍 ---------------- */
+let SELMON=null;
+function monRow(m,idx,inBox){
+  const sp=SP[m.sp], r=m.hp/maxHP(m);
+  const d=document.createElement('div');
+  d.className='mon'+(alive(m)?'':' fnt')+(SELMON===m.u?' sel':'');
+  const av=document.createElement('div');av.className='avatar';
+  av.appendChild(monCanvas(m.sp,56,{shiny:m.shiny}));
+  d.appendChild(av);
+  const mid=document.createElement('div');mid.className='mid';
+  mid.innerHTML=`<div class="row"><span class="nm">${name(m)}${m.shiny?' ✨':''}</span> ${tpChip(sp.t)}
+      ${m.st?'<span class="stx '+m.st+'">'+STN[m.st]+'</span>':''}
+      <span class="muted" style="margin-left:auto">Lv.${m.lv}</span></div>
+    <div class="bar" style="margin-top:5px"><i style="width:${r*100}%;background:${hpColor(r)}"></i></div>
+    <div class="row" style="justify-content:space-between;margin-top:2px">
+      <span class="muted">${m.hp}/${maxHP(m)}</span>
+      <span class="muted">EXP ${m.xp}/${xpNext(m)}</span></div>`;
+  d.appendChild(mid);
+  d.onclick=()=>{SELMON=SELMON===m.u?null:m.u;renderTab();};
+  return d;
+}
+function vTeam(m){
+  m.innerHTML=`<div class="card"><h3>🐾 出戰隊伍 <span class="muted">(${S.party.length}/6)</span></h3>
+    <div class="grid" id="pty"></div>
+    <div class="muted" style="margin-top:8px">點擊御獸查看詳情與操作</div></div>
+    <div class="card"><h3>📦 倉庫 <span class="muted">(${S.box.length})</span></h3><div class="grid" id="box"></div></div>`;
+  const p=$('#pty');
+  if(!S.party.length)p.innerHTML='<div class="muted">尚無御獸</div>';
+  S.party.forEach((mo,i)=>{p.appendChild(monRow(mo,i,false));if(SELMON===mo.u)p.appendChild(detailPanel(mo,i,false));});
+  const b=$('#box');
+  if(!S.box.length)b.innerHTML='<div class="muted">空空如也</div>';
+  S.box.forEach((mo,i)=>{b.appendChild(monRow(mo,i,true));if(SELMON===mo.u)b.appendChild(detailPanel(mo,i,true));});
+}
+function detailPanel(m,i,inBox){
+  const sp=SP[m.sp], d=document.createElement('div');
+  d.className='card';d.style.margin='0 0 10px';d.style.background='#141b29';
+  const bars=[['hp','體力',maxHP(m),260],['atk','攻擊',stat(m,'atk'),200],
+              ['def','防禦',stat(m,'def'),200],['spd','速度',stat(m,'spd'),200]];
+  d.innerHTML=`
+   <div class="row" style="align-items:flex-start;gap:12px">
+     <div style="flex:1">
+       ${bars.map(b=>`<div class="sbar"><span class="muted">${b[1]}</span>
+         <span class="b"><i style="width:${clamp(b[2]/b[3]*100,4,100)}%"></i></span><span>${b[2]}</span></div>`).join('')}
+       <div class="muted" style="margin-top:6px">個體值 ${m.iv.hp}/${m.iv.atk}/${m.iv.def}/${m.iv.spd}
+        ${sp.evo?' · '+SP[sp.evo.to].n+' Lv.'+sp.evo.lv+' 進化':' · 已是最終型態'}</div>
+     </div>
+   </div>
+   <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:8px">
+     ${m.mv.map(v=>{const s=SK[v.id];return `<div class="mv" style="cursor:default">
+        <div class="t">${tpChip(s.t)} ${s.n}</div>
+        <div class="p"><span>威力 ${s.p||'—'}</span><span>PP ${v.pp}/${s.pp}</span></div></div>`;}).join('')}
+   </div>
+   <div class="row" style="margin-top:10px;flex-wrap:wrap">
+     <button class="btn" data-act="nick">✏️ 改名</button>
+     ${inBox?'<button class="btn pri" data-act="in">⬆️ 加入隊伍</button>'
+            :'<button class="btn" data-act="out">⬇️ 移到倉庫</button>'}
+     ${!inBox&&S.party.length>1?'<button class="btn" data-act="up">🔼 提前</button>':''}
+     <button class="btn dan" data-act="rel">🕊️ 放生</button>
+   </div>`;
+  d.querySelectorAll('[data-act]').forEach(b=>b.onclick=async e=>{
+    e.stopPropagation();
+    const a=b.dataset.act;
+    if(a==='nick'){
+      const v=await dialog(`<h2>為 ${name(m)} 命名</h2>
+        <input class="txt" id="nk" maxlength="8" value="${m.nick||''}" placeholder="留白則使用種族名">
+        <div class="btns"><button class="btn pri" onclick="closeDlg($('#nk').value)">確定</button>
+        <button class="btn" onclick="closeDlg(null)">取消</button></div>`,
+        {after:o=>setTimeout(()=>o.querySelector('#nk').focus(),50)});
+      if(v!==null){m.nick=v.trim()||null;toast('已更名');}
+    }
+    else if(a==='in'){
+      if(S.party.length>=6){toast('隊伍已滿(6)');return;}
+      S.box.splice(i,1);S.party.push(m);
+    }
+    else if(a==='out'){
+      if(S.party.length<=1){toast('至少保留一隻御獸');return;}
+      S.party.splice(i,1);S.box.push(m);
+    }
+    else if(a==='up'){ if(i>0){S.party.splice(i,1);S.party.splice(i-1,0,m);} }
+    else if(a==='rel'){
+      const ok=await dialog(`<h2>放生 ${name(m)}?</h2><div class="muted">此操作無法復原。</div>
+        <div class="btns"><button class="btn dan" onclick="closeDlg(1)">放生</button>
+        <button class="btn" onclick="closeDlg(0)">取消</button></div>`);
+      if(!ok)return;
+      if(!inBox){ if(S.party.length<=1){toast('至少保留一隻御獸');return;} S.party.splice(i,1);}
+      else S.box.splice(i,1);
+      SELMON=null;toast('🕊️ '+name(m)+' 回歸了野外');
+    }
+    renderAll();
+  });
+  return d;
+}
+
+/* ---------------- 背包 ---------------- */
+function vBag(m){
+  const ks=Object.keys(S.bag).filter(k=>S.bag[k]>0);
+  m.innerHTML=`<div class="card"><h3>🎒 背包</h3><div id="bl"></div></div>`;
+  const bl=$('#bl');
+  if(!ks.length){bl.innerHTML='<div class="muted">空的</div>';return;}
+  bl.innerHTML=ks.map(k=>{const it=ITEM[k];
+    const usable=['heal','cure','revive','ether','candy'].includes(it.k);
+    return `<div class="itemrow"><div class="ic">${it.ic}</div>
+      <div style="flex:1"><div>${it.n} <span class="muted">×${S.bag[k]}</span></div>
+      <div class="muted">${it.d}</div></div>
+      ${usable?`<button class="btn" data-u="${k}">使用</button>`:''}</div>`;}).join('');
+  bl.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>pickTargetAndUse(b.dataset.u));
+}
+async function pickTargetAndUse(key){
+  const it=ITEM[key];
+  const list=S.party.concat(S.box);
+  if(!list.length){toast('沒有御獸');return;}
+  const html=`<h2>${it.ic} ${it.n}</h2><div class="muted">${it.d}</div>
+    <div class="grid" style="margin-top:10px;max-height:46vh;overflow:auto" id="tl"></div>
+    <div class="btns"><button class="btn" onclick="closeDlg(null)">取消</button></div>`;
+  const target=await dialog(html,{after:o=>{
+    const tl=o.querySelector('#tl');
+    list.forEach(mo=>{
+      const r=document.createElement('div');r.className='mon';
+      const av=document.createElement('div');av.className='avatar';av.style.width='42px';av.style.height='42px';
+      av.appendChild(monCanvas(mo.sp,40,{shiny:mo.shiny}));r.appendChild(av);
+      const rt=mo.hp/maxHP(mo);
+      r.innerHTML+=`<div class="mid" style="text-align:left"><div class="nm">${name(mo)} <span class="muted">Lv.${mo.lv}</span>
+        ${mo.st?'<span class="stx '+mo.st+'">'+STN[mo.st]+'</span>':''}</div>
+        <div class="bar" style="margin-top:4px"><i style="width:${rt*100}%;background:${hpColor(rt)}"></i></div>
+        <div class="muted">${mo.hp}/${maxHP(mo)}</div></div>`;
+      r.onclick=()=>closeDlg(mo);
+      tl.appendChild(r);
+    });
+  }});
+  if(!target)return;
+  const r=useItemOn(key,target);
+  toast(r.msg);
+  if(r.ok){S.bag[key]--;save();}
+  renderTab();
+}
+function useItemOn(key,m){
+  const it=ITEM[key];
+  if(it.k==='heal'){
+    if(!alive(m))return{ok:0,msg:'瀕死狀態無法使用傷藥'};
+    if(m.hp>=maxHP(m))return{ok:0,msg:'HP 已滿'};
+    const before=m.hp;m.hp=Math.min(maxHP(m),m.hp+it.v);
+    return{ok:1,msg:`${name(m)} 回復了 ${m.hp-before} HP`};
+  }
+  if(it.k==='cure'){ if(!m.st)return{ok:0,msg:'沒有異常狀態'}; m.st=null;return{ok:1,msg:name(m)+' 恢復正常'};}
+  if(it.k==='revive'){ if(alive(m))return{ok:0,msg:'不需要復活'}; m.hp=Math.ceil(maxHP(m)/2);m.st=null;
+    return{ok:1,msg:'✨ '+name(m)+' 復活了!'};}
+  if(it.k==='ether'){
+    let any=0;m.mv.forEach(v=>{if(v.pp<SK[v.id].pp){v.pp=Math.min(SK[v.id].pp,v.pp+10);any=1;}});
+    return any?{ok:1,msg:name(m)+' 的 PP 回復了'}:{ok:0,msg:'PP 已滿'};
+  }
+  if(it.k==='candy'){
+    if(m.lv>=60)return{ok:0,msg:'已達等級上限 60'};
+    m.lv++;m.xp=0;m.hp=maxHP(m);
+    const learned=SP[m.sp].ls.filter(x=>x[0]===m.lv).map(x=>x[1]);
+    learned.forEach(id=>teachMove(m,id));
+    let msg=name(m)+' 升到 Lv.'+m.lv;
+    const ev=SP[m.sp].evo;
+    if(ev&&m.lv>=ev.lv){ evolveNow(m); msg+=' 並進化了!'; }
+    return{ok:1,msg:msg};
+  }
+  return{ok:0,msg:'無法使用'};
+}
+function teachMove(m,id){
+  if(m.mv.some(v=>v.id===id))return null;
+  if(m.mv.length<4){m.mv.push({id,pp:SK[id].pp});return {learn:id};}
+  const drop=m.mv.shift();m.mv.push({id,pp:SK[id].pp});
+  return {learn:id,forget:drop.id};
+}
+function evolveNow(m){
+  const ev=SP[m.sp].evo;if(!ev)return null;
+  const old=m.sp;const ratio=m.hp/maxHP(m);
+  m.sp=ev.to;m.hp=Math.max(1,Math.round(maxHP(m)*ratio));
+  dexCatch(ev.to);
+  return old;
+}
+
+/* ---------------- 商店 ---------------- */
+function vShop(m){
+  m.innerHTML=`<div class="card"><h3>🏪 御獸商店 <span class="muted">— 💰 ${S.money.toLocaleString()}</span></h3>
+   <div id="sl"></div></div>`;
+  $('#sl').innerHTML=SHOP.map(k=>{const it=ITEM[k];
+    return `<div class="itemrow"><div class="ic">${it.ic}</div>
+      <div style="flex:1"><div>${it.n} <span class="muted">(持有 ${S.bag[k]||0})</span></div>
+      <div class="muted">${it.d}</div></div>
+      <div style="text-align:right"><div class="muted">💰${it.price}</div>
+      <div class="row" style="margin-top:3px">
+        <button class="btn" data-b="${k}" data-q="1">×1</button>
+        <button class="btn" data-b="${k}" data-q="5">×5</button></div></div></div>`;}).join('');
+  $('#sl').querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>{
+    const k=b.dataset.b,q=+b.dataset.q,cost=ITEM[k].price*q;
+    if(S.money<cost){toast('💰 金幣不足');return;}
+    S.money-=cost;S.bag[k]=(S.bag[k]||0)+q;
+    toast(`購買 ${ITEM[k].n} ×${q}`);renderAll();
+  });
+}
+
+/* ---------------- 圖鑑 ---------------- */
+function vDex(m){
+  const caught=SPIDS.filter(i=>S.dex[i]&&S.dex[i].c).length;
+  const seen=SPIDS.filter(i=>S.dex[i]&&S.dex[i].s).length;
+  m.innerHTML=`<div class="card"><h3>📖 圖鑑 <span class="muted">— 捕獲 ${caught} / 目擊 ${seen} / 全 ${SPIDS.length}</span></h3>
+   <div class="dexg" id="dg"></div></div>`;
+  const dg=$('#dg');
+  SPIDS.forEach(id=>{
+    const st=S.dex[id]||{s:0,c:0};
+    const c=document.createElement('div');c.className='dexc'+(st.s?'':' unk');
+    if(st.s){
+      c.appendChild(monCanvas(id,72,{}));
+      c.insertAdjacentHTML('beforeend',`<div class="n">${st.c?'':'· '}${SP[id].n}</div>
+        <div>${tpChip(SP[id].t)}</div>`);
+      c.onclick=()=>showDex(id);
+    }else{
+      c.innerHTML='<div style="height:72px;display:grid;place-items:center;font-size:26px">❓</div><div class="n">???</div>';
+    }
+    dg.appendChild(c);
+  });
+}
+function showDex(id){
+  const sp=SP[id];
+  dialog(`<h2>${sp.n} ${tpChip(sp.t)}</h2>
+    <div id="dxc" style="display:grid;place-items:center;margin:6px 0"></div>
+    <div class="muted">種族值 HP ${sp.b.hp} / 攻 ${sp.b.atk} / 防 ${sp.b.def} / 速 ${sp.b.spd}</div>
+    <div class="muted" style="margin-top:4px">捕獲率 ${sp.rate} ${sp.evo?'· Lv.'+sp.evo.lv+' 進化為 '+SP[sp.evo.to].n:'· 最終型態'}</div>
+    <div class="muted" style="margin-top:8px;text-align:left">習得:${sp.ls.map(x=>'Lv'+x[0]+' '+SK[x[1]].n).join('、')}</div>
+    <div class="btns"><button class="btn pri" onclick="closeDlg(1)">關閉</button></div>`,
+    {after:o=>o.querySelector('#dxc').appendChild(monCanvas(id,120,{}))});
+}
+
+/* ============================================================
+   戰鬥
+   ============================================================ */
+let B=null, ANIM=0;
+function bhtml(){
+  return `<div class="field">
+    <div class="slot foe">
+      <div class="info" id="fInfo"></div>
+      <div id="fArt"></div>
+    </div>
+    <div class="slot mine">
+      <div id="mArt"></div>
+      <div class="info" id="mInfo"></div>
+    </div>
+  </div>
+  <div class="logbox" id="bLog"></div>
+  <div class="cmds" id="bCmd"></div>`;
+}
+function infoHTML(m,isFoe){
+  const r=m.hp/maxHP(m);
+  let balls='';
+  if(isFoe&&B.trainer){
+    balls='<div class="ball-row">'+B.trainer.team.map(t=>
+      `<span class="pb ${alive(t)?'alive':'dead'}"></span>`).join('')+'</div>';
+  }
+  return `<div class="l1">${name(m)}${m.shiny?' ✨':''} ${tpChip(SP[m.sp].t)}
+     ${m.st?'<span class="stx '+m.st+'">'+STN[m.st]+'</span>':''}
+     <span class="lv">Lv.${m.lv}</span></div>
+   <div class="bar" style="margin-top:4px"><i style="width:${r*100}%;background:${hpColor(r)}"></i></div>
+   ${isFoe?balls:`<div class="hpn">${m.hp}/${maxHP(m)}</div>
+     <div class="bar exp" style="margin-top:2px"><i style="width:${clamp(m.xp/xpNext(m)*100,0,100)}%"></i></div>`}`;
+}
+function paintSlot(which){
+  const m=which==='foe'?B.foe:B.me;
+  const holder=$(which==='foe'?'#fArt':'#mArt');
+  const info=$(which==='foe'?'#fInfo':'#mInfo');
+  info.innerHTML=infoHTML(m,which==='foe');
+  if(holder.dataset.sp!==m.sp+m.u){
+    holder.dataset.sp=m.sp+m.u;
+    holder.innerHTML='';
+    const sz=which==='foe'?128:150;
+    const cv=monCanvas(m.sp,sz,{flip:which!=='foe',shiny:m.shiny});
+    cv.className='enter';holder.appendChild(cv);
+  }
+}
+function animLoop(){
+  if(!B)return;
+  const t=performance.now();
+  ['#fArt','#mArt'].forEach((s,i)=>{
+    const h=$(s);if(!h)return;const cv=h.querySelector('canvas');if(!cv)return;
+    const m=i===0?B.foe:B.me;
+    drawMon(cv,m.sp,{t:t,flip:i!==0,shiny:m.shiny,faint:!alive(m)});
+  });
+  ANIM=requestAnimationFrame(animLoop);
+}
+async function say(t,ms){ $('#bLog').innerHTML=t; await sleep(ms===undefined?820:ms); }
+function cmdRoot(){
+  const wild=!!B.wild;
+  $('#bCmd').innerHTML=`<div class="cmd4">
+    <button class="btn pri" data-c="fight">⚔️ 戰鬥</button>
+    <button class="btn" data-c="bag">🎒 道具</button>
+    <button class="btn" data-c="sw">🔄 換獸</button>
+    ${wild?'<button class="btn gold" data-c="ball">🔴 捕捉</button>'
+          :'<button class="btn" disabled>🚫 無法逃跑</button>'}
+    ${wild?'<button class="btn" data-c="run" style="grid-column:span 2">🚪 逃跑</button>':''}
+  </div>`;
+  $('#bCmd').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>onCmd(b.dataset.c));
+}
+function cmdMoves(){
+  if(!B.me.mv.some(v=>v.pp>0)){
+    $('#bCmd').innerHTML=`<div class="muted" style="margin-bottom:8px">所有技能的 PP 都用完了!</div>
+      <button class="btn dan" style="width:100%" data-str="1">💥 掙扎(會受到反作用傷害)</button>
+      <button class="btn" style="margin-top:8px;width:100%" data-back="1">↩ 返回</button>`;
+    $('#bCmd').querySelector('[data-str]').onclick=()=>ACT({type:'struggle'});
+    $('#bCmd').querySelector('[data-back]').onclick=cmdRoot;
+    return;
+  }
+  $('#bCmd').innerHTML=`<div class="cmd4">${B.me.mv.map((v,i)=>{
+    const s=SK[v.id];
+    const e=s.p?eff(s.t,SP[B.foe.sp].t):1;
+    const tag=!s.p?'':e>1?'<span style="color:#4ecb71">效果絕佳</span>':e<1?'<span style="color:#ff8b96">效果不好</span>':'';
+    return `<button class="mv ${v.pp<=0?'no':''}" data-m="${i}" ${v.pp<=0?'disabled':''}>
+      <div class="t">${tpChip(s.t)} ${s.n}</div>
+      <div class="p"><span>威力 ${s.p||'—'}</span><span>PP ${v.pp}/${s.pp}</span>${tag}</div></button>`;}).join('')}
+    </div><button class="btn" style="margin-top:8px;width:100%" data-back="1">↩ 返回</button>`;
+  $('#bCmd').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>ACT({type:'move',i:+b.dataset.m}));
+  $('#bCmd').querySelector('[data-back]').onclick=cmdRoot;
+}
+function cmdSwitch(force){
+  const list=S.party.map((m,i)=>({m,i})).filter(x=>x.m.u!==B.me.u);
+  $('#bCmd').innerHTML=`<div class="grid" style="max-height:38vh;overflow:auto">${list.map(x=>{
+    const r=x.m.hp/maxHP(x.m);
+    return `<button class="mv ${alive(x.m)?'':'no'}" data-s="${x.i}" ${alive(x.m)?'':'disabled'}>
+      <div class="t">${name(x.m)} ${tpChip(SP[x.m.sp].t)} <span class="muted" style="margin-left:auto">Lv.${x.m.lv}</span></div>
+      <div class="bar" style="margin-top:4px"><i style="width:${r*100}%;background:${hpColor(r)}"></i></div>
+      <div class="p"><span>${x.m.hp}/${maxHP(x.m)}</span>${x.m.st?'<span>'+STN[x.m.st]+'</span>':''}</div></button>`;}).join('')}
+    </div>${force?'':'<button class="btn" style="margin-top:8px;width:100%" data-back="1">↩ 返回</button>'}`;
+  $('#bCmd').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>ACT({type:'switch',i:+b.dataset.s,force:force}));
+  const bk=$('#bCmd').querySelector('[data-back]');if(bk)bk.onclick=cmdRoot;
+}
+function cmdBag(){
+  const ks=Object.keys(S.bag).filter(k=>S.bag[k]>0&&ITEM[k].k!=='ball');
+  $('#bCmd').innerHTML=`<div class="grid" style="max-height:38vh;overflow:auto">${
+    ks.length?ks.map(k=>`<button class="mv" data-i="${k}">
+      <div class="t">${ITEM[k].ic} ${ITEM[k].n} <span class="muted" style="margin-left:auto">×${S.bag[k]}</span></div>
+      <div class="p">${ITEM[k].d}</div></button>`).join('')
+    :'<div class="muted">沒有可用道具</div>'}
+    </div><button class="btn" style="margin-top:8px;width:100%" data-back="1">↩ 返回</button>`;
+  $('#bCmd').querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>ACT({type:'item',key:b.dataset.i}));
+  $('#bCmd').querySelector('[data-back]').onclick=cmdRoot;
+}
+function cmdBalls(){
+  const ks=Object.keys(S.bag).filter(k=>S.bag[k]>0&&ITEM[k].k==='ball');
+  $('#bCmd').innerHTML=`<div class="grid" style="max-height:38vh;overflow:auto">${
+    ks.length?ks.map(k=>`<button class="mv" data-b="${k}">
+      <div class="t">${ITEM[k].ic} ${ITEM[k].n} <span class="muted" style="margin-left:auto">×${S.bag[k]}</span></div>
+      <div class="p">${ITEM[k].d}</div></button>`).join('')
+    :'<div class="muted">沒有球了!</div>'}
+    </div><button class="btn" style="margin-top:8px;width:100%" data-back="1">↩ 返回</button>`;
+  $('#bCmd').querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>ACT({type:'ball',key:b.dataset.b}));
+  $('#bCmd').querySelector('[data-back]').onclick=cmdRoot;
+}
+function onCmd(c){
+  if(c==='fight')cmdMoves();
+  else if(c==='sw'){
+    if(S.party.filter(alive).length<=1){toast('沒有其他可出戰的御獸');return;}
+    cmdSwitch(false);
+  }
+  else if(c==='bag')cmdBag();
+  else if(c==='ball')cmdBalls();
+  else if(c==='run')ACT({type:'run'});
+}
+let ACT=()=>{};
+function waitAct(){ return new Promise(r=>{ ACT=v=>{ACT=()=>{};r(v);}; }); }
+
+function stg(m,k){ const s=(B.stages[m.u]&&B.stages[m.u][k])||0;
+  return s>=0?(2+s)/2:2/(2-s); }
+function addStage(m,k,d){
+  B.stages[m.u]=B.stages[m.u]||{atk:0,def:0,spd:0};
+  const o=B.stages[m.u][k];
+  B.stages[m.u][k]=clamp(o+d,-6,6);
+  return B.stages[m.u][k]!==o;
+}
+function spdOf(m){return stat(m,'spd')*stg(m,'spd');}
+
+async function hpTo(which,val){
+  const m=which==='foe'?B.foe:B.me;
+  m.hp=clamp(val,0,maxHP(m));
+  paintSlot(which);
+  await sleep(430);
+}
+function fx(which,cls){
+  const h=$(which==='foe'?'#fArt':'#mArt');
+  if(!h)return;h.classList.remove(cls);void h.offsetWidth;h.classList.add(cls);
+  setTimeout(()=>h.classList.remove(cls),600);
+}
+
+async function useMove(att,def,attSide,mvIdx){
+  const slot=att.mv[mvIdx];
+  const s=SK[slot.id];
+  // 行動阻礙
+  if(att.st==='slp'){
+    B.slp[att.u]=(B.slp[att.u]||0)-1;
+    if(B.slp[att.u]<=0){att.st=null;paintSlot(attSide);await say(`${name(att)} 醒過來了!`);}
+    else{await say(`${name(att)} 睡得正香…`);return;}
+  }
+  if(att.st==='para'&&chance(.25)){await say(`${name(att)} 因麻痺而無法動彈!`);return;}
+  slot.pp--;
+  await say(`${name(att)} 使用了 <b>${s.n}</b>!`,620);
+
+  // 命中
+  const acc=s.acc>=999?100:s.acc;
+  if(!chance(acc/100)){await say(`可惜沒有命中…`);return;}
+
+  const defSide=attSide==='foe'?'me':'foe';
+  if(s.p>0){
+    const e=eff(s.t,SP[def.sp].t);
+    const stab=SP[att.sp].t===s.t?1.5:1;
+    const crit=chance((s.fx&&s.fx.crit)||.0625);
+    const A=stat(att,'atk')*stg(att,'atk')*(crit?1.5:1);
+    const D=stat(def,'def')*(crit?1:stg(def,'def'));
+    let dmg=Math.floor((((2*att.lv/5+2)*s.p*A/Math.max(1,D))/50+2)*stab*e*(0.85+Math.random()*0.15));
+    dmg=Math.max(1,dmg);
+    fx(defSide,'shake');fx(defSide,'flash');
+    await hpTo(defSide,def.hp-dmg);
+    if(crit)await say('要害命中!',560);
+    if(e>1.9)await say('效果絕佳!',560);
+    else if(e>1)await say('效果不錯!',520);
+    else if(e<.6)await say('效果不太好…',560);
+    if(s.fx&&s.fx.drain){
+      const h=Math.max(1,Math.floor(dmg*s.fx.drain));
+      await hpTo(attSide,att.hp+h);
+      await say(`${name(att)} 吸取了體力!`,560);
+    }
+    if(!alive(def))return;
+    if(s.fx&&s.fx.inflict&&chance(s.fx.ch)&&!def.st){
+      def.st=s.fx.inflict;
+      if(def.st==='slp')B.slp[def.u]=rnd(1,3);
+      paintSlot(defSide);
+      await say(`${name(def)} 陷入了${STN[def.st]}!`);
+    }
+    if(s.fx&&s.fx.debuff&&chance(s.fx.ch||1)){
+      if(addStage(def,s.fx.debuff,s.fx.st))
+        await say(`${name(def)} 的${({atk:'攻擊',def:'防禦',spd:'速度'})[s.fx.debuff]}下降了!`,620);
+    }
+  }else{
+    const f=s.fx||{};
+    if(f.heal){
+      if(att.hp>=maxHP(att))await say('但是沒有效果…');
+      else{await hpTo(attSide,att.hp+Math.floor(maxHP(att)*f.heal));await say(`${name(att)} 回復了體力!`,620);}
+    }
+    if(f.buff){
+      if(addStage(att,f.buff,f.st))await say(`${name(att)} 的${({atk:'攻擊',def:'防禦',spd:'速度'})[f.buff]}提升了!`,620);
+      else await say('但是無法再提升了…',620);
+    }
+    if(f.debuff){
+      if(addStage(def,f.debuff,f.st))await say(`${name(def)} 的${({atk:'攻擊',def:'防禦',spd:'速度'})[f.debuff]}下降了!`,620);
+      else await say('但是無法再下降了…',620);
+    }
+    if(f.inflict){
+      if(def.st)await say(`${name(def)} 已經處於異常狀態了。`,620);
+      else{def.st=f.inflict;if(def.st==='slp')B.slp[def.u]=rnd(1,3);
+        paintSlot(defSide);await say(`${name(def)} 陷入了${STN[def.st]}!`);}
+    }
+  }
+}
+
+function aiChoose(){
+  const f=B.foe, me=B.me;
+  const opts=f.mv.filter(v=>v.pp>0);
+  if(!opts.length)return -1;
+  let best=null,bs=-1;
+  opts.forEach(v=>{
+    const s=SK[v.id];let sc;
+    if(s.p>0){
+      const e=eff(s.t,SP[me.sp].t), stab=SP[f.sp].t===s.t?1.5:1;
+      sc=s.p*e*stab*(s.acc>=999?1:s.acc/100);
+    }else{
+      const fx2=s.fx||{};
+      sc=25;
+      if(fx2.heal) sc = f.hp/maxHP(f)<.45?150:5;
+      if(fx2.inflict) sc = me.st?4:70;
+      if(fx2.buff||fx2.debuff) sc = 45;
+    }
+    sc*=0.85+Math.random()*0.3;
+    if(sc>bs){bs=sc;best=v;}
+  });
+  return f.mv.indexOf(best);
+}
+
+async function tryCatch(key){
+  const it=ITEM[key];
+  S.bag[key]--;
+  const f=B.foe, sp=SP[f.sp];
+  await say(`丟出了 ${it.ic} ${it.n}!`,700);
+  const holder=$('#fArt');holder.style.transition='.35s';holder.style.transform='scale(.25)';holder.style.opacity='.35';
+  await sleep(420);
+  let a=((3*maxHP(f)-2*f.hp)*sp.rate*it.m)/(3*maxHP(f));
+  if(f.st==='slp')a*=2.5; else if(f.st)a*=1.6;
+  a=a*(1+Math.max(0,(30-f.lv))/100);
+  let shakes=0;
+  if(a>=255)shakes=4;
+  else{
+    const b=65536/Math.pow(255/a,0.1875);
+    for(let i=0;i<4;i++){ if(rnd(0,65535)<b)shakes++; else break; }
+  }
+  for(let i=0;i<Math.min(shakes,3);i++){
+    fx('foe','shake');await say('…搖晃了 '+(i+1)+' 下',560);
+  }
+  if(shakes>=4){
+    await say(`🎉 太好了!成功捕獲了 <b>${sp.n}</b>!`,1200);
+    dexCatch(f.sp);S.caught++;
+    if(S.party.length<6)S.party.push(f); else S.box.push(f);
+    feed(`捕獲了 <b>${sp.n}</b> Lv.${f.lv}${S.party.length<6?'':'(送入倉庫)'}`);
+    B.over='caught';
+    return true;
+  }
+  holder.style.transform='';holder.style.opacity='';
+  await say(`可惡…${sp.n} 掙脫了球!`,780);
+  return false;
+}
+
+async function gainXP(m,amount){
+  m.xp+=amount;
+  await say(`${name(m)} 獲得了 ${amount} 點經驗值。`,700);
+  paintSlot('me');
+  while(m.xp>=xpNext(m)&&m.lv<60){
+    const prevMax=maxHP(m);
+    m.xp-=xpNext(m);m.lv++;
+    m.hp=Math.min(maxHP(m),m.hp+(maxHP(m)-prevMax)); // 升級補上新增的體力上限
+    paintSlot('me');
+    await say(`🎊 ${name(m)} 升到了 <b>Lv.${m.lv}</b>!`,900);
+    const learns=SP[m.sp].ls.filter(x=>x[0]===m.lv).map(x=>x[1]);
+    for(const id of learns){
+      const r=teachMove(m,id);
+      if(!r)continue;
+      if(r.forget)await say(`${name(m)} 忘記了 ${SK[r.forget].n},學會了 <b>${SK[id].n}</b>!`,950);
+      else await say(`${name(m)} 學會了 <b>${SK[id].n}</b>!`,900);
+    }
+    const ev=SP[m.sp].evo;
+    if(ev&&m.lv>=ev.lv){
+      const oldName=SP[m.sp].n;
+      await say(`咦…?${oldName} 的樣子有點奇怪…`,900);
+      evolveNow(m);
+      $('#mArt').dataset.sp='';paintSlot('me');
+      fx('me','flash');
+      await say(`✨ 恭喜!${oldName} 進化成了 <b>${SP[m.sp].n}</b>!`,1500);
+      feed(`<b>${oldName}</b> 進化成了 <b>${SP[m.sp].n}</b>!`);
+    }
+  }
+  if(m.lv>=60)m.xp=0;
+}
+
+async function endTurnStatus(m,side){
+  if(!alive(m))return;
+  if(m.st==='burn'){
+    fx(side,'flash');
+    await hpTo(side,m.hp-Math.max(1,Math.floor(maxHP(m)/14)));
+    await say(`${name(m)} 受到燒傷的傷害!`,620);
+  }else if(m.st==='psn'){
+    fx(side,'flash');
+    await hpTo(side,m.hp-Math.max(1,Math.floor(maxHP(m)/12)));
+    await say(`${name(m)} 受到毒的侵蝕!`,620);
+  }
+}
+
+async function onFoeFaint(){
+  fx('foe','fade');
+  await say(`${name(B.foe)} 倒下了!`,780);
+  const base=SP[B.foe.sp].xp;
+  const amount=Math.max(1,Math.floor(base*B.foe.lv/6*(B.trainer?1.4:1)));
+  // 參戰的存活者分經驗
+  const parts=S.party.filter(m=>alive(m)&&B.part[m.u]);
+  for(const m of (parts.length?parts:[B.me])){
+    if(m.u===B.me.u){await gainXP(m,amount);}
+    else{ m.xp+=Math.floor(amount*0.5);
+      while(m.xp>=xpNext(m)&&m.lv<60){m.xp-=xpNext(m);m.lv++;
+        SP[m.sp].ls.filter(x=>x[0]===m.lv).forEach(x=>teachMove(m,x[1]));
+        const ev=SP[m.sp].evo;if(ev&&m.lv>=ev.lv)evolveNow(m);
+        m.hp=Math.min(maxHP(m),m.hp+8);}
+    }
+  }
+  if(B.wild){
+    const g=rnd(30,70)+B.foe.lv*6;
+    S.money+=g;
+    await say(`獲得了 💰${g} 金幣。`,700);
+    B.over='win';return;
+  }
+  // 訓練家:換下一隻
+  const next=B.trainer.team.find(alive);
+  if(!next){B.over='win';return;}
+  B.foe=next;
+  $('#fArt').style.transform='';$('#fArt').style.opacity='';
+  $('#fArt').dataset.sp='';paintSlot('foe');
+  dexSee(next.sp);
+  await say(`${B.trainer.name} 派出了 ${name(next)}!`,900);
+}
+async function onMyFaint(){
+  fx('me','fade');
+  await say(`${name(B.me)} 失去了戰鬥能力…`,850);
+  if(!S.party.some(alive)){B.over='lose';return;}
+  await say('要派出哪一隻御獸?',400);
+  const a=await (cmdSwitch(true),waitAct());
+  B.me=S.party[a.i];B.part[B.me.u]=1;
+  $('#mArt').style.transform='';$('#mArt').style.opacity='';
+  $('#mArt').dataset.sp='';paintSlot('me');
+  await say(`上吧!${name(B.me)}!`,780);
+}
+
+async function startBattle(cfg){
+  const first=S.party.find(alive);
+  if(!first){toast('全隊無法戰鬥');return false;}
+  B={wild:cfg.wild||null,trainer:cfg.trainer||null,
+     foe:cfg.wild||cfg.trainer.team[0], me:first,
+     stages:{}, slp:{}, part:{}, over:null};
+  B.part[first.u]=1;
+  dexSee(B.foe.sp);
+  const el=$('#bt');
+  el.className=cfg.boss?'boss':(cfg.wild?'wild':'');
+  el.innerHTML=bhtml();
+  $('#mArt').dataset.sp='';$('#fArt').dataset.sp='';
+  paintSlot('foe');paintSlot('me');
+  cancelAnimationFrame(ANIM);animLoop();
+
+  await say(cfg.wild?`野生的 <b>${name(B.foe)}</b> Lv.${B.foe.lv} 出現了!`
+    :`<b>${B.trainer.name}</b> 向你發起了挑戰!`,1000);
+  await say(`去吧!${name(B.me)}!`,760);
+
+  while(!B.over){
+    cmdRoot();
+    $('#bLog').innerHTML='要怎麼做?';
+    const act=await waitAct();
+    await runTurn(act);
+    if(B.over)break;
+    if(!alive(B.foe))await onFoeFaint();
+    if(B.over)break;
+    if(!alive(B.me))await onMyFaint();
+  }
+
+  // 結算
+  let win=false;
+  if(B.over==='win'){
+    S.wins++;
+    if(B.trainer)await say(`🏆 擊敗了 ${B.trainer.name}!`,1100);
+    win=true;
+  }else if(B.over==='caught'){win=true;}
+  else if(B.over==='lose'){
+    await say('眼前一片白茫茫…',1000);
+    const lost=Math.floor(S.money*0.15);
+    S.money-=lost;healAll();
+    await say(`你回到了治療所,支付了 💰${lost} 治療費。`,1400);
+    feed(`在 ${AREAS[S.area].n} 戰敗,失去 💰${lost}。`);
+  }else if(B.over==='run'){ /* nothing */ }
+
+  cancelAnimationFrame(ANIM);ANIM=0;
+  $('#bt').classList.add('hide');$('#bt').innerHTML='';
+  B=null;
+  save();renderHeader();
+  return win;
+}
+$('#bt').classList.add('hide');
+
+async function runTurn(act){
+  const foeIdx=aiChoose();
+  const slowAct=['move','struggle','run'].includes(act.type); // 這些不享有優先權
+  const myPri=act.type==='move'?(SK[B.me.mv[act.i].id].pri||0):slowAct?0:6;
+  const foePri=foeIdx>=0?(SK[B.foe.mv[foeIdx].id].pri||0):0;
+  let meFirst;
+  if(myPri!==foePri)meFirst=myPri>foePri;
+  else{const a=spdOf(B.me),b=spdOf(B.foe);meFirst=a===b?chance(.5):a>b;}
+
+  const doMine=async()=>{
+    if(act.type==='move'){ await useMove(B.me,B.foe,'me',act.i); }
+    else if(act.type==='struggle'){
+      await say(`${name(B.me)} 拼命地掙扎!`,700);
+      const A=stat(B.me,'atk')*stg(B.me,'atk'), D=stat(B.foe,'def')*stg(B.foe,'def');
+      const dmg=Math.max(1,Math.floor(((2*B.me.lv/5+2)*50*A/Math.max(1,D))/50+2));
+      fx('foe','shake');await hpTo('foe',B.foe.hp-dmg);
+      const rec=Math.max(1,Math.floor(dmg/4));
+      fx('me','flash');await hpTo('me',B.me.hp-rec);
+      await say(`${name(B.me)} 受到了反作用傷害!`,700);
+    }
+    else if(act.type==='switch'){
+      await say(`回來吧,${name(B.me)}!`,620);
+      B.me=S.party[act.i];B.part[B.me.u]=1;
+      $('#mArt').dataset.sp='';paintSlot('me');
+      await say(`上吧!${name(B.me)}!`,700);
+    }
+    else if(act.type==='item'){
+      const r=useItemOn(act.key,B.me);
+      if(r.ok){S.bag[act.key]--;paintSlot('me');}
+      await say(r.msg,850);
+      if(!r.ok)return 'free';
+    }
+    else if(act.type==='ball'){
+      const got=await tryCatch(act.key);
+      if(got)return 'stop';
+    }
+    else if(act.type==='run'){
+      const odds=clamp(spdOf(B.me)/Math.max(1,spdOf(B.foe))*0.6+0.28,.2,.95);
+      if(chance(odds)){await say('成功逃走了!',900);B.over='run';return 'stop';}
+      await say('沒能逃掉!',800);
+    }
+  };
+  const doFoe=async()=>{
+    if(!alive(B.foe)||B.over)return;
+    if(foeIdx<0){await say(`${name(B.foe)} 沒有招式可用,拼命掙扎!`,700);
+      fx('me','shake');await hpTo('me',B.me.hp-rnd(5,12));return;}
+    await useMove(B.foe,B.me,'foe',foeIdx);
+  };
+
+  if(meFirst){
+    const r=await doMine();
+    if(r==='stop'||B.over)return;
+    if(alive(B.foe)&&alive(B.me))await doFoe();
+  }else{
+    if(!slowAct){ // 道具/換獸/捕捉不受速度影響,總是先執行
+      const r=await doMine();
+      if(r==='stop'||B.over)return;
+      if(alive(B.foe)&&alive(B.me))await doFoe();
+    }else{
+      await doFoe();
+      if(alive(B.me)&&!B.over){const r=await doMine();if(r==='stop'||B.over)return;}
+    }
+  }
+  if(B.over)return;
+  await endTurnStatus(B.me,'me');
+  await endTurnStatus(B.foe,'foe');
+}
+
+/* ============================================================
+   開場
+   ============================================================ */
+const STARTERS=['emberfox','bubbleturtle','sproutcat'];
+async function intro(){
+  const nm=await dialog(`<h2>★ 星痕御獸錄</h2>
+    <div class="muted">在星痕大陸上,御獸師與夥伴一同踏上旅程。<br>先告訴我你的名字吧。</div>
+    <div style="margin-top:12px"><input class="txt" id="nm" maxlength="8" placeholder="輸入名字"></div>
+    <div class="btns"><button class="btn pri" onclick="closeDlg($('#nm').value.trim()||'訓練家')">開始旅程</button></div>`,
+    {after:o=>{const i=o.querySelector('#nm');setTimeout(()=>i.focus(),60);
+      i.onkeydown=e=>{if(e.key==='Enter')closeDlg(i.value.trim()||'訓練家');};}});
+  S=newSave(nm);
+  const pickId=await dialog(`<h2>選擇你的初始夥伴</h2>
+    <div class="muted">牠將陪你走完整段旅程。</div>
+    <div class="starter" id="stw"></div>
+    <div class="muted" style="margin-top:10px">火 → 草 → 水 → 火 · 屬性相剋是勝負關鍵</div>`,
+    {after:o=>{
+      const w=o.querySelector('#stw');
+      STARTERS.forEach(id=>{
+        const c=document.createElement('div');c.className='stc';
+        c.appendChild(monCanvas(id,84,{}));
+        c.insertAdjacentHTML('beforeend',`<div style="font-size:12px;margin-top:2px">${SP[id].n}</div>${tpChip(SP[id].t)}`);
+        c.onclick=()=>closeDlg(id);
+        w.appendChild(c);
+      });
+    }});
+  const st=makeMon(pickId,5);
+  S.party.push(st);dexCatch(pickId);
+  feed(`與 <b>${SP[pickId].n}</b> 一起踏上旅程!`);
+  save();renderAll();
+  toast('🎮 提示:探索遇敵 → 打到殘血 → 丟球捕捉',3400);
+}
+
+/* ---- boot ---- */
+(function boot(){
+  const l=load();
+  if(l&&l.party&&l.party.length){
+    S=l;
+    // 相容性補齊
+    S.bag=S.bag||{};S.dex=S.dex||{};S.unlock=S.unlock||1;S.box=S.box||[];
+    FEED=['讀取存檔完成,歡迎回來!'];
+    renderAll();
+  }else{
+    S=newSave('訓練家');
+    renderHeader();
+    intro();
+  }
+})();
+
+/* 開發者:重置 */
+window.RESET=function(){localStorage.removeItem(KEY);location.reload();};
+</script>

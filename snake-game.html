@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>貪食蛇 — Star Snake</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#1a3a2e 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:640px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--green),var(--blue),#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;
+            position:relative;flex:none}
+canvas#board{display:block;border-radius:8px;background:#0a0c16;touch-action:none}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:150px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.86);border-radius:8px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.7}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.hint .k{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+        border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--txt);margin:0 2px}
+
+.diffrow{display:flex;gap:6px}
+.diffrow button{flex:1;padding:8px 4px;font-size:11.5px}
+.diffrow button.active{outline:2px solid var(--green)}
+
+/* touch controls */
+.touch{display:none;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap;max-width:220px;margin-left:auto;margin-right:auto}
+.touch .row{display:flex;gap:8px;justify-content:center;width:100%}
+.touch button{width:56px;height:56px;font-size:20px;border-radius:12px;background:var(--panel2);
+              border:1px solid var(--line);color:var(--txt);display:flex;align-items:center;justify-content:center}
+.touch button:active{background:var(--panel)}
+@media(max-width:640px){
+  .touch{display:flex}
+  .side{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>貪食蛇</h1>
+    <div class="sub">STAR SNAKE · 單機益智</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">分數</div><div class="v" id="score">0</div></div>
+  <div class="pill"><div class="k">長度</div><div class="v" id="length">1</div></div>
+  <div class="pill"><div class="k">最高分</div><div class="v" id="best">0</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <canvas id="board"></canvas>
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">貪食蛇</h2>
+      <p id="ovText">方向鍵 / WASD 控制方向，吃到食物增長，撞牆或咬到自己就結束。<br>金色食物稀有且分數更高！</p>
+      <button class="b-gold" id="ovBtn">開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>難度</h2>
+      <div class="diffrow">
+        <button class="b-ghost" id="diffEasy">簡單</button>
+        <button class="b-ghost active" id="diffNormal">普通</button>
+        <button class="b-ghost" id="diffHard">困難</button>
+      </div>
+    </div>
+    <div class="card-panel">
+      <h2>操作說明</h2>
+      <div class="hint">
+        <span class="k">↑↓←→</span>移動<br>
+        <span class="k">WASD</span>亦可<br>
+        <span class="k">空白</span>暫停<br>
+        手機可滑動螢幕轉向
+      </div>
+    </div>
+    <button class="b-ghost b-sm" id="pauseBtn">暫停</button>
+    <button class="b-green b-sm" id="restartBtn">重新開始</button>
+  </div>
+</div>
+
+<div class="touch">
+  <div class="row"><button id="tUp">▲</button></div>
+  <div class="row">
+    <button id="tLeft">◀</button>
+    <button id="tDown">▼</button>
+    <button id="tRight">▶</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const COLS=20, ROWS=20, CELL=24;
+const boardCv = document.getElementById('board');
+boardCv.width = COLS*CELL; boardCv.height = ROWS*CELL;
+const ctx = boardCv.getContext('2d');
+
+const DIFF = {
+  easy:   { start: 180, min: 100, step: 2 },
+  normal: { start: 140, min: 70,  step: 3 },
+  hard:   { start: 100, min: 50,  step: 4 },
+};
+
+let snake, dir, nextDir, food, foodIsGold, score, best, length;
+let tickMs, tickTimer, running, paused, gameOver, difficulty;
+
+best = Number(localStorage.getItem('snakeBest') || 0);
+
+function initState(){
+  const mid = Math.floor(COLS/2), midY = Math.floor(ROWS/2);
+  snake = [ {x:mid-1,y:midY}, {x:mid-2,y:midY}, {x:mid-3,y:midY} ];
+  dir = {x:1,y:0};
+  nextDir = {x:1,y:0};
+  score = 0;
+  length = snake.length;
+  tickMs = DIFF[difficulty].start;
+  running = false; paused = false; gameOver = false;
+  placeFood();
+  updateStats();
+}
+
+function placeFood(){
+  let cell;
+  do {
+    cell = { x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*ROWS) };
+  } while (snake.some(s => s.x===cell.x && s.y===cell.y));
+  food = cell;
+  foodIsGold = Math.random() < 0.15;
+}
+
+function updateStats(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('length').textContent = length;
+  document.getElementById('best').textContent = best;
+}
+
+function collide(x,y){
+  if (x<0 || x>=COLS || y<0 || y>=ROWS) return true;
+  return snake.some(s => s.x===x && s.y===y);
+}
+
+function step(){
+  if (!running || paused || gameOver) return;
+  dir = nextDir;
+  const head = snake[0];
+  const nx = head.x + dir.x, ny = head.y + dir.y;
+
+  if (collide(nx, ny)){
+    endGame();
+    return;
+  }
+
+  snake.unshift({x:nx, y:ny});
+
+  if (nx===food.x && ny===food.y){
+    score += foodIsGold ? 30 : 10;
+    length = snake.length;
+    tickMs = Math.max(DIFF[difficulty].min, tickMs - DIFF[difficulty].step);
+    placeFood();
+    restartTimer();
+  } else {
+    snake.pop();
+  }
+
+  updateStats();
+  draw();
+}
+
+function restartTimer(){
+  clearInterval(tickTimer);
+  tickTimer = setInterval(step, tickMs);
+}
+
+function endGame(){
+  running = false;
+  gameOver = true;
+  clearInterval(tickTimer);
+  if (score > best){
+    best = score;
+    localStorage.setItem('snakeBest', String(best));
+  }
+  document.getElementById('ovTitle').textContent = '遊戲結束';
+  document.getElementById('ovText').innerHTML = `本局分數 <b style="color:var(--gold)">${score}</b>，長度 ${length}。<br>再試一次！`;
+  document.getElementById('ovBtn').textContent = '重新開始';
+  document.getElementById('overlay').classList.add('show');
+  updateStats();
+}
+
+function draw(){
+  ctx.clearRect(0,0,boardCv.width,boardCv.height);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for(let x=1;x<COLS;x++){
+    ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,ROWS*CELL); ctx.stroke();
+  }
+  for(let y=1;y<ROWS;y++){
+    ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(COLS*CELL,y*CELL); ctx.stroke();
+  }
+
+  ctx.fillStyle = foodIsGold ? '#ffc84a' : '#ff5d73';
+  const fx = food.x*CELL, fy = food.y*CELL;
+  roundRect(fx+3, fy+3, CELL-6, CELL-6, 6);
+  ctx.fill();
+  if (foodIsGold){
+    ctx.strokeStyle = '#fff2c4'; ctx.lineWidth = 2;
+    roundRect(fx+3, fy+3, CELL-6, CELL-6, 6); ctx.stroke();
+  }
+
+  snake.forEach((s,i) => {
+    const isHead = i===0;
+    ctx.fillStyle = isHead ? '#3ddc97' : `rgba(61,220,151,${Math.max(0.4, 1 - i*0.03)})`;
+    roundRect(s.x*CELL+2, s.y*CELL+2, CELL-4, CELL-4, isHead ? 8 : 5);
+    ctx.fill();
+  });
+}
+
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function setDir(x,y){
+  if (dir.x === -x && dir.y === -y) return;
+  if (dir.x === x && dir.y === y) return;
+  nextDir = {x,y};
+}
+
+function startGame(){
+  document.getElementById('overlay').classList.remove('show');
+  initState();
+  running = true;
+  restartTimer();
+  draw();
+}
+
+function togglePause(){
+  if (!running || gameOver) return;
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? '繼續' : '暫停';
+}
+
+document.getElementById('ovBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+function setDifficulty(d, btnId){
+  difficulty = d;
+  document.querySelectorAll('.diffrow button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+  if (!running) { initState(); draw(); }
+}
+document.getElementById('diffEasy').addEventListener('click', ()=>setDifficulty('easy','diffEasy'));
+document.getElementById('diffNormal').addEventListener('click', ()=>setDifficulty('normal','diffNormal'));
+document.getElementById('diffHard').addEventListener('click', ()=>setDifficulty('hard','diffHard'));
+
+document.addEventListener('keydown', (e) => {
+  switch(e.key){
+    case 'ArrowUp': case 'w': case 'W': setDir(0,-1); e.preventDefault(); break;
+    case 'ArrowDown': case 's': case 'S': setDir(0,1); e.preventDefault(); break;
+    case 'ArrowLeft': case 'a': case 'A': setDir(-1,0); e.preventDefault(); break;
+    case 'ArrowRight': case 'd': case 'D': setDir(1,0); e.preventDefault(); break;
+    case ' ': togglePause(); e.preventDefault(); break;
+  }
+});
+
+document.getElementById('tUp').addEventListener('click', ()=>setDir(0,-1));
+document.getElementById('tDown').addEventListener('click', ()=>setDir(0,1));
+document.getElementById('tLeft').addEventListener('click', ()=>setDir(-1,0));
+document.getElementById('tRight').addEventListener('click', ()=>setDir(1,0));
+
+let touchStart = null;
+boardCv.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  touchStart = { x: t.clientX, y: t.clientY };
+}, {passive:true});
+boardCv.addEventListener('touchend', (e) => {
+  if (!touchStart) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) > 20){
+    if (Math.abs(dx) > Math.abs(dy)) setDir(dx>0?1:-1, 0);
+    else setDir(0, dy>0?1:-1);
+  }
+  touchStart = null;
+}, {passive:true});
+
+difficulty = 'normal';
+initState();
+draw();
+</script>
+</body>
+</html>

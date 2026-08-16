@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>勇者傳說 — Hero Legend RPG</title>
+<style>
+:root{
+  --bg:#140f1f; --panel:#231a35; --panel2:#2e2148; --line:#493a68;
+  --txt:#f1edff; --dim:#a595c9; --gold:#ffcf5c; --green:#4ade80; --red:#ff5d73; --blue:#60a5fa; --purple:#b388ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#2a1f4d 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding-bottom:24px;overflow-x:hidden}
+#app{max-width:760px;margin:0 auto;padding:14px 12px 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.panel h2{font-size:12px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #ffffff10}
+.row:last-child{border-bottom:none}
+.row>span:first-child{color:var(--dim)}
+.flex{display:flex;gap:8px;flex-wrap:wrap}
+.grow{flex:1}
+.center{text-align:center}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.7;margin-top:8px}
+.hint b{color:var(--gold)}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:var(--txt);background:var(--panel2);transition:transform .1s}
+button:active{transform:scale(.96)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.b-gold{background:linear-gradient(135deg,#ffcf5c,#ff9a3c);color:#241200}
+.b-green{background:linear-gradient(135deg,#4ade80,#20a86a);color:#04231a}
+.b-ghost{background:transparent;border:1px solid var(--line)}
+.b-red{background:linear-gradient(135deg,#ff5d73,#d13a53)}
+.b-purple{background:linear-gradient(135deg,#b388ff,#7c4dff)}
+.b-sm{padding:6px 10px;font-size:12px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 16px}
+.brand{font-weight:800;font-size:18px;letter-spacing:1px}
+.brand span{color:var(--gold)}
+.curbar{display:flex;gap:10px;font-size:12px}
+.cur{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 10px;display:flex;gap:4px;align-items:center}
+.bar-bg{background:#00000055;border-radius:8px;height:10px;overflow:hidden;margin:4px 0}
+.bar-fill{height:100%;border-radius:8px}
+.hpbar{background:#00000055;border-radius:6px;height:8px;overflow:hidden;margin-top:3px}
+.hpfill{height:100%;background:var(--green)}
+.mpfill{height:100%;background:var(--blue)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pick-card{background:var(--panel2);border:2px solid var(--line);border-radius:14px;padding:14px;text-align:center;cursor:pointer}
+.pick-card.sel{border-color:var(--gold)}
+.pick-card .em{font-size:36px}
+.modal-bg{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;max-width:440px;width:100%;max-height:86vh;overflow:auto}
+.modal h3{margin-bottom:10px;font-size:15px}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#221a3a;border:1px solid var(--line);
+  padding:9px 16px;border-radius:10px;font-size:13px;z-index:200;box-shadow:0 6px 20px #0008}
+.member-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+.member-card.dead{opacity:.4}
+.member-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700}
+.dgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-width:320px;margin:10px auto}
+.tile{aspect-ratio:1;background:#00000040;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;position:relative}
+.tile.wall{background:#00000080}
+.tile.here{box-shadow:0 0 0 2px var(--gold) inset}
+.movepad{display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:48px 48px 48px;gap:6px;justify-content:center;margin:14px auto}
+.movepad button{padding:0;font-size:18px}
+.skill-btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:left;width:100%}
+.skill-btn .mp{font-size:11px;color:var(--dim)}
+.log{background:#00000040;border-radius:8px;padding:8px;font-size:12px;line-height:1.7;max-height:120px;overflow-y:auto;margin:8px 0}
+.zone-item{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:6px}
+.tab2{display:flex;gap:6px;margin-bottom:10px}
+.tab2 button{flex:1}
+.tab2 button.active{background:var(--gold);color:#241200}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   資料層：職業 / 技能 / 裝備 / 道具 / 地區
+   ============================================================ */
+const CLASSES = {
+  warrior:{name:'戰士',emoji:'🗡️',desc:'高生命與防禦，擅長近戰輸出與坦傷。',
+    base:{hp:36,mp:10,atk:10,def:9,mag:2,spd:7},
+    grow:{hp:8,mp:1.2,atk:2.2,def:2,mag:0.3,spd:1.1},
+    skills:[
+      {id:'w1',name:'猛擊',lv:1,mp:4,power:1.8,type:'phys',target:'single',desc:'單體物理攻擊，威力180%'},
+      {id:'w2',name:'破甲斬',lv:5,mp:7,power:1.4,type:'phys',target:'single',shred:true,desc:'單體攻擊並降低敵方防禦'},
+      {id:'w3',name:'怒濤連斬',lv:10,mp:12,power:1.0,type:'phys',target:'all',desc:'對全體敵人造成物理傷害'},
+    ]},
+  mage:{name:'法師',emoji:'🔮',desc:'高魔力與爆發，脆皮但傷害驚人。',
+    base:{hp:22,mp:24,atk:4,def:4,mag:12,spd:8},
+    grow:{hp:4.5,mp:4.5,atk:0.6,def:1,mag:2.6,spd:1.1},
+    skills:[
+      {id:'m1',name:'火球術',lv:1,mp:5,power:2.0,type:'mag',target:'single',desc:'單體魔法攻擊，威力200%'},
+      {id:'m2',name:'冰霜箭',lv:5,mp:8,power:1.7,type:'mag',target:'single',slow:true,desc:'單體魔法攻擊並降低敵方速度'},
+      {id:'m3',name:'爆裂魔法',lv:10,mp:16,power:1.3,type:'mag',target:'all',desc:'對全體敵人造成魔法傷害'},
+    ]},
+  rogue:{name:'遊俠',emoji:'🏹',desc:'高速度與爆擊，靈活的多段攻擊者。',
+    base:{hp:27,mp:12,atk:9,def:6,mag:3,spd:12},
+    grow:{hp:5.5,mp:1.8,atk:2,def:1.2,mag:0.5,spd:1.9},
+    skills:[
+      {id:'r1',name:'迅捷突刺',lv:1,mp:4,power:1.6,type:'phys',target:'single',crit:true,desc:'單體攻擊，高爆擊率'},
+      {id:'r2',name:'毒刃',lv:5,mp:6,power:1.2,type:'phys',target:'single',poison:true,desc:'單體攻擊並附加中毒效果'},
+      {id:'r3',name:'影分身連擊',lv:10,mp:13,power:0.75,type:'phys',target:'random3',desc:'隨機攻擊敵人三次'},
+    ]},
+  priest:{name:'牧師',emoji:'✨',desc:'治療與支援專家，隊伍存續的關鍵。',
+    base:{hp:25,mp:20,atk:5,def:6,mag:10,spd:7.5},
+    grow:{hp:5,mp:3.8,atk:1,def:1.3,mag:2.3,spd:1.1},
+    skills:[
+      {id:'p1',name:'治癒術',lv:1,mp:5,power:1.4,type:'heal',target:'singleAlly',desc:'治療單一隊友HP'},
+      {id:'p2',name:'聖光斬',lv:5,mp:6,power:1.3,type:'mag',target:'single',desc:'單體神聖魔法攻擊'},
+      {id:'p3',name:'群體治療',lv:10,mp:14,power:1.0,type:'heal',target:'allAlly',desc:'治療所有隊友HP'},
+    ]},
+};
+const COMPANIONS = {
+  luna:{name:'露娜',classId:'priest',emoji:'👧',intro:'「我是露娜，一名見習牧師……讓我加入你們，一起冒險吧！」'},
+  kain:{name:'凱因',classId:'warrior',emoji:'🧔',intro:'「我是凱因，曾是王國騎士。這副身軀，就用來為同伴擋下傷害吧。」'},
+};
+const WEAPONS = [
+  {id:'wp1',name:'鐵劍',atk:5,mag:1,cost:80,tier:1},
+  {id:'wp2',name:'秘銀劍',atk:10,mag:2,cost:220,tier:2},
+  {id:'wp3',name:'龍牙劍',atk:16,mag:4,cost:500,tier:3},
+  {id:'wp4',name:'聖光聖劍',atk:24,mag:8,cost:1000,tier:4},
+];
+const ARMORS = [
+  {id:'ar1',name:'皮甲',def:4,hp:10,cost:70,tier:1},
+  {id:'ar2',name:'鎖子甲',def:8,hp:24,cost:200,tier:2},
+  {id:'ar3',name:'騎士鎧甲',def:14,hp:45,cost:480,tier:3},
+  {id:'ar4',name:'聖光鎧甲',def:22,hp:80,cost:950,tier:4},
+];
+const ITEMS = {
+  potion:{name:'藥草',emoji:'🌿',heal:30,cost:15,desc:'恢復30點HP'},
+  hipotion:{name:'高級藥草',emoji:'🍀',heal:80,cost:40,desc:'恢復80點HP'},
+  ether:{name:'魔力藥水',emoji:'💧',mp:20,cost:20,desc:'恢復20點MP'},
+  elixir:{name:'複合藥劑',emoji:'⚗️',heal:40,mp:20,cost:50,desc:'恢復40HP與20MP'},
+  phoenix:{name:'鳳凰羽毛',emoji:'🪶',revive:0.5,cost:100,desc:'復活倒下的隊友(50%HP)'},
+};
+const ROLE_MUL = {
+  grunt:{hpM:0.8,atkM:0.9,defM:0.8,spdM:1,magM:0.3},
+  brute:{hpM:1.35,atkM:1.15,defM:1.25,spdM:0.8,magM:0.2},
+  caster:{hpM:0.7,atkM:0.55,defM:0.7,spdM:1,magM:1.3},
+  boss:{hpM:3.6,atkM:1.35,defM:1.35,spdM:1.05,magM:1.25},
+};
+function genMonster(name,emoji,lv,role){
+  const m=ROLE_MUL[role];
+  const hp=Math.round((20+7*lv)*m.hpM);
+  return {name,emoji,lv,role,hp,maxHp:hp,
+    atk:Math.round((6+2*lv)*m.atkM), def:Math.round((5+1.8*lv)*m.defM),
+    mag:Math.round((4+1.8*lv)*m.magM), spd:Math.round((6+0.9*lv)*m.spdM),
+    exp:Math.round(8+lv*3), gold:Math.round(6+lv*4), defending:false, poisoned:0};
+}
+const ZONES = [
+  {name:'新手森林',lv:3,rows:['#####','#S.C#','#.#.#','#T.B#','#####'],
+    monsterDefs:[{name:'野狼',emoji:'🐺',role:'grunt'},{name:'哥布林',emoji:'👺',role:'grunt'}],
+    boss:{name:'哥布林王',emoji:'👹',lv:6,role:'boss'}, companion:'luna',
+    intro:'村莊近郊的森林最近魔物橫行，長老拜託你前去討伐，順便尋找失蹤的旅人。',
+    outro:'哥布林王倒下了，森林恢復了平靜。但長老提到，更深處的礦坑傳來不祥的震動……'},
+  {name:'荒廢礦坑',lv:8,rows:['#####','#S.T#','#.#.#','#U.B#','#####'],
+    monsterDefs:[{name:'石巨人',emoji:'🗿',role:'brute'},{name:'礦坑蝙蝠',emoji:'🦇',role:'grunt'}],
+    boss:{name:'礦坑霸主',emoji:'🪨',lv:11,role:'boss'}, companion:null,
+    intro:'廢棄多年的礦坑深處傳出巨響，據說裡面藏著遠古的怪物。',
+    outro:'礦坑霸主轟然倒地，坑道深處露出一道通往地下墓穴的階梯……'},
+  {name:'亡靈墓穴',lv:13,rows:['#####','#S.D#','#.#.#','#T.B#','#####'],
+    monsterDefs:[{name:'骷髏兵',emoji:'💀',role:'grunt'},{name:'幽魂',emoji:'👻',role:'caster'}],
+    boss:{name:'亡靈君主',emoji:'☠️',lv:17,role:'boss'}, companion:'kain',
+    intro:'古老墓穴中亡靈甦醒，你必須阻止亡靈君主喚醒更多的不死軍團。',
+    outro:'亡靈君主化為塵埃消散。遠方的火山開始劇烈噴發，似乎與此事有關……'},
+  {name:'熔岩地帶',lv:20,rows:['#####','#S.T#','#.#.#','#H.B#','#####'],
+    monsterDefs:[{name:'熔岩魔',emoji:'🌋',role:'brute'},{name:'火蜥蜴',emoji:'🦎',role:'grunt'},{name:'炎靈',emoji:'🔥',role:'caster'}],
+    boss:{name:'炎獄魔王',emoji:'👹',lv:25,role:'boss'}, companion:null,
+    intro:'熾熱的熔岩地帶中，炎獄魔王正在集結軍隊，準備進攻天界。',
+    outro:'炎獄魔王被擊敗，天空裂開一道通往神殿的光之階梯，你聽見了神聖的呼喚。'},
+  {name:'天空神殿',lv:27,rows:['#####','#S.H#','#.#.#','#T.B#','#####'],
+    monsterDefs:[{name:'天使守衛',emoji:'👼',role:'brute'},{name:'風之精靈',emoji:'🧚',role:'caster'}],
+    boss:{name:'墮落天神',emoji:'😈',lv:33,role:'boss'}, companion:null,
+    intro:'傳說中的天空神殿終於出現在眼前，墮落天神就在最深處等著你。',
+    outro:'墮落天神灰飛煙滅，大陸終於恢復和平。你的名字，將成為勇者傳說，代代流傳。'},
+];
+
+/* ============================================================
+   狀態層
+   ============================================================ */
+let S=null;
+const SAVE_KEY='hero_legend_save_v1';
+function freshState(){
+  return {
+    started:false, name:'勇者', classId:null,
+    gold:120, maxZoneUnlocked:0,
+    zoneState: ZONES.map(()=>({cleared:false, consumed:{}})),
+    unlockedWeapons:[], unlockedArmors:[],
+    inventory:{potion:3, ether:1},
+    party:[],
+  };
+}
+function load(){
+  try{ const raw=localStorage.getItem(SAVE_KEY); S= raw?JSON.parse(raw):freshState(); }
+  catch(e){ S=freshState(); }
+  if(!S.zoneState) S.zoneState=ZONES.map(()=>({cleared:false,consumed:{}}));
+}
+function save(){ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }
+function resetGame(){ localStorage.removeItem(SAVE_KEY); S=freshState(); uiScreen='title'; render(); }
+
+function expToNext(level){ return Math.round(25*Math.pow(level,1.4)); }
+function characterStats(mem){
+  const cls=CLASSES[mem.classId]; const lv=mem.level;
+  const w = mem.equip.weapon ? WEAPONS.find(w=>w.id===mem.equip.weapon) : null;
+  const a = mem.equip.armor ? ARMORS.find(a=>a.id===mem.equip.armor) : null;
+  const maxHp = Math.round(cls.base.hp + cls.grow.hp*(lv-1)) + (a?a.hp:0);
+  const maxMp = Math.round(cls.base.mp + cls.grow.mp*(lv-1));
+  const atk = Math.round(cls.base.atk + cls.grow.atk*(lv-1)) + (w?w.atk:0);
+  const def = Math.round(cls.base.def + cls.grow.def*(lv-1)) + (a?a.def:0);
+  const mag = Math.round(cls.base.mag + cls.grow.mag*(lv-1)) + (w?w.mag:0);
+  const spd = Math.round(cls.base.spd + cls.grow.spd*(lv-1));
+  return {maxHp,maxMp,atk,def,mag,spd};
+}
+function newMember(classId, name, emoji, level){
+  const mem={uid:'m'+Math.random().toString(36).slice(2,9), classId, name, emoji, level:level||1, exp:0,
+    equip:{weapon:null,armor:null}};
+  const st=characterStats(mem);
+  mem.hp=st.maxHp; mem.mp=st.maxMp;
+  return mem;
+}
+function addExpToParty(amt){
+  const levelUps=[];
+  for(const mem of S.party){
+    mem.exp+=amt;
+    let leveled=false;
+    while(mem.exp>=expToNext(mem.level) && mem.level<40){
+      mem.exp-=expToNext(mem.level); mem.level++; leveled=true;
+    }
+    if(leveled){
+      const st=characterStats(mem);
+      mem.hp=st.maxHp; mem.mp=st.maxMp;
+      levelUps.push(mem.name);
+    }
+  }
+  return levelUps;
+}
+
+/* ============================================================
+   UI 共用
+   ============================================================ */
+let uiScreen='title'; // title, create, town, shop, inn, party, storyLog, dungeon, battle
+let dungeon=null; // {zoneIdx, pos:{r,c}}
+let battle=null;
+let pendingAction=null;
+
+function toast(msg){
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  document.getElementById('toastRoot').appendChild(el);
+  setTimeout(()=>el.remove(),2200);
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function openModal(html){ document.getElementById('modalRoot').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+
+function render(){
+  const app=document.getElementById('app');
+  if(!S.started){ app.innerHTML=viewTitleOrCreate(); return; }
+  app.innerHTML=`
+    <div class="topbar">
+      <div class="brand">勇者<span>傳說</span></div>
+      <div class="curbar"><div class="cur">💰 ${S.gold.toLocaleString()}</div></div>
+    </div>
+    <div id="pages"></div>`;
+  renderPage();
+}
+function renderPage(){
+  const pages=document.getElementById('pages'); if(!pages) return;
+  const curEl=document.querySelector('.curbar .cur');
+  if(curEl) curEl.textContent=`💰 ${S.gold.toLocaleString()}`;
+  if(uiScreen==='town') pages.innerHTML=viewTown();
+  else if(uiScreen==='shop') pages.innerHTML=viewShop();
+  else if(uiScreen==='inn') pages.innerHTML=viewInn();
+  else if(uiScreen==='party') pages.innerHTML=viewParty();
+  else if(uiScreen==='storyLog') pages.innerHTML=viewStoryLog();
+  else if(uiScreen==='zones') pages.innerHTML=viewZoneSelect();
+  else if(uiScreen==='dungeon') pages.innerHTML=viewDungeon();
+  else if(uiScreen==='battle') pages.innerHTML=viewBattle();
+  else pages.innerHTML=viewTown();
+}
+function goto(screen){ uiScreen=screen; renderPage(); }
+
+/* ============================================================
+   標題 / 建立角色
+   ============================================================ */
+let createPick=null;
+function viewTitleOrCreate(){
+  if(uiScreen!=='create'){
+    return `
+    <div style="padding:60px 20px;text-align:center">
+      <div style="font-size:40px;margin-bottom:6px">⚔️</div>
+      <div style="font-size:26px;font-weight:800;margin-bottom:4px">勇者<span style="color:var(--gold)">傳說</span></div>
+      <div class="hint" style="margin-bottom:26px">一段拯救大陸的回合制冒險</div>
+      <div class="flex" style="justify-content:center">
+        <button class="b-gold" onclick="uiScreen='create';render()">🗡️ 開始新的冒險</button>
+        ${localStorage.getItem(SAVE_KEY)?`<button class="b-ghost" onclick="if(confirm('確定要清除進度並重新開始嗎？'))resetGame()">重新開始</button>`:''}
+      </div>
+    </div>`;
+  }
+  return `
+  <div style="padding:20px 12px">
+    <div class="panel">
+      <h2>選擇職業</h2>
+      <div class="grid2">
+        ${Object.entries(CLASSES).map(([id,c])=>`
+          <div class="pick-card ${createPick===id?'sel':''}" onclick="createPick='${id}';render()">
+            <div class="em">${c.emoji}</div>
+            <div style="font-weight:700;margin-top:6px">${c.name}</div>
+            <div class="hint">${c.desc}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="panel">
+      <h2>勇者之名</h2>
+      <input id="nameInput" value="${S.name}" maxlength="8" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font-size:14px">
+    </div>
+    <button class="b-gold grow" style="width:100%" ${createPick?'':'disabled'} onclick="confirmCreate()">⚔️ 啟程冒險</button>
+  </div>`;
+}
+function confirmCreate(){
+  if(!createPick) return;
+  const nameEl=document.getElementById('nameInput');
+  S.name=(nameEl && nameEl.value.trim())?nameEl.value.trim():'勇者';
+  S.classId=createPick;
+  const player=newMember(createPick, S.name, CLASSES[createPick].emoji, 1);
+  player.isPlayer=true;
+  S.party=[player];
+  S.started=true;
+  save();
+  uiScreen='town';
+  render();
+  toast(`歡迎踏上冒險之旅，${S.name}！`);
+}
+
+/* ============================================================
+   城鎮
+   ============================================================ */
+function viewTown(){
+  const clearedCount=S.zoneState.filter(z=>z.cleared).length;
+  return `
+    <div class="panel center">
+      <div style="font-size:30px">🏰</div>
+      <div style="font-weight:800;font-size:16px;margin-top:4px">王城 · 冒險者公會</div>
+      <div class="hint">已討伐 ${clearedCount} / ${ZONES.length} 個地區的魔物首領</div>
+    </div>
+    <div class="grid2">
+      <button class="b-purple" onclick="goto('zones')">🗺️ 出發冒險</button>
+      <button class="b-green" onclick="goto('inn')">🛏️ 旅店(治療)</button>
+      <button class="b-gold" onclick="goto('shop')">🏪 商店</button>
+      <button class="b-ghost" onclick="goto('party')">🎒 隊伍/裝備</button>
+    </div>
+    <button class="b-ghost grow" style="width:100%;margin-top:8px" onclick="goto('storyLog')">📜 冒險紀錄</button>
+    <div class="hint" style="margin-top:14px">${clearedCount>=ZONES.length?'✨ 你已完成大陸的傳說，仍可自由重新挑戰各地區累積金幣與經驗。':'前往冒險公會的地圖，挑戰下一個地區吧。'}</div>
+  `;
+}
+
+/* ============================================================
+   旅店
+   ============================================================ */
+function viewInn(){
+  return `
+    <div class="panel">
+      <h2>🛏️ 旅店</h2>
+      <div class="hint">入住旅店可完全恢復隊伍所有成員的HP與MP。</div>
+      <button class="b-green grow" style="margin-top:10px" onclick="innRest()">入住休息 (免費)</button>
+    </div>
+    <button class="b-ghost grow" style="width:100%" onclick="goto('town')">← 返回城鎮</button>
+  `;
+}
+function innRest(){
+  for(const mem of S.party){ const st=characterStats(mem); mem.hp=st.maxHp; mem.mp=st.maxMp; }
+  save(); toast('隊伍已完全恢復！'); renderPage();
+}
+
+/* ============================================================
+   商店
+   ============================================================ */
+let shopTab='item';
+function viewShop(){
+  return `
+    <div class="panel">
+      <h2>🏪 商店</h2>
+      <div class="tab2">
+        <button class="${shopTab==='item'?'active':''}" onclick="shopTab='item';renderPage()">道具</button>
+        <button class="${shopTab==='weapon'?'active':''}" onclick="shopTab='weapon';renderPage()">武器</button>
+        <button class="${shopTab==='armor'?'active':''}" onclick="shopTab='armor';renderPage()">防具</button>
+      </div>
+      ${shopTab==='item'?shopItemList():shopTab==='weapon'?shopEquipList(WEAPONS,'unlockedWeapons'):shopEquipList(ARMORS,'unlockedArmors')}
+    </div>
+    <button class="b-ghost grow" style="width:100%" onclick="goto('town')">← 返回城鎮</button>
+  `;
+}
+function shopItemList(){
+  return Object.entries(ITEMS).map(([id,it])=>`
+    <div class="row">
+      <span>${it.emoji} ${it.name}　<span class="hint" style="display:inline">${it.desc}</span></span>
+      <button class="b-gold b-sm" onclick="buyItem('${id}')">💰${it.cost}</button>
+    </div>`).join('');
+}
+function shopEquipList(list, unlockedKey){
+  const clearedCount=S.zoneState.filter(z=>z.cleared).length;
+  return list.map(eq=>{
+    const owned=S[unlockedKey].includes(eq.id);
+    const locked=eq.tier-1>clearedCount;
+    const statTxt = eq.atk!==undefined ? `攻${eq.atk} 魔${eq.mag}` : `防${eq.def} HP+${eq.hp}`;
+    return `<div class="row">
+      <span>${eq.name}　<span class="hint" style="display:inline">${statTxt}</span></span>
+      ${owned?'<span style="color:var(--green);font-size:12px">已擁有</span>'
+        :locked?`<span class="hint">討伐${eq.tier-1}個首領解鎖</span>`
+        :`<button class="b-gold b-sm" onclick="buyEquip('${eq.id}','${unlockedKey}')">💰${eq.cost}</button>`}
+    </div>`;
+  }).join('');
+}
+function buyItem(id){
+  const it=ITEMS[id];
+  if(S.gold<it.cost){ toast('金幣不足'); return; }
+  S.gold-=it.cost; S.inventory[id]=(S.inventory[id]||0)+1;
+  save(); toast(`購買了 ${it.name}`); renderPage();
+}
+function buyEquip(id, unlockedKey){
+  const list = unlockedKey==='unlockedWeapons'?WEAPONS:ARMORS;
+  const eq=list.find(e=>e.id===id);
+  if(S.gold<eq.cost){ toast('金幣不足'); return; }
+  S.gold-=eq.cost; S[unlockedKey].push(id);
+  save(); toast(`購買了 ${eq.name}！可到隊伍頁面裝備`); renderPage();
+}
+
+/* ============================================================
+   隊伍 / 裝備
+   ============================================================ */
+function viewParty(){
+  return `
+    <div class="panel">
+      <h2>🎒 隊伍</h2>
+      ${S.party.map(mem=>partyMemberBlock(mem)).join('')}
+    </div>
+    <button class="b-ghost grow" style="width:100%" onclick="goto('town')">← 返回城鎮</button>
+  `;
+}
+function partyMemberBlock(mem){
+  const st=characterStats(mem);
+  const cls=CLASSES[mem.classId];
+  const w=mem.equip.weapon?WEAPONS.find(x=>x.id===mem.equip.weapon):null;
+  const a=mem.equip.armor?ARMORS.find(x=>x.id===mem.equip.armor):null;
+  return `
+  <div class="member-card">
+    <div class="member-head"><span>${mem.emoji} ${mem.name}（${cls.name}）Lv.${mem.level}</span><span class="hint">EXP ${mem.exp}/${expToNext(mem.level)}</span></div>
+    <div class="hint">HP ${mem.hp}/${st.maxHp}　MP ${mem.mp}/${st.maxMp}　攻${st.atk} 防${st.def} 魔${st.mag} 速${st.spd}</div>
+    <div class="flex" style="margin-top:8px">
+      <button class="b-ghost b-sm" onclick="openEquipPicker('${mem.uid}','weapon')">武器：${w?w.name:'（未裝備）'}</button>
+      <button class="b-ghost b-sm" onclick="openEquipPicker('${mem.uid}','armor')">防具：${a?a.name:'（未裝備）'}</button>
+    </div>
+  </div>`;
+}
+function openEquipPicker(uid, slot){
+  const mem=S.party.find(m=>m.uid===uid);
+  const list = slot==='weapon'?WEAPONS:ARMORS;
+  const unlockedKey = slot==='weapon'?'unlockedWeapons':'unlockedArmors';
+  const owned=list.filter(e=>S[unlockedKey].includes(e.id));
+  openModal(`
+    <h3>選擇${slot==='weapon'?'武器':'防具'} — ${mem.name}</h3>
+    ${owned.length===0?`<div class="hint">尚未擁有任何${slot==='weapon'?'武器':'防具'}，請先到商店購買。</div>`:''}
+    <div class="flex" style="flex-direction:column">
+      <button class="b-ghost grow" style="margin-bottom:6px" onclick="setEquip('${uid}','${slot}',null)">卸下裝備</button>
+      ${owned.map(eq=>`<button class="b-ghost grow" style="margin-bottom:6px;text-align:left" onclick="setEquip('${uid}','${slot}','${eq.id}')">${eq.name}　${eq.atk!==undefined?`攻${eq.atk} 魔${eq.mag}`:`防${eq.def} HP+${eq.hp}`}</button>`).join('')}
+    </div>
+    <button class="b-ghost grow" style="margin-top:8px" onclick="closeModal()">關閉</button>
+  `);
+}
+function setEquip(uid, slot, eqId){
+  const mem=S.party.find(m=>m.uid===uid);
+  mem.equip[slot]=eqId;
+  const st=characterStats(mem);
+  mem.hp=Math.min(mem.hp, st.maxHp); mem.mp=Math.min(mem.mp, st.maxMp);
+  save(); closeModal(); renderPage();
+}
+
+/* ============================================================
+   冒險紀錄
+   ============================================================ */
+function viewStoryLog(){
+  return `
+    <div class="panel">
+      <h2>📜 冒險紀錄</h2>
+      ${ZONES.map((z,i)=>{
+        const st=S.zoneState[i];
+        if(i>S.maxZoneUnlocked) return `<div class="row"><span>???</span><span class="hint">尚未抵達</span></div>`;
+        return `<div class="hint" style="margin-bottom:10px"><b>${z.name}</b><br>${st.cleared?z.outro:z.intro}</div>`;
+      }).join('')}
+    </div>
+    <button class="b-ghost grow" style="width:100%" onclick="goto('town')">← 返回城鎮</button>
+  `;
+}
+
+/* ============================================================
+   地區選擇
+   ============================================================ */
+function viewZoneSelect(){
+  return `
+    <div class="panel">
+      <h2>🗺️ 選擇地區</h2>
+      ${ZONES.map((z,i)=>{
+        const locked=i>S.maxZoneUnlocked;
+        const cleared=S.zoneState[i].cleared;
+        return `<div class="zone-item">
+          <div>
+            <div style="font-weight:700;font-size:13px">${cleared?'✅ ':''}${locked?'🔒 ???':z.name}</div>
+            ${!locked?`<div class="hint" style="margin-top:2px">建議等級 ${z.lv}　首領 Lv.${z.boss.lv}</div>`:''}
+          </div>
+          <button class="${locked?'b-ghost':'b-purple'} b-sm" ${locked?'disabled':''} onclick="enterDungeon(${i})">${locked?'未解鎖':'進入'}</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="b-ghost grow" style="width:100%" onclick="goto('town')">← 返回城鎮</button>
+  `;
+}
+function enterDungeon(zoneIdx){
+  if(S.party.some(m=>m.hp<=0)){ toast('請先到旅店治療倒下的隊友！'); return; }
+  dungeon={zoneIdx, pos:{r:1,c:1}};
+  uiScreen='dungeon';
+  const z=ZONES[zoneIdx];
+  if(!S.zoneState[zoneIdx].cleared){
+    openModal(`<h3>${z.name}</h3><div class="hint">${z.intro}</div><button class="b-gold grow" style="margin-top:12px" onclick="closeModal()">出發！</button>`);
+  }
+  renderPage();
+}
+
+/* ============================================================
+   地城探索
+   ============================================================ */
+function tileAt(zoneIdx, r, c){
+  const rows=ZONES[zoneIdx].rows;
+  if(r<0||c<0||r>=rows.length||c>=rows[0].length) return '#';
+  const key=r+','+c;
+  if(S.zoneState[zoneIdx].consumed[key]) return '.';
+  return rows[r][c];
+}
+function viewDungeon(){
+  const z=ZONES[dungeon.zoneIdx];
+  const rows=z.rows;
+  let grid='<div class="dgrid">';
+  for(let r=0;r<rows.length;r++){
+    for(let c=0;c<rows[0].length;c++){
+      const t=tileAt(dungeon.zoneIdx,r,c);
+      const isHere = dungeon.pos.r===r && dungeon.pos.c===c;
+      const icon = t==='#'?'':t==='S'?'🚩':t==='B'?(S.zoneState[dungeon.zoneIdx].cleared?'💠':'👹'):
+        t==='T'||t==='U'?'💰':t==='H'?'⛲':t==='C'?'👧':t==='D'?'🧔':'';
+      grid+=`<div class="tile ${t==='#'?'wall':''} ${isHere?'here':''}">${isHere?'🧍':icon}</div>`;
+    }
+  }
+  grid+='</div>';
+  return `
+    <div class="panel center">
+      <h2>${z.name}</h2>
+      ${grid}
+      <div class="movepad">
+        <div></div><button onclick="moveDungeon(-1,0)">↑</button><div></div>
+        <button onclick="moveDungeon(0,-1)">←</button><div></div><button onclick="moveDungeon(0,1)">→</button>
+        <div></div><button onclick="moveDungeon(1,0)">↓</button><div></div>
+      </div>
+      <div class="hint">🚩起點　👹首領　💰寶箱　⛲神龕　🧍你</div>
+    </div>
+    <button class="b-ghost grow" style="width:100%" onclick="dungeon=null;goto('town')">🚪 返回城鎮</button>
+  `;
+}
+function moveDungeon(dr,dc){
+  const nr=dungeon.pos.r+dr, nc=dungeon.pos.c+dc;
+  const t=tileAt(dungeon.zoneIdx, nr, nc);
+  if(t==='#'){ toast('前方是牆壁'); return; }
+  dungeon.pos={r:nr,c:nc};
+  const zoneIdx=dungeon.zoneIdx, z=ZONES[zoneIdx], key=nr+','+nc;
+  const consumed=S.zoneState[zoneIdx].consumed;
+  if(t==='T'||t==='U'){
+    consumed[key]=true; save();
+    const goldGain=30+zoneIdx*20;
+    S.gold+=goldGain; save();
+    openModal(`<h3>💰 發現寶箱！</h3><div class="hint">獲得 ${goldGain} 金幣。</div><button class="b-gold grow" style="margin-top:10px" onclick="closeModal()">收下</button>`);
+    renderPage(); return;
+  }
+  if(t==='H'){
+    consumed[key]=true; save();
+    for(const mem of S.party){ const st=characterStats(mem); mem.hp=st.maxHp; mem.mp=st.maxMp; }
+    save();
+    openModal(`<h3>⛲ 神聖的泉水</h3><div class="hint">隊伍HP與MP完全恢復了！</div><button class="b-gold grow" style="margin-top:10px" onclick="closeModal()">繼續前進</button>`);
+    renderPage(); return;
+  }
+  if((t==='C'||t==='D') && z.companion){
+    const cid=z.companion, comp=COMPANIONS[cid];
+    if(!S.party.some(m=>m.compId===cid)){
+      consumed[key]=true; save();
+      openModal(`<h3>${comp.emoji} ${comp.name}</h3><div class="hint">${comp.intro}</div><button class="b-green grow" style="margin-top:10px" onclick="recruitCompanion('${cid}')">邀請加入隊伍</button>`);
+      renderPage(); return;
+    }
+  }
+  if(t==='B'){
+    if(!S.zoneState[zoneIdx].cleared){ startBattle(zoneIdx, true); return; }
+  } else if(t==='.' || t==='S'){
+    if(t!=='S' && Math.random()<0.35){ startBattle(zoneIdx, false); return; }
+  }
+  renderPage();
+}
+function recruitCompanion(cid){
+  const comp=COMPANIONS[cid];
+  const lv = S.party[0] ? Math.max(1, S.party[0].level) : 1;
+  const mem=newMember(comp.classId, comp.name, comp.emoji, lv);
+  mem.compId=cid;
+  S.party.push(mem);
+  save(); closeModal();
+  toast(`${comp.name} 加入了隊伍！`);
+  renderPage();
+}
+
+/* ============================================================
+   戰鬥系統
+   ============================================================ */
+function buildEnemies(zoneIdx, isBoss){
+  const z=ZONES[zoneIdx];
+  if(isBoss){
+    const b=z.boss;
+    return [genMonster(b.name,b.emoji,b.lv,b.role)];
+  }
+  const count = 1+Math.floor(Math.random()*2);
+  const enemies=[];
+  for(let i=0;i<count;i++){
+    const def=z.monsterDefs[Math.floor(Math.random()*z.monsterDefs.length)];
+    const lvOff=Math.floor(Math.random()*3)-1;
+    enemies.push(genMonster(def.name,def.emoji,Math.max(1,z.lv+lvOff),def.role));
+  }
+  return enemies;
+}
+function startBattle(zoneIdx, isBoss){
+  battle={
+    zoneIdx, isBoss,
+    enemies: buildEnemies(zoneIdx,isBoss).map((e,i)=>({...e, uid:'e'+i})),
+    log:[isBoss?`⚔️ ${ZONES[zoneIdx].boss.name} 出現了！`:'⚔️ 遭遇怪物！'],
+    over:false, queue:[], qIdx:0, round:0, awaiting:null,
+  };
+  for(const mem of S.party) mem._defending=false;
+  uiScreen='battle';
+  buildRound();
+  advanceTurn();
+}
+function battleLog(msg){ battle.log.push(msg); if(battle.log.length>50) battle.log.shift(); }
+function aliveAllies(){ return S.party.filter(m=>m.hp>0); }
+function aliveEnemies(){ return battle.enemies.filter(e=>e.hp>0); }
+function buildRound(){
+  const combatants=[...S.party.filter(m=>m.hp>0).map(m=>({uid:m.uid,isEnemy:false,spd:characterStats(m).spd})),
+    ...battle.enemies.filter(e=>e.hp>0).map(e=>({uid:e.uid,isEnemy:true,spd:e.spd}))];
+  combatants.sort((a,b)=> (b.spd+Math.random()*3) - (a.spd+Math.random()*3));
+  battle.queue=combatants.map(c=>c.uid);
+  battle.qIdx=0; battle.round++;
+}
+function findAlly(uid){ return S.party.find(m=>m.uid===uid); }
+function findEnemy(uid){ return battle.enemies.find(e=>e.uid===uid); }
+function checkBattleEnd(){
+  if(aliveEnemies().length===0){ endBattle(true); return true; }
+  if(aliveAllies().length===0){ endBattle(false); return true; }
+  return false;
+}
+function advanceTurn(){
+  while(true){
+    if(!battle || battle.over) return;
+    if(checkBattleEnd()) return;
+    if(battle.qIdx>=battle.queue.length){ buildRound(); }
+    const uid=battle.queue[battle.qIdx];
+    const ally=findAlly(uid);
+    if(ally){
+      if(ally.hp<=0){ battle.qIdx++; continue; }
+      battle.awaiting=uid;
+      renderPage();
+      return;
+    } else {
+      const en=findEnemy(uid);
+      if(!en || en.hp<=0){ battle.qIdx++; continue; }
+      if(en.poisoned>0){
+        const pd=Math.max(1,Math.round(en.maxHp*0.06));
+        en.hp=Math.max(0,en.hp-pd); en.poisoned--;
+        battleLog(`${en.emoji} ${en.name} 受到中毒傷害 ${pd}！`);
+        if(en.hp<=0){ battleLog(`${en.name} 倒下了！`); battle.qIdx++; continue; }
+      }
+      enemyAct(en);
+      battle.qIdx++;
+      if(checkBattleEnd()) return;
+      continue;
+    }
+  }
+}
+function physDamage(atk,def,power){ let raw=atk*power-def*0.6; raw*=(0.9+Math.random()*0.2); return Math.max(1,Math.round(raw)); }
+function magDamage(mag,def,power){ let raw=mag*power-def*0.3; raw*=(0.9+Math.random()*0.2); return Math.max(1,Math.round(raw)); }
+function enemyAct(en){
+  const targets=aliveAllies();
+  if(targets.length===0) return;
+  if(en.role==='boss' && Math.random()<0.25){
+    battleLog(`${en.emoji} ${en.name} 使用了強力範圍攻擊！`);
+    for(const t of targets){
+      const st=characterStats(t);
+      let dmg=physDamage(en.atk,st.def,0.7);
+      if(t._defending) dmg=Math.round(dmg*0.5);
+      t.hp=Math.max(0,t.hp-dmg);
+      battleLog(`${t.name} 受到 ${dmg} 傷害`);
+    }
+    return;
+  }
+  const target=targets[Math.floor(Math.random()*targets.length)];
+  const st=characterStats(target);
+  let dmg = en.role==='caster' ? magDamage(en.mag, st.def, 1.1) : physDamage(en.atk, st.def, 1.0);
+  if(target._defending) dmg=Math.round(dmg*0.5);
+  target.hp=Math.max(0,target.hp-dmg);
+  battleLog(`${en.emoji} ${en.name} 攻擊 ${target.name}，造成 ${dmg} 傷害${target.hp<=0?'，倒下了！':''}`);
+}
+function endBattle(won){
+  battle.over=true;
+  for(const m of S.party) m._defending=false;
+  if(won){
+    const goldGain=battle.enemies.reduce((s,e)=>s+e.gold,0);
+    const expGain=battle.enemies.reduce((s,e)=>s+e.exp,0);
+    S.gold+=goldGain;
+    const levelUps=addExpToParty(expGain);
+    battleLog(`🏆 勝利！獲得 ${goldGain} 金幣、${expGain} EXP`);
+    if(levelUps.length) battleLog(`✨ ${levelUps.join('、')} 升級了！`);
+    if(battle.isBoss){
+      S.zoneState[battle.zoneIdx].cleared=true;
+      S.maxZoneUnlocked=Math.max(S.maxZoneUnlocked, battle.zoneIdx+1);
+      if(S.maxZoneUnlocked>ZONES.length-1) S.maxZoneUnlocked=ZONES.length-1;
+    }
+    save();
+  } else {
+    for(const m of S.party) m.hp=Math.max(m.hp,1);
+    save();
+    battleLog('💀 隊伍全軍覆沒，狼狽地被送回城鎮療傷……');
+  }
+  renderPage();
+}
+function viewBattle(){
+  const z=ZONES[battle.zoneIdx];
+  const enemiesHtml = battle.enemies.map(e=>`
+    <div class="member-card ${e.hp<=0?'dead':''}">
+      <div class="member-head"><span>${e.emoji} ${e.name} Lv.${e.lv}</span><span class="hint">${e.hp}/${e.maxHp}</span></div>
+      <div class="hpbar"><div class="hpfill" style="width:${Math.max(0,e.hp/e.maxHp*100)}%;background:${e.hp/e.maxHp<0.3?'var(--red)':'var(--green)'}"></div></div>
+    </div>`).join('');
+  const alliesHtml = S.party.map(m=>{
+    const st=characterStats(m);
+    return `<div class="member-card ${m.hp<=0?'dead':''}">
+      <div class="member-head"><span>${m.emoji} ${m.name} Lv.${m.level}${battle.awaiting===m.uid?' ▶':''}</span><span class="hint">HP${m.hp}/${st.maxHp} MP${m.mp}/${st.maxMp}</span></div>
+      <div class="hpbar"><div class="hpfill" style="width:${Math.max(0,m.hp/st.maxHp*100)}%;background:${m.hp/st.maxHp<0.3?'var(--red)':'var(--green)'}"></div></div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="panel"><h2>敵方</h2>${enemiesHtml}</div>
+    <div class="panel"><h2>我方</h2>${alliesHtml}
+      <div class="log">${battle.log.map(l=>`<div>${l}</div>`).join('')}</div>
+      ${battle.over?
+        `<button class="b-gold grow" style="width:100%" onclick="battle=null;dungeon=null;goto('town')">返回城鎮</button>`
+        : renderActionArea()}
+    </div>
+  `;
+}
+function renderActionArea(){
+  if(pendingAction){ return renderTargetPicker(); }
+  const mem=findAlly(battle.awaiting);
+  if(!mem) return '';
+  const st=characterStats(mem);
+  const cls=CLASSES[mem.classId];
+  const usableSkills=cls.skills.filter(s=>mem.level>=s.lv);
+  return `
+    <div class="grid2">
+      <button class="skill-btn" onclick="chooseAttack()">⚔️ 攻擊<div class="mp">威力100% · 無消耗</div></button>
+      <button class="skill-btn" onclick="chooseDefend()">🛡️ 防禦<div class="mp">減少本回合50%傷害</div></button>
+      ${usableSkills.map(s=>`<button class="skill-btn" ${mem.mp<s.mp?'disabled':''} onclick="chooseSkill('${s.id}')">${s.name}<div class="mp">MP ${s.mp} · ${s.desc}</div></button>`).join('')}
+      <button class="skill-btn" onclick="chooseItem()">🎒 使用道具</button>
+    </div>
+  `;
+}
+function chooseAttack(){
+  if(aliveEnemies().length===1){ doPlayerAction({kind:'attack'}, aliveEnemies()[0].uid); return; }
+  pendingAction={kind:'attack'}; renderPage();
+}
+function chooseDefend(){ doPlayerAction({kind:'defend'}, null); }
+function chooseSkill(skillId){
+  const mem=findAlly(battle.awaiting);
+  const cls=CLASSES[mem.classId];
+  const skill=cls.skills.find(s=>s.id===skillId);
+  if(skill.target==='all' || skill.target==='allAlly'){ doPlayerAction({kind:'skill',skillId}, null); return; }
+  if(skill.target==='random3'){ doPlayerAction({kind:'skill',skillId}, null); return; }
+  if(skill.target==='single' && aliveEnemies().length===1){ doPlayerAction({kind:'skill',skillId}, aliveEnemies()[0].uid); return; }
+  if(skill.target==='singleAlly' && aliveAllies().length===1){ doPlayerAction({kind:'skill',skillId}, aliveAllies()[0].uid); return; }
+  pendingAction={kind:'skill',skillId}; renderPage();
+}
+function chooseItem(){ pendingAction={kind:'itemMenu'}; renderPage(); }
+function renderTargetPicker(){
+  if(pendingAction.kind==='itemMenu'){
+    const entries=Object.entries(S.inventory).filter(([id,cnt])=>cnt>0);
+    if(entries.length===0) return `<div class="hint">沒有可用的道具</div><button class="b-ghost grow" onclick="pendingAction=null;renderPage()">返回</button>`;
+    return `<div class="flex" style="flex-direction:column">
+      ${entries.map(([id,cnt])=>`<button class="skill-btn" onclick="pendingAction={kind:'item',itemId:'${id}'};renderPage()">${ITEMS[id].emoji} ${ITEMS[id].name} x${cnt}<div class="mp">${ITEMS[id].desc}</div></button>`).join('')}
+      <button class="b-ghost grow" onclick="pendingAction=null;renderPage()">返回</button>
+    </div>`;
+  }
+  if(pendingAction.kind==='item'){
+    const it=ITEMS[pendingAction.itemId];
+    const pool = it.revive ? S.party.filter(m=>m.hp<=0) : S.party.filter(m=>m.hp>0);
+    if(pool.length===0) return `<div class="hint">沒有合適的目標</div><button class="b-ghost grow" onclick="pendingAction=null;renderPage()">返回</button>`;
+    return `<div class="flex" style="flex-direction:column">
+      ${pool.map(m=>`<button class="skill-btn" onclick="doPlayerAction({kind:'item',itemId:'${pendingAction.itemId}'},'${m.uid}')">${m.emoji} ${m.name}</button>`).join('')}
+      <button class="b-ghost grow" onclick="pendingAction=null;renderPage()">返回</button>
+    </div>`;
+  }
+  const skill = pendingAction.kind==='skill' ? CLASSES[findAlly(battle.awaiting).classId].skills.find(s=>s.id===pendingAction.skillId) : null;
+  const targetAlly = skill && skill.target==='singleAlly';
+  const pool = targetAlly ? aliveAllies() : aliveEnemies();
+  return `<div class="flex" style="flex-direction:column">
+    ${pool.map(t=>`<button class="skill-btn" onclick="doPlayerAction(${JSON.stringify(pendingAction).replace(/"/g,'&quot;')},'${targetAlly?t.uid:t.uid}')">${t.emoji} ${t.name}${!targetAlly?` (HP ${t.hp}/${t.maxHp})`:''}</button>`).join('')}
+    <button class="b-ghost grow" onclick="pendingAction=null;renderPage()">返回</button>
+  </div>`;
+}
+function doPlayerAction(action, targetUid){
+  const mem=findAlly(battle.awaiting);
+  pendingAction=null;
+  if(action.kind==='defend'){
+    mem._defending=true;
+    battleLog(`${mem.name} 擺出防禦姿態`);
+  } else if(action.kind==='attack'){
+    mem._defending=false;
+    const st=characterStats(mem);
+    const en=findEnemy(targetUid);
+    if(en && en.hp>0){
+      const dmg=physDamage(st.atk, en.def, 1.0);
+      en.hp=Math.max(0,en.hp-dmg);
+      battleLog(`${mem.name} 攻擊 ${en.name}，造成 ${dmg} 傷害${en.hp<=0?'，倒下了！':''}`);
+    }
+  } else if(action.kind==='skill'){
+    mem._defending=false;
+    resolveSkill(mem, action.skillId, targetUid);
+  } else if(action.kind==='item'){
+    resolveItem(mem, action.itemId, targetUid);
+  }
+  save();
+  battle.qIdx++;
+  advanceTurn();
+}
+function resolveSkill(mem, skillId, targetUid){
+  const cls=CLASSES[mem.classId];
+  const skill=cls.skills.find(s=>s.id===skillId);
+  const st=characterStats(mem);
+  mem.mp-=skill.mp;
+  if(skill.type==='phys' || skill.type==='mag'){
+    const power=skill.power;
+    const doHit=(en)=>{
+      if(!en||en.hp<=0) return;
+      let dmg = skill.type==='phys' ? physDamage(st.atk,en.def,power) : magDamage(st.mag,en.def,power);
+      if(skill.crit && Math.random()<0.35) dmg=Math.round(dmg*1.6);
+      en.hp=Math.max(0,en.hp-dmg);
+      if(skill.shred) en.def=Math.max(1,Math.round(en.def*0.8));
+      if(skill.slow) en.spd=Math.max(1,Math.round(en.spd*0.8));
+      if(skill.poison) en.poisoned=3;
+      battleLog(`${mem.name} 使用 ${skill.name}，對 ${en.name} 造成 ${dmg} 傷害${en.hp<=0?'，倒下了！':''}`);
+    };
+    if(skill.target==='single') doHit(findEnemy(targetUid));
+    else if(skill.target==='all') aliveEnemies().forEach(doHit);
+    else if(skill.target==='random3'){
+      for(let i=0;i<3;i++){ const alive=aliveEnemies(); if(alive.length===0) break; doHit(alive[Math.floor(Math.random()*alive.length)]); }
+    }
+  } else if(skill.type==='heal'){
+    const doHeal=(ally)=>{
+      const ast=characterStats(ally);
+      const amt=Math.round(st.mag*skill.power);
+      ally.hp=Math.min(ast.maxHp, ally.hp+amt);
+      battleLog(`${mem.name} 使用 ${skill.name}，為 ${ally.name} 恢復 ${amt} HP`);
+    };
+    if(skill.target==='singleAlly'){ const t=findAlly(targetUid); if(t&&t.hp>0) doHeal(t); }
+    else if(skill.target==='allAlly'){ aliveAllies().forEach(doHeal); }
+  }
+}
+function resolveItem(mem, itemId, targetUid){
+  if((S.inventory[itemId]||0)<=0){ toast('道具不足'); return; }
+  const it=ITEMS[itemId];
+  const target = it.revive ? S.party.find(m=>m.uid===targetUid) : findAlly(targetUid);
+  if(!target) return;
+  S.inventory[itemId]--;
+  const st=characterStats(target);
+  if(it.revive){
+    target.hp=Math.round(st.maxHp*it.revive);
+    battleLog(`${mem.name} 使用 ${it.name}，復活了 ${target.name}！`);
+  } else {
+    if(it.heal){ target.hp=Math.min(st.maxHp, target.hp+it.heal); }
+    if(it.mp){ target.mp=Math.min(st.maxMp, target.mp+it.mp); }
+    battleLog(`${mem.name} 使用 ${it.name}，${target.name} 恢復了狀態`);
+  }
+}
+
+/* ============================================================
+   啟動
+   ============================================================ */
+load();
+render();
+</script>
+</body>
+</html>

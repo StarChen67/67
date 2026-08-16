@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>俄羅斯方塊 — Star Blocks</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#241a42 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:640px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),#ff9d2e,#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;
+            position:relative;flex:none}
+canvas#board{display:block;border-radius:8px;background:#0a0c16;touch-action:none}
+canvas#next{display:block;border-radius:8px;background:#0a0c16}
+canvas#hold{display:block;border-radius:8px;background:#0a0c16}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:120px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.86);border-radius:8px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.7}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-purple{background:linear-gradient(135deg,#d14bff,#8b5cff)}
+.b-green{background:linear-gradient(135deg,#3ddc97,#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.hint .k{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+        border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--txt);margin:0 2px}
+
+/* touch controls */
+.touch{display:none;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap;max-width:400px;margin-left:auto;margin-right:auto}
+.touch button{width:56px;height:56px;font-size:20px;border-radius:12px;background:var(--panel2);
+              border:1px solid var(--line);color:var(--txt);display:flex;align-items:center;justify-content:center}
+.touch button:active{background:var(--panel)}
+@media(max-width:640px){
+  .touch{display:flex}
+  .side{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>俄羅斯方塊</h1>
+    <div class="sub">STAR BLOCKS · 單機益智</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">分數</div><div class="v" id="score">0</div></div>
+  <div class="pill"><div class="k">等級</div><div class="v" id="level">1</div></div>
+  <div class="pill"><div class="k">消行</div><div class="v" id="lines">0</div></div>
+  <div class="pill"><div class="k">最高分</div><div class="v" id="best">0</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <canvas id="board"></canvas>
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">俄羅斯方塊</h2>
+      <p id="ovText">方向鍵移動與旋轉，空白鍵硬降，C 保留方塊。<br>準備好了嗎？</p>
+      <button class="b-gold" id="ovBtn">開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>下一個</h2>
+      <canvas id="next" width="104" height="104" style="margin:0 auto;display:block"></canvas>
+    </div>
+    <div class="card-panel">
+      <h2>保留 (C)</h2>
+      <canvas id="hold" width="104" height="104" style="margin:0 auto;display:block"></canvas>
+    </div>
+    <div class="card-panel">
+      <h2>操作說明</h2>
+      <div class="hint">
+        <span class="k">←→</span>移動<br>
+        <span class="k">↑</span>旋轉　<span class="k">↓</span>軟降<br>
+        <span class="k">空白</span>硬降<br>
+        <span class="k">C</span>保留　<span class="k">P</span>暫停
+      </div>
+    </div>
+    <button class="b-ghost b-sm" id="pauseBtn">暫停</button>
+    <button class="b-purple b-sm" id="restartBtn">重新開始</button>
+  </div>
+</div>
+
+<div class="touch">
+  <button id="tLeft">◀</button>
+  <button id="tRotate">⟳</button>
+  <button id="tRight">▶</button>
+  <button id="tHold">H</button>
+  <button id="tDown">▼</button>
+  <button id="tDrop">⤓</button>
+</div>
+
+</div>
+
+<script>
+const COLS=10, ROWS=20, CELL=28;
+const boardCv = document.getElementById('board');
+boardCv.width = COLS*CELL; boardCv.height = ROWS*CELL;
+const ctx = boardCv.getContext('2d');
+const nextCv = document.getElementById('next');
+const nextCtx = nextCv.getContext('2d');
+const holdCv = document.getElementById('hold');
+const holdCtx = holdCv.getContext('2d');
+
+const COLORS = {
+  I:'#5aa9ff', O:'#ffc84a', T:'#d14bff', S:'#3ddc97', Z:'#ff5d73', J:'#4d6bff', L:'#ff9d2e'
+};
+const SHAPES = {
+  I:[[0,1],[1,1],[2,1],[3,1]],
+  O:[[1,0],[2,0],[1,1],[2,1]],
+  T:[[1,0],[0,1],[1,1],[2,1]],
+  S:[[1,0],[2,0],[0,1],[1,1]],
+  Z:[[0,0],[1,0],[1,1],[2,1]],
+  J:[[0,0],[0,1],[1,1],[2,1]],
+  L:[[2,0],[0,1],[1,1],[2,1]],
+};
+const PIECE_KEYS = Object.keys(SHAPES);
+
+function rotateCells(cells, times){
+  let c = cells.map(p=>p.slice());
+  for(let t=0;t<times;t++){
+    // rotate around 1.5,1.5 pivot (4x4 box) for all except O
+    c = c.map(([x,y])=>[y, 3-x]);
+  }
+  return c;
+}
+
+function newBag(){
+  const bag = PIECE_KEYS.slice();
+  for(let i=bag.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [bag[i],bag[j]] = [bag[j],bag[i]];
+  }
+  return bag;
+}
+
+let bag = [];
+function nextPieceKey(){
+  if(bag.length===0) bag = newBag();
+  return bag.pop();
+}
+
+function makePiece(key){
+  return { key, rot:0, cells: SHAPES[key].map(p=>p.slice()), x: key==='O'?4:3, y:-1 };
+}
+
+function currentCells(piece){
+  const base = key => rotateCells(SHAPES[key], piece.rot%4);
+  return base(piece.key).map(([cx,cy])=>[cx+piece.x, cy+piece.y]);
+}
+
+let grid, current, holdKey, canHold, nextQueue, score, level, lines, best;
+let dropInterval, dropTimer, running, paused, gameOver;
+
+function initState(){
+  grid = Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  bag = [];
+  nextQueue = [nextPieceKey(), nextPieceKey(), nextPieceKey()];
+  current = makePiece(nextQueue.shift());
+  nextQueue.push(nextPieceKey());
+  holdKey = null;
+  canHold = true;
+  score = 0; level = 1; lines = 0;
+  dropInterval = 900;
+  running = false; paused = false; gameOver = false;
+  updateStats();
+}
+
+function updateStats(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('level').textContent = level;
+  document.getElementById('lines').textContent = lines;
+  document.getElementById('best').textContent = best;
+}
+
+function collide(piece, dx=0, dy=0, rotOverride=null){
+  const rot = rotOverride===null ? piece.rot : rotOverride;
+  const cells = rotateCells(SHAPES[piece.key], rot%4);
+  for(const [cx,cy] of cells){
+    const x = cx + piece.x + dx;
+    const y = cy + piece.y + dy;
+    if(x<0 || x>=COLS || y>=ROWS) return true;
+    if(y>=0 && grid[y][x]) return true;
+  }
+  return false;
+}
+
+function lockPiece(){
+  const cells = currentCells(current);
+  for(const [x,y] of cells){
+    if(y<0){ triggerGameOver(); return; }
+    grid[y][x] = COLORS[current.key];
+  }
+  clearLines();
+  spawnNext();
+}
+
+function clearLines(){
+  let cleared = 0;
+  for(let y=ROWS-1;y>=0;y--){
+    if(grid[y].every(c=>c)){
+      grid.splice(y,1);
+      grid.unshift(Array(COLS).fill(null));
+      cleared++;
+      y++;
+    }
+  }
+  if(cleared>0){
+    const table = {1:100,2:300,3:500,4:800};
+    score += (table[cleared]||0) * level;
+    lines += cleared;
+    const newLevel = Math.floor(lines/10)+1;
+    if(newLevel !== level){
+      level = newLevel;
+      dropInterval = Math.max(100, 900 - (level-1)*70);
+    }
+    if(score > best){ best = score; localStorage.setItem('tetris_best', best); }
+    updateStats();
+  }
+}
+
+function spawnNext(){
+  current = makePiece(nextQueue.shift());
+  nextQueue.push(nextPieceKey());
+  canHold = true;
+  if(collide(current)){
+    triggerGameOver();
+  }
+}
+
+function hardDrop(){
+  if(gameOver||paused) return;
+  let d = 0;
+  while(!collide(current,0,d+1)) d++;
+  current.y += d;
+  score += d*2;
+  updateStats();
+  lockPiece();
+  resetDropTimer();
+  draw();
+}
+
+function softDrop(){
+  if(gameOver||paused) return;
+  if(!collide(current,0,1)){
+    current.y++;
+    score += 1;
+    updateStats();
+  } else {
+    lockPiece();
+  }
+  draw();
+}
+
+function moveHoriz(dir){
+  if(gameOver||paused) return;
+  if(!collide(current,dir,0)){
+    current.x += dir;
+    draw();
+  }
+}
+
+const KICKS = [0,1,-1,2,-2];
+function rotatePiece(){
+  if(gameOver||paused) return;
+  if(current.key==='O') return;
+  const newRot = (current.rot+1)%4;
+  for(const k of KICKS){
+    if(!collide(current, k, 0, newRot)){
+      current.rot = newRot;
+      current.x += k;
+      draw();
+      return;
+    }
+  }
+}
+
+function doHold(){
+  if(gameOver||paused||!canHold) return;
+  canHold = false;
+  if(holdKey===null){
+    holdKey = current.key;
+    spawnNext();
+  } else {
+    const tmp = holdKey;
+    holdKey = current.key;
+    current = makePiece(tmp);
+    if(collide(current)){ triggerGameOver(); }
+  }
+  canHold = false;
+  draw();
+}
+
+function resetDropTimer(){
+  clearTimeout(dropTimer);
+  if(!running || paused || gameOver) return;
+  dropTimer = setTimeout(gameTick, dropInterval);
+}
+
+function gameTick(){
+  if(!running||paused||gameOver) return;
+  if(!collide(current,0,1)){
+    current.y++;
+  } else {
+    lockPiece();
+  }
+  draw();
+  resetDropTimer();
+}
+
+function triggerGameOver(){
+  gameOver = true;
+  running = false;
+  clearTimeout(dropTimer);
+  showOverlay('遊戲結束', `本局分數：${score}　消除行數：${lines}`, '再玩一次');
+}
+
+function ghostY(){
+  let d=0;
+  while(!collide(current,0,d+1)) d++;
+  return current.y + d;
+}
+
+function drawCell(c, x, y, color, alpha=1){
+  c.globalAlpha = alpha;
+  c.fillStyle = color;
+  c.fillRect(x*CELL+1, y*CELL+1, CELL-2, CELL-2);
+  c.globalAlpha = 1;
+  c.strokeStyle = 'rgba(255,255,255,.12)';
+  c.strokeRect(x*CELL+1, y*CELL+1, CELL-2, CELL-2);
+}
+
+function draw(){
+  ctx.fillStyle = '#0a0c16';
+  ctx.fillRect(0,0,boardCv.width,boardCv.height);
+  // grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,.04)';
+  for(let x=0;x<=COLS;x++){ ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,ROWS*CELL); ctx.stroke(); }
+  for(let y=0;y<=ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(COLS*CELL,y*CELL); ctx.stroke(); }
+
+  for(let y=0;y<ROWS;y++)
+    for(let x=0;x<COLS;x++)
+      if(grid[y][x]) drawCell(ctx,x,y,grid[y][x]);
+
+  if(!gameOver && current){
+    const gy = ghostY();
+    const gCells = rotateCells(SHAPES[current.key], current.rot%4).map(([cx,cy])=>[cx+current.x, cy+gy]);
+    for(const [x,y] of gCells){ if(y>=0) drawCell(ctx,x,y,COLORS[current.key],0.18); }
+
+    const cells = currentCells(current);
+    for(const [x,y] of cells){ if(y>=0) drawCell(ctx,x,y,COLORS[current.key]); }
+  }
+}
+
+function drawMini(c, key){
+  c.clearRect(0,0,104,104);
+  c.fillStyle = '#0a0c16';
+  c.fillRect(0,0,104,104);
+  if(!key) return;
+  const cells = SHAPES[key];
+  const size = 22;
+  const xs = cells.map(p=>p[0]), ys = cells.map(p=>p[1]);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const w = (maxX-minX+1)*size, h = (maxY-minY+1)*size;
+  const ox = (104-w)/2, oy = (104-h)/2;
+  for(const [cx,cy] of cells){
+    c.fillStyle = COLORS[key];
+    const px = ox + (cx-minX)*size, py = oy + (cy-minY)*size;
+    c.fillRect(px+1, py+1, size-2, size-2);
+    c.strokeStyle = 'rgba(255,255,255,.15)';
+    c.strokeRect(px+1, py+1, size-2, size-2);
+  }
+}
+
+function drawSide(){
+  drawMini(nextCtx, nextQueue[0]);
+  drawMini(holdCtx, holdKey);
+}
+
+// overlay
+const overlay = document.getElementById('overlay');
+function showOverlay(title, text, btnText){
+  document.getElementById('ovTitle').textContent = title;
+  document.getElementById('ovText').innerHTML = text;
+  document.getElementById('ovBtn').textContent = btnText;
+  overlay.classList.add('show');
+}
+function hideOverlay(){ overlay.classList.remove('show'); }
+
+function startGame(){
+  initState();
+  best = Number(localStorage.getItem('tetris_best')||0);
+  updateStats();
+  hideOverlay();
+  running = true;
+  paused = false;
+  document.getElementById('pauseBtn').textContent = '暫停';
+  draw();
+  drawSide();
+  resetDropTimer();
+}
+
+document.getElementById('ovBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', ()=>{
+  if(gameOver||!running) return;
+  paused = !paused;
+  document.getElementById('pauseBtn').textContent = paused ? '繼續' : '暫停';
+  if(paused){
+    clearTimeout(dropTimer);
+    showOverlay('已暫停', '按下繼續按鈕恢復遊戲', '繼續');
+  } else {
+    hideOverlay();
+    resetDropTimer();
+  }
+});
+
+window.addEventListener('keydown', (e)=>{
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
+  if(gameOver && e.code==='Space'){ startGame(); return; }
+  if(!running) return;
+  switch(e.code){
+    case 'ArrowLeft': moveHoriz(-1); break;
+    case 'ArrowRight': moveHoriz(1); break;
+    case 'ArrowUp': rotatePiece(); break;
+    case 'ArrowDown': softDrop(); break;
+    case 'Space': hardDrop(); break;
+    case 'KeyC': doHold(); break;
+    case 'KeyP': document.getElementById('pauseBtn').click(); break;
+  }
+  drawSide();
+});
+
+function bindHold(id, fn){
+  const el = document.getElementById(id);
+  let iv;
+  el.addEventListener('touchstart', (e)=>{ e.preventDefault(); fn(); }, {passive:false});
+  el.addEventListener('mousedown', fn);
+}
+bindHold('tLeft', ()=>moveHoriz(-1));
+bindHold('tRight', ()=>moveHoriz(1));
+bindHold('tRotate', rotatePiece);
+bindHold('tDown', softDrop);
+bindHold('tDrop', hardDrop);
+bindHold('tHold', doHold);
+
+// swipe/tap controls directly on board for mobile
+let touchStartX=null, touchStartY=null, touchMoved=false;
+boardCv.addEventListener('touchstart', (e)=>{
+  const t = e.touches[0];
+  touchStartX = t.clientX; touchStartY = t.clientY; touchMoved=false;
+}, {passive:true});
+boardCv.addEventListener('touchmove', (e)=>{
+  if(touchStartX===null) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY;
+  if(Math.abs(dx) > 24){
+    moveHoriz(dx>0?1:-1);
+    touchStartX = t.clientX;
+    touchMoved = true;
+  } else if(dy > 24){
+    softDrop();
+    touchStartY = t.clientY;
+    touchMoved = true;
+  }
+}, {passive:true});
+boardCv.addEventListener('touchend', ()=>{
+  if(!touchMoved) rotatePiece();
+  touchStartX=null; touchStartY=null;
+});
+
+best = Number(localStorage.getItem('tetris_best')||0);
+document.getElementById('best').textContent = best;
+initState();
+draw();
+drawSide();
+</script>
+</body>
+</html>

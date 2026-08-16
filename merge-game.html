@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>倍數合成 — Merge 2ⁿ</title>
+<style>
+/* ============================================================
+   倍數合成遊戲
+   ============================================================ */
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#241a42 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:640px;margin:0 auto}
+
+/* 頂列 */
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),#ff9d2e,#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+.stats-top{display:flex;gap:8px;flex-wrap:wrap}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card-panel h2{font-size:12px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;
+     font-size:13px;padding:6px 0;border-bottom:1px solid #23294560;font-variant-numeric:tabular-nums}
+.row:last-child{border-bottom:none}
+.row>span:first-child{color:var(--dim)}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.75;margin-top:8px}
+.hint b{color:var(--gold)}
+.flex{display:flex;gap:8px;flex-wrap:wrap}
+.grow{flex:1}
+.center{text-align:center}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.35;cursor:not-allowed}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-purple{background:linear-gradient(135deg,#d14bff,#8b5cff)}
+.b-green{background:linear-gradient(135deg,#3ddc97,#22a173);color:#062a1c}
+.b-red{background:linear-gradient(135deg,#ff5d73,#c8324a)}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+.b-xs{padding:5px 9px;font-size:11px;border-radius:7px}
+
+.toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim);cursor:pointer;
+        user-select:none;padding:6px 0}
+.sw{width:38px;height:22px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);
+    position:relative;transition:.15s;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+           background:var(--dim);transition:.15s}
+.toggle.on .sw{background:var(--green);border-color:transparent}
+.toggle.on .sw::after{left:18px;background:#fff}
+.toggle.on{color:var(--txt)}
+
+/* 背包格 */
+#bag{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.slot{aspect-ratio:1;border-radius:11px;background:#12162a;border:2px dashed #262c48;
+      display:flex;align-items:center;justify-content:center;position:relative}
+.tile{position:absolute;inset:0;border-radius:9px;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;cursor:pointer;font-weight:800;
+      font-variant-numeric:tabular-nums;transition:transform .12s;overflow:hidden}
+.tile .num{line-height:1;padding:0 3px}
+.tile .exp{font-size:8.5px;opacity:.65;margin-top:2px;font-weight:700}
+.tile:active{transform:scale(.94)}
+.tile.sel{box-shadow:0 0 0 3px #fff,0 0 16px #ffffff88;z-index:3}
+.tile.hintable{box-shadow:0 0 0 2px var(--green)}
+.tile.pop{animation:pop .28s cubic-bezier(.2,.9,.3,1)}
+.tile.merged{animation:merged .4s cubic-bezier(.2,.9,.3,1)}
+@keyframes pop{0%{transform:scale(.2);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes merged{0%{transform:scale(1)}40%{transform:scale(1.28);filter:brightness(1.5)}100%{transform:scale(1)}}
+.tile.glow{animation:glow 1.6s ease-in-out infinite}
+@keyframes glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+
+/* 抽卡結果彈幕 */
+#drawResult{min-height:0;margin-top:11px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.mini{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+      font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;animation:pop .3s both}
+.selhint{text-align:center;font-size:12px;color:var(--dim);min-height:18px;margin-top:8px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;
+  background:var(--panel2);border:1px solid var(--gold);border-radius:10px;padding:10px 18px;
+  font-size:13px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;max-width:92vw;text-align:center}
+#toast.on{opacity:1;bottom:36px}
+
+/* 分佈條 */
+.bars{margin-top:6px}
+.bl{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px}
+.bl .lb{width:56px;text-align:right;flex:none;font-variant-numeric:tabular-nums;font-weight:700}
+.bl .bx{flex:1;height:13px;background:var(--panel2);border-radius:3px;overflow:hidden;position:relative}
+.bl .bx i{display:block;height:100%;border-radius:3px}
+.bl .bx .theo{position:absolute;top:0;height:100%;border-right:2px dashed #ffffff77}
+.bl .vl{width:80px;flex:none;color:var(--dim);font-variant-numeric:tabular-nums;text-align:right;font-size:10px}
+
+.record-big{text-align:center;padding:6px 0}
+.record-big .n{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;
+  background:linear-gradient(90deg,var(--gold),#ff9d2e);-webkit-background-clip:text;background-clip:text;color:transparent}
+.record-big .l{font-size:11px;color:var(--dim);margin-top:3px}
+.pbar{height:9px;background:var(--panel2);border-radius:5px;overflow:hidden;margin:7px 0 3px}
+.pbar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--gold),#d14bff);transition:width .3s}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>倍數合成</h1>
+      <div class="sub">抽牌 · 合成 · 挑戰更高的數字</div>
+    </div>
+    <div class="stats-top">
+      <div class="pill"><div class="k">💰 金幣</div><div class="v" id="s-gold" style="color:var(--gold)">10</div></div>
+      <div class="pill"><div class="k">🎒 背包</div><div class="v" id="s-bag">0/10</div></div>
+      <div class="pill"><div class="k">🏆 最高</div><div class="v" id="s-record" style="color:var(--green)">—</div></div>
+    </div>
+  </header>
+
+  <!-- 抽卡 -->
+  <div class="card-panel">
+    <div class="flex">
+      <button class="b-gold grow" id="btn1" onclick="draw(1)">抽一張<br><span style="font-size:10px;opacity:.8">💰 1</span></button>
+      <button class="b-purple grow" id="btn10" onclick="draw(10)">十連抽<br><span style="font-size:10px;opacity:.85">💰 10</span></button>
+    </div>
+    <div class="toggle on" id="autoMergeToggle" onclick="toggleAutoMerge()">
+      <div class="sw"></div><span>自動合成（抽到相同數字時自動疊加）</span>
+    </div>
+    <div id="drawResult"></div>
+  </div>
+
+  <!-- 背包 -->
+  <div class="card-panel">
+    <div class="row" style="border:none;padding-top:0">
+      <span>背包　<b id="bag-count" style="color:var(--txt)">0 / 10</b></span>
+      <span id="bag-tip" style="color:var(--dim);font-size:11px">點兩張相同數字即可合成</span>
+    </div>
+    <div id="bag"></div>
+    <div class="selhint" id="sel-hint"></div>
+    <div class="flex" style="margin-top:10px">
+      <button class="b-green grow b-sm" id="btn-sellSel" onclick="sellSelected()" disabled>💰 出售選中</button>
+      <button class="b-ghost grow b-sm" onclick="autoMergeAll()">⚡ 一鍵合成</button>
+      <button class="b-ghost grow b-sm" onclick="openSellBelow()">🧹 批量出售</button>
+    </div>
+  </div>
+
+  <!-- 擴充 -->
+  <div class="card-panel">
+    <h2>背包擴充</h2>
+    <div class="row"><span>目前容量</span><span id="ex-cur">10 格</span></div>
+    <div class="row"><span>擴充後</span><span id="ex-next" style="color:var(--green)">15 格</span></div>
+    <button class="b-gold" style="width:100%;margin-top:9px" id="btn-expand" onclick="expandBag()">
+      🎒 擴充背包 +5 格</button>
+  </div>
+
+  <!-- 統計 -->
+  <div class="card-panel">
+    <h2>紀錄</h2>
+    <div class="record-big">
+      <div class="n" id="rec-num">—</div>
+      <div class="l" id="rec-goal">先抽第一張牌吧</div>
+    </div>
+    <div class="pbar"><i id="rec-bar" style="width:0%"></i></div>
+    <div class="row"><span>總抽牌數</span><span id="st-draws">0</span></div>
+    <div class="row"><span>累計花費 / 出售 / 里程碑</span><span id="st-econ">0 / 0 / 0</span></div>
+    <div class="row"><span>背包內總和</span><span id="st-sum">0</span></div>
+  </div>
+
+  <!-- 機率 -->
+  <div class="card-panel">
+    <h2>抽牌機率（理論 vs 實際）</h2>
+    <div class="bars" id="dist"></div>
+    <div class="hint" id="petersburg"></div>
+  </div>
+
+  <div class="flex">
+    <button class="b-ghost grow b-sm" onclick="save(true)">💾 儲存</button>
+    <button class="b-red grow b-sm" onclick="resetGame()">🗑️ 重置</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   倍數合成遊戲
+   ----------------------------------------------------------------------------
+   規則：
+     · 初始 10 金幣、背包 10 格
+     · 抽一張 = 1 金幣；十連抽 = 10 金幣
+     · 抽到的數字 v = 2^k，機率 P(v) = 1/2^(k+1)
+         P(1)=1/2, P(2)=1/4, P(4)=1/8, ...（連續投擲硬幣，正面就翻倍）
+     · 兩張相同數字可合成為兩倍
+     · 首次達到更高的數字紀錄 → 獲得金幣獎勵 = 該數字
+     · 出售卡牌 → 獲得金幣 = 數值
+   ========================================================================== */
+
+const CONFIG = {
+  saveKey: 'merge_game_v1',
+  startGold: 10,
+  startSlots: 10,
+  drawCost: 1,
+  maxExponent: 50,            // 安全上限，避免 Infinity
+  expand: { amount:5, baseCost:50, growth:1.8 },   // 第 n 次擴充費用 = baseCost × growth^n
+};
+
+/* ---------- 工具 ---------- */
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast'); t.innerHTML = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('on'), 2100);
+}
+
+let ac = null;
+function sfx(freq, dur, type='sine', vol=0.05){
+  try{
+    ac = ac || new (window.AudioContext||window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + dur);
+  }catch(e){}
+}
+function fanfare(notes=[523,659,784,1046], gap=80){
+  notes.forEach((f,i)=>setTimeout(()=>sfx(f,.3,'triangle',.06), i*gap));
+}
+
+/* ---------- 稀有度色彩（依 2 的指數）---------- */
+// 低階用 2048 風格，高階進入發光的彩虹漸層
+const TILE_COLORS = [
+  {bg:'#8b93b5', fg:'#12162a'},   // 1   (2^0)
+  {bg:'#6fb8e8', fg:'#062036'},   // 2
+  {bg:'#5aa9ff', fg:'#04182e'},   // 4
+  {bg:'#3ddc97', fg:'#042a1c'},   // 8
+  {bg:'#9ada3d', fg:'#152a04'},   // 16
+  {bg:'#ffd53d', fg:'#3a2e05'},   // 32
+  {bg:'#ff9d2e', fg:'#3a2205'},   // 64
+  {bg:'#ff6b3d', fg:'#3a1405'},   // 128
+  {bg:'#ff5d73', fg:'#3a0812'},   // 256
+  {bg:'#ff3d9e', fg:'#3a0824'},   // 512
+  {bg:'#d14bff', fg:'#280a3a'},   // 1024
+  {bg:'#8b5cff', fg:'#160a3a'},   // 2048
+];
+function tileStyle(exp){
+  if(exp < TILE_COLORS.length){
+    const c = TILE_COLORS[exp];
+    return { bg:c.bg, fg:c.fg, glow:exp>=9 };
+  }
+  // 2^12 以上：彩虹 + 發光
+  const hue = (exp * 47) % 360;
+  return {
+    bg:`linear-gradient(135deg,hsl(${hue},85%,60%),hsl(${(hue+40)%360},85%,45%))`,
+    fg:'#fff', glow:true,
+  };
+}
+
+/* ---------- 狀態 ---------- */
+const S = {
+  gold: CONFIG.startGold,
+  slots: CONFIG.startSlots,
+  bag: [],                    // [{id, value}]
+  autoMerge: true,
+  record: 0,                  // 最高達成數值
+  reached: {},                // value -> true（曾達成，用於里程碑）
+  expansions: 0,
+  selected: null,             // 選中的卡片 id
+  stats: { draws:0, spent:0, sell:0, milestone:0, dist:{} },  // dist: exp -> 抽到次數
+};
+
+/* ---------- 存檔 ---------- */
+function save(manual){
+  try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); if(manual) toast('💾 已儲存'); }
+  catch(e){ toast('⚠️ 儲存失敗'); }
+}
+function load(){
+  try{
+    const d = JSON.parse(localStorage.getItem(CONFIG.saveKey) || 'null');
+    if(!d) return false;
+    Object.assign(S, d);
+    S.bag = Array.isArray(d.bag) ? d.bag : [];
+    S.reached = d.reached || {};
+    S.stats = Object.assign({draws:0,spent:0,sell:0,milestone:0,dist:{}}, d.stats || {});
+    S.selected = null;
+    return true;
+  }catch(e){ return false; }
+}
+function resetGame(){
+  if(!confirm('確定要重置所有進度嗎？此操作無法復原。')) return;
+  localStorage.removeItem(CONFIG.saveKey);
+  location.reload();
+}
+
+/* ---------- 抽牌核心 ----------
+   連續投擲公正硬幣：每次正面就把指數 +1，第一次反面停止。
+   得到 k 次正面 → 數值 2^k，機率 (1/2)^k × (1/2) = 1/2^(k+1)。 */
+function rollExponent(){
+  let k = 0;
+  while(k < CONFIG.maxExponent && Math.random() < 0.5) k++;
+  return k;
+}
+
+/* 把一個數值放進背包（allowMerge 時會自動疊加並連鎖）。
+   回傳 { placed, merged, record, value } */
+function placeValue(value, allowMerge, touched){
+  touched = touched || {};
+  if(allowMerge){
+    const idx = S.bag.findIndex(c => c.value === value);
+    if(idx >= 0){
+      S.bag.splice(idx, 1);                    // 合成：移除舊卡，把兩倍數值再放進去（連鎖）
+      const res = placeValue(value * 2, true, touched);
+      res.merged = true;
+      return res;
+    }
+  }
+  if(S.bag.length >= S.slots) return { placed:false, value, touched };
+  const card = { id: uid(), value };
+  S.bag.push(card);
+  touched[card.id] = 'pop';
+  checkRecord(value);
+  return { placed:true, merged:false, value, cardId:card.id, touched };
+}
+
+// 里程碑：首次達到更高數值紀錄 → 金幣獎勵
+function checkRecord(value){
+  if(value > S.record){
+    if(!S.reached[value]){
+      S.reached[value] = true;
+      S.gold += value;
+      S.stats.milestone += value;
+      pendingRecord = value;                   // render 後統一提示，避免十連抽洗版
+    }
+    S.record = value;
+  } else {
+    S.reached[value] = true;
+  }
+}
+let pendingRecord = 0;
+
+/* ---------- 抽牌動作 ---------- */
+function draw(n){
+  if(S.gold < 1){ toast('💰 金幣不足，出售一些卡牌換取金幣吧'); return; }
+
+  const results = [];        // 每次抽到的原始數值
+  const touched = {};        // 需要播動畫的卡片
+  let drawn = 0, stoppedFull = false;
+  pendingRecord = 0;
+
+  for(let i = 0; i < n; i++){
+    if(S.gold < CONFIG.drawCost) break;
+    // 先檢查是否放得下：滿了且無法合成就停手，不扣這一抽的錢
+    const exp = rollExponent();
+    const value = 2 ** exp;
+    const canMerge = S.autoMerge && S.bag.some(c => c.value === value);
+    if(S.bag.length >= S.slots && !canMerge){ stoppedFull = true; break; }
+
+    S.gold -= CONFIG.drawCost;
+    S.stats.spent += CONFIG.drawCost;
+    S.stats.draws++;
+    S.stats.dist[exp] = (S.stats.dist[exp] || 0) + 1;
+
+    const res = placeValue(value, S.autoMerge, touched);
+    results.push({ value, merged: res.merged, placed: res.placed });
+  }
+
+  // 抽牌音效
+  if(results.length){
+    const best = Math.max(...results.map(r=>r.value));
+    if(best >= 128) fanfare();
+    else if(results.some(r=>r.merged)) sfx(660,.12,'triangle',.05);
+    else sfx(440,.08,'sine',.04);
+  }
+
+  save();
+  render(touched);
+  showDrawResult(results);
+
+  if(pendingRecord){
+    setTimeout(()=>{
+      toast(`🏆 新紀錄 ${fmt(pendingRecord)}！里程碑獎勵 💰 +${fmt(pendingRecord)}`);
+      fanfare([523,784,1046,1318], 90);
+    }, 200);
+  } else if(stoppedFull){
+    toast('🎒 背包已滿，十連抽提前結束（未扣未抽的金幣）');
+  }
+}
+function showDrawResult(results){
+  $('drawResult').innerHTML = results.map(r=>{
+    const exp = Math.log2(r.value);
+    const st = tileStyle(exp);
+    return `<div class="mini" style="background:${st.bg};color:${st.fg}">${fmt(r.value)}</div>`;
+  }).join('');
+}
+
+/* ---------- 合成 / 選取 ---------- */
+function tapCard(id){
+  const card = S.bag.find(c => c.id === id);
+  if(!card) return;
+  if(S.selected === id){ S.selected = null; render(); return; }
+  if(S.selected){
+    const other = S.bag.find(c => c.id === S.selected);
+    if(other && other.value === card.value){
+      mergePair(S.selected, id);
+      return;
+    }
+  }
+  S.selected = id;
+  render();
+}
+function mergePair(idA, idB){
+  const a = S.bag.find(c => c.id === idA), b = S.bag.find(c => c.id === idB);
+  if(!a || !b || a.value !== b.value) return;
+  const value = a.value;
+  S.bag = S.bag.filter(c => c.id !== idA && c.id !== idB);
+  S.selected = null;
+  pendingRecord = 0;
+  const touched = {};
+  const res = placeValue(value * 2, true, touched);   // 連鎖合成
+  sfx(700,.14,'triangle',.06);
+  save(); render(touched);
+  if(pendingRecord){
+    toast(`🏆 新紀錄 ${fmt(pendingRecord)}！里程碑獎勵 💰 +${fmt(pendingRecord)}`);
+    fanfare([523,784,1046,1318], 90);
+  }
+}
+// 反覆合成所有可合成的對子，直到無法再合
+function autoMergeAll(){
+  let any = false;
+  pendingRecord = 0;
+  const touched = {};
+  for(;;){
+    // 找出現次數 >= 2 的最小數值
+    const count = {};
+    S.bag.forEach(c => count[c.value] = (count[c.value]||0)+1);
+    const dup = Object.keys(count).map(Number).filter(v => count[v] >= 2).sort((a,b)=>a-b)[0];
+    if(dup === undefined) break;
+    const ids = S.bag.filter(c => c.value === dup).slice(0,2).map(c=>c.id);
+    S.bag = S.bag.filter(c => !ids.includes(c.id));
+    placeValue(dup * 2, true, touched);
+    any = true;
+  }
+  S.selected = null;
+  if(!any){ toast('沒有可以合成的卡牌'); return; }
+  sfx(760,.16,'triangle',.06);
+  save(); render(touched);
+  if(pendingRecord){
+    toast(`🏆 新紀錄 ${fmt(pendingRecord)}！里程碑獎勵 💰 +${fmt(pendingRecord)}`);
+    fanfare([523,784,1046,1318], 90);
+  } else toast('⚡ 已合成所有可合成的卡牌');
+}
+
+/* ---------- 出售 ---------- */
+function sellCard(id){
+  const card = S.bag.find(c => c.id === id);
+  if(!card) return;
+  S.bag = S.bag.filter(c => c.id !== id);
+  S.gold += card.value;
+  S.stats.sell += card.value;
+  if(S.selected === id) S.selected = null;
+  sfx(520,.1,'sine',.04);
+  toast(`💰 出售 ${fmt(card.value)}，獲得 ${fmt(card.value)} 金幣`);
+  save(); render();
+}
+function sellSelected(){ if(S.selected) sellCard(S.selected); }
+function openSellBelow(){
+  if(!S.bag.length){ toast('背包是空的'); return; }
+  const values = [...new Set(S.bag.map(c=>c.value))].sort((a,b)=>a-b);
+  const opts = values.map(v => {
+    const n = S.bag.filter(c=>c.value===v).length;
+    const sum = v*n;
+    return `<button class="b-ghost b-sm" style="width:100%;margin-bottom:6px;text-align:left"
+      onclick="sellBelow(${v})">出售所有 ≤ ${fmt(v)}
+      <span style="color:var(--dim);font-weight:400;font-size:11px"> 　（含 ${v} 以下，可換 ${fmt(cumulativeSum(v))} 金幣）</span></button>`;
+  }).join('');
+  toastModal(`<div style="font-weight:800;margin-bottom:8px">🧹 批量出售</div>${opts}
+    <button class="b-ghost b-sm" style="width:100%;margin-top:4px" onclick="closeModal()">取消</button>`);
+}
+function cumulativeSum(maxV){
+  return S.bag.filter(c=>c.value<=maxV).reduce((s,c)=>s+c.value,0);
+}
+function sellBelow(maxV){
+  const sold = S.bag.filter(c => c.value <= maxV);
+  if(!sold.length){ closeModal(); return; }
+  const gain = sold.reduce((s,c)=>s+c.value,0);
+  S.bag = S.bag.filter(c => c.value > maxV);
+  S.gold += gain; S.stats.sell += gain; S.selected = null;
+  closeModal(); sfx(560,.12,'sine',.05);
+  toast(`💰 出售 ${sold.length} 張，獲得 ${fmt(gain)} 金幣`);
+  save(); render();
+}
+
+// 極簡彈窗（複用 toast 容器旁的浮層）
+let modalEl = null;
+function toastModal(html){
+  closeModal();
+  modalEl = document.createElement('div');
+  modalEl.style.cssText = 'position:fixed;inset:0;background:#05070ecc;z-index:80;display:flex;'+
+    'align-items:center;justify-content:center;padding:20px';
+  modalEl.onclick = e => { if(e.target === modalEl) closeModal(); };
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--panel);border:1px solid var(--line);border-radius:14px;'+
+    'padding:16px;max-width:360px;width:100%;font-size:13px';
+  box.innerHTML = html;
+  modalEl.appendChild(box);
+  document.body.appendChild(modalEl);
+}
+function closeModal(){ if(modalEl){ modalEl.remove(); modalEl = null; } }
+
+/* ---------- 擴充背包 ---------- */
+function expandCost(){
+  return Math.round(CONFIG.expand.baseCost * Math.pow(CONFIG.expand.growth, S.expansions));
+}
+function expandBag(){
+  const cost = expandCost();
+  if(S.gold < cost){ toast(`💰 金幣不足，需要 ${fmt(cost)}`); return; }
+  S.gold -= cost; S.slots += CONFIG.expand.amount; S.expansions++;
+  sfx(880,.2,'triangle',.06);
+  toast(`🎒 背包擴充至 ${S.slots} 格`);
+  save(); render();
+}
+
+/* ---------- 自動合成開關 ---------- */
+function toggleAutoMerge(){
+  S.autoMerge = !S.autoMerge;
+  $('autoMergeToggle').classList.toggle('on', S.autoMerge);
+  save();
+}
+
+/* ---------- 畫面 ---------- */
+function render(touched){
+  touched = touched || {};
+  // 頂列
+  $('s-gold').textContent = fmt(S.gold);
+  $('s-bag').textContent = `${S.bag.length}/${S.slots}`;
+  $('s-record').textContent = S.record ? fmt(S.record) : '—';
+
+  // 背包
+  const bag = $('bag');
+  const cells = [];
+  for(let i = 0; i < S.slots; i++){
+    const card = S.bag[i];
+    if(!card){ cells.push(`<div class="slot"></div>`); continue; }
+    const exp = Math.log2(card.value);
+    const st = tileStyle(exp);
+    const digits = String(card.value).length;
+    const fs = digits <= 2 ? 22 : digits <= 3 ? 18 : digits <= 4 ? 15 : digits <= 6 ? 12 : 10;
+    const cls = ['tile'];
+    if(S.selected === card.id) cls.push('sel');
+    if(touched[card.id] === 'pop') cls.push('pop');
+    if(st.glow) cls.push('glow');
+    // 若有可合成的同伴，且此卡被選中，提示同伴
+    cells.push(`<div class="slot">
+      <div class="${cls.join(' ')}" style="background:${st.bg};color:${st.fg}"
+           onclick="tapCard('${card.id}')" oncontextmenu="event.preventDefault();sellCard('${card.id}')">
+        <div class="num" style="font-size:${fs}px">${fmt(card.value)}</div>
+        <div class="exp">2^${exp}</div>
+      </div></div>`);
+  }
+  bag.innerHTML = cells.join('');
+  $('bag-count').textContent = `${S.bag.length} / ${S.slots}`;
+
+  // 選取提示
+  $('btn-sellSel').disabled = !S.selected;
+  const selCard = S.selected ? S.bag.find(c=>c.id===S.selected) : null;
+  if(selCard){
+    const partners = S.bag.filter(c => c.value === selCard.value && c.id !== selCard.id).length;
+    $('sel-hint').innerHTML = partners
+      ? `已選中 <b style="color:var(--txt)">${fmt(selCard.value)}</b>　·　點擊另一張 ${fmt(selCard.value)} 即可合成（可合成 ${partners} 張）`
+      : `已選中 <b style="color:var(--txt)">${fmt(selCard.value)}</b>　·　目前沒有可合成的同伴`;
+    // 高亮可合成同伴
+    if(partners){
+      [...bag.querySelectorAll('.tile')].forEach((el,i)=>{
+        const c = S.bag[i];
+        if(c && c.value === selCard.value && c.id !== selCard.id) el.classList.add('hintable');
+      });
+    }
+  } else {
+    $('sel-hint').textContent = '';
+  }
+
+  // 擴充
+  $('ex-cur').textContent = `${S.slots} 格`;
+  $('ex-next').textContent = `${S.slots + CONFIG.expand.amount} 格`;
+  const cost = expandCost();
+  $('btn-expand').innerHTML = `🎒 擴充背包 +${CONFIG.expand.amount} 格　（💰 ${fmt(cost)}）`;
+  $('btn-expand').disabled = S.gold < cost;
+
+  // 抽卡鈕
+  $('btn1').disabled = S.gold < CONFIG.drawCost;
+  $('btn10').disabled = S.gold < CONFIG.drawCost;
+
+  renderStats();
+}
+
+function renderStats(){
+  // 紀錄
+  $('rec-num').textContent = S.record ? fmt(S.record) : '—';
+  if(S.record){
+    const next = S.record * 2;
+    $('rec-goal').innerHTML = `下一個目標：<b style="color:var(--gold)">${fmt(next)}</b>`;
+    // 進度：以目前背包中「最接近下一目標」的合成潛力粗略表示 → 用最大牌 / 下一目標
+    const top = S.bag.length ? Math.max(...S.bag.map(c=>c.value)) : 0;
+    $('rec-bar').style.width = Math.min(100, top / next * 100) + '%';
+  } else {
+    $('rec-goal').textContent = '先抽第一張牌吧';
+    $('rec-bar').style.width = '0%';
+  }
+  $('st-draws').textContent = fmt(S.stats.draws);
+  $('st-econ').textContent = `${fmt(S.stats.spent)} / ${fmt(S.stats.sell)} / ${fmt(S.stats.milestone)}`;
+  $('st-sum').textContent = fmt(S.bag.reduce((s,c)=>s+c.value,0));
+
+  // 分佈
+  const total = S.stats.draws || 1;
+  const maxExpSeen = Math.max(3, ...Object.keys(S.stats.dist).map(Number));
+  const rows = [];
+  for(let k = 0; k <= Math.min(maxExpSeen, 9); k++){
+    const theo = 1 / 2**(k+1);
+    const cnt = S.stats.dist[k] || 0;
+    const act = cnt / total;
+    const st = tileStyle(k);
+    rows.push(`<div class="bl">
+      <span class="lb" style="color:${typeof st.bg==='string'&&st.bg[0]==='#'?st.bg:'var(--txt)'}">${fmt(2**k)}</span>
+      <span class="bx">
+        <i style="width:${Math.min(100,act*100)}%;background:${st.bg}"></i>
+        <span class="theo" style="width:${theo*100}%"></span>
+      </span>
+      <span class="vl">${(act*100).toFixed(1)}% / ${(theo*100).toFixed(1)}%</span>
+    </div>`);
+  }
+  $('dist').innerHTML = rows.join('');
+
+  // 聖彼得堡悖論說明
+  $('petersburg').innerHTML = S.stats.draws
+    ? `虛線為理論機率。每抽的<b>期望值是無限大</b>（½×1 + ¼×2 + ⅛×4 + … = ½+½+½+…），這就是著名的<b>聖彼得堡悖論</b>——理論上一張牌值無限多金幣，但你幾乎總是抽到很小的數字。`
+    : `每抽的<b>期望值是無限大</b>（½+½+½+…＝∞），這就是<b>聖彼得堡悖論</b>：理論上無價，實際上多半是 1 或 2。`;
+}
+
+/* ---------- 啟動 ---------- */
+load();
+$('autoMergeToggle').classList.toggle('on', S.autoMerge);
+render();
+window.addEventListener('beforeunload', ()=>save());
+</script>
+</body>
+</html>

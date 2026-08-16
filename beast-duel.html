@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>元素怪獸卡牌 — Beast Duel</title>
+<style>
+:root{
+  --bg:#0b0e1a; --panel:#151a2c; --panel2:#1d2338; --line:#2a3155;
+  --txt:#eef0ff; --dim:#8c93bd; --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+  --c-common:#93a0c4; --c-rare:#4a9eff; --c-epic:#b06bff; --c-legendary:#ffb430; --c-mythic:#ff3d7f;
+  --e-fire:#ff6b3d; --e-water:#4ab8ff; --e-grass:#4ada7a; --e-electric:#ffd53d; --e-ice:#8fe7ff;
+  --e-psychic:#ff7ad1; --e-dark:#8b6bff; --e-fairy:#ffb6e6; --e-normal:#c9cee0;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#1e2450 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding-bottom:76px;overflow-x:hidden}
+#app{max-width:760px;margin:0 auto;padding:12px 12px 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.panel h2{font-size:12px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;padding:7px 0;border-bottom:1px solid #23294560}
+.row:last-child{border-bottom:none}
+.row>span:first-child{color:var(--dim)}
+.flex{display:flex;gap:8px;flex-wrap:wrap}
+.grow{flex:1}
+.center{text-align:center}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.7;margin-top:8px}
+.hint b{color:var(--gold)}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;color:var(--txt);background:var(--panel2);transition:transform .1s}
+button:active{transform:scale(.96)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.b-gold{background:linear-gradient(135deg,#ffb430,#ff8a30);color:#221200}
+.b-green{background:linear-gradient(135deg,#3ddc97,#2ab577);color:#04231a}
+.b-ghost{background:transparent;border:1px solid var(--line)}
+.b-red{background:linear-gradient(135deg,#ff5d73,#d13a53)}
+.b-sm{padding:6px 10px;font-size:12px}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 14px}
+.brand{font-weight:800;font-size:17px;letter-spacing:1px}
+.brand span{color:var(--gold)}
+.curbar{display:flex;gap:10px;font-size:12px}
+.cur{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:4px 10px;display:flex;gap:4px;align-items:center}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:#0d1122ee;backdrop-filter:blur(8px);
+  border-top:1px solid var(--line);display:flex;z-index:50}
+.tabbar button{flex:1;background:transparent;border-radius:0;padding:9px 2px;font-size:11px;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabbar button.active{color:var(--gold)}
+.tabbar .ic{font-size:18px}
+.page{display:none}
+.page.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;position:relative;cursor:pointer}
+.card .em{font-size:30px;line-height:1;margin:4px 0}
+.card .nm{font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .lv{font-size:10px;color:var(--dim)}
+.card .rar{position:absolute;top:4px;left:4px;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:800}
+.card .team-mark{position:absolute;top:4px;right:4px;font-size:12px}
+.rar-common{background:#38406b;color:var(--c-common)}
+.rar-rare{background:#1c3a63;color:var(--c-rare)}
+.rar-epic{background:#3a205e;color:var(--c-epic)}
+.rar-legendary{background:#5a3a0e;color:var(--c-legendary)}
+.rar-mythic{background:#5a1030;color:var(--c-mythic)}
+.el-badge{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;padding:1px 7px;border-radius:8px;background:#00000030}
+.modal-bg{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;max-width:420px;width:100%;max-height:86vh;overflow:auto}
+.modal h3{margin-bottom:10px;font-size:15px}
+.bar-bg{background:#00000055;border-radius:8px;height:10px;overflow:hidden;margin:4px 0}
+.bar-fill{height:100%;border-radius:8px}
+.stage-item{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:6px}
+.battle-side{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.mon-card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;align-items:center;gap:8px}
+.mon-card.fainted{opacity:.35}
+.mon-card .em2{font-size:26px}
+.mon-info{flex:1;min-width:0}
+.mon-name{font-size:12px;font-weight:700;display:flex;justify-content:space-between}
+.hp-bg{background:#00000055;border-radius:6px;height:7px;overflow:hidden;margin-top:3px}
+.hp-fill{height:100%;background:var(--green)}
+.log{background:#00000040;border-radius:8px;padding:8px;font-size:12px;line-height:1.7;max-height:110px;overflow-y:auto;margin:8px 0}
+.move-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.move-btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:left}
+.move-btn .mp{font-size:11px;color:var(--dim)}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:#171d33;border:1px solid var(--line);
+  padding:9px 16px;border-radius:10px;font-size:13px;z-index:200;box-shadow:0 6px 20px #0008}
+.pick-card{background:var(--panel2);border:2px solid var(--line);border-radius:14px;padding:14px;text-align:center;cursor:pointer}
+.pick-card:hover{border-color:var(--gold)}
+.pick-card .em{font-size:44px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   資料層
+   ============================================================ */
+const ELEMENTS = {
+  fire:{name:'火',icon:'🔥',color:'var(--e-fire)'},
+  water:{name:'水',icon:'💧',color:'var(--e-water)'},
+  grass:{name:'草',icon:'🌿',color:'var(--e-grass)'},
+  electric:{name:'電',icon:'⚡',color:'var(--e-electric)'},
+  ice:{name:'冰',icon:'❄️',color:'var(--e-ice)'},
+  psychic:{name:'超能',icon:'🔮',color:'var(--e-psychic)'},
+  dark:{name:'惡',icon:'🌑',color:'var(--e-dark)'},
+  fairy:{name:'妖精',icon:'✨',color:'var(--e-fairy)'},
+  normal:{name:'一般',icon:'⚪',color:'var(--e-normal)'},
+};
+// attacker -> defender 有利 (1.5x)，反向自動變 0.67x
+const ADV = [
+  ['fire','grass'],['fire','ice'],['water','fire'],['grass','water'],
+  ['electric','water'],['ice','grass'],['dark','psychic'],['psychic','normal'],['fairy','dark'],
+];
+function typeMultiplier(atk,def){
+  if(atk===def) return 1;
+  if(ADV.some(p=>p[0]===atk&&p[1]===def)) return 1.5;
+  if(ADV.some(p=>p[0]===def&&p[1]===atk)) return 0.67;
+  return 1;
+}
+const RARITY = {
+  common:{label:'普通',color:'var(--c-common)',weight:55},
+  rare:{label:'稀有',color:'var(--c-rare)',weight:30},
+  epic:{label:'史詩',color:'var(--c-epic)',weight:10},
+  legendary:{label:'傳說',color:'var(--c-legendary)',weight:4},
+  mythic:{label:'神話',color:'var(--c-mythic)',weight:1},
+};
+const RARITY_BASE = {
+  common:{hp:32,atk:9,def:7,spd:9,move:34},
+  rare:{hp:45,atk:13,def:10,spd:12,move:42},
+  epic:{hp:64,atk:18,def:14,spd:15,move:50},
+  legendary:{hp:85,atk:24,def:18,spd:17,move:58},
+  mythic:{hp:100,atk:28,def:21,spd:20,move:65},
+};
+// 物種資料庫
+const SPECIES = [
+  // 火系 三階
+  {id:'firecub',name:'火種蜥',element:'fire',rarity:'common',stage:1,evolvesTo:'flamewolf',evolveLv:12,emoji:'🦎',move:'火花'},
+  {id:'flamewolf',name:'烈焰狼',element:'fire',rarity:'rare',stage:2,evolvesTo:'inferlion',evolveLv:26,emoji:'🐺',move:'烈焰爪'},
+  {id:'inferlion',name:'炎皇獅',element:'fire',rarity:'epic',stage:3,emoji:'🦁',move:'業火吼'},
+  // 水系 三階
+  {id:'droplfrog',name:'水滴蛙',element:'water',rarity:'common',stage:1,evolvesTo:'tidalturt',evolveLv:12,emoji:'🐸',move:'水槍'},
+  {id:'tidalturt',name:'潮流龜',element:'water',rarity:'rare',stage:2,evolvesTo:'abyssdrake',evolveLv:26,emoji:'🐢',move:'激流衝'},
+  {id:'abyssdrake',name:'深海蛟龍',element:'water',rarity:'epic',stage:3,emoji:'🐉',move:'深淵怒濤'},
+  // 草系 三階
+  {id:'sproutrat',name:'藤芽鼠',element:'grass',rarity:'common',stage:1,evolvesTo:'vinemink',evolveLv:12,emoji:'🐁',move:'藤鞭'},
+  {id:'vinemink',name:'蔓葉貂',element:'grass',rarity:'rare',stage:2,evolvesTo:'forestking',evolveLv:26,emoji:'🦡',move:'荊棘束'},
+  {id:'forestking',name:'森王鹿',element:'grass',rarity:'epic',stage:3,emoji:'🦌',move:'森羅萬葉'},
+  // 電 二階
+  {id:'sparkmouse',name:'電絨鼠',element:'electric',rarity:'common',stage:1,evolvesTo:'thunderfox',evolveLv:16,emoji:'🐹',move:'電擊'},
+  {id:'thunderfox',name:'雷霆狐',element:'electric',rarity:'rare',stage:2,emoji:'🦊',move:'雷霆一閃'},
+  // 冰 二階
+  {id:'frostbun',name:'雪絨兔',element:'ice',rarity:'common',stage:1,evolvesTo:'glacewolf',evolveLv:16,emoji:'🐰',move:'冰凍光線'},
+  {id:'glacewolf',name:'冰晶狼',element:'ice',rarity:'rare',stage:2,emoji:'🐺',move:'極寒爪'},
+  // 超能 二階
+  {id:'dreamcat',name:'幻夢貓',element:'psychic',rarity:'common',stage:1,evolvesTo:'seerowl',evolveLv:16,emoji:'🐱',move:'意念波'},
+  {id:'seerowl',name:'靈視梟',element:'psychic',rarity:'rare',stage:2,emoji:'🦉',move:'預知打擊'},
+  // 惡 二階
+  {id:'shadowpup',name:'暗影狼崽',element:'dark',rarity:'common',stage:1,evolvesTo:'nighthound',evolveLv:16,emoji:'🐕',move:'暗襲'},
+  {id:'nighthound',name:'夜魔犬',element:'dark',rarity:'rare',stage:2,emoji:'🐕‍🦺',move:'夜幕獠牙'},
+  // 妖精 二階
+  {id:'stardustf',name:'星塵精',element:'fairy',rarity:'common',stage:1,evolvesTo:'moonmaiden',evolveLv:16,emoji:'🧚',move:'星光塵'},
+  {id:'moonmaiden',name:'月光仙子',element:'fairy',rarity:'rare',stage:2,emoji:'🧝',move:'月華亂舞'},
+  // 一般 二階
+  {id:'roundchick',name:'圓滾雞',element:'normal',rarity:'common',stage:1,evolvesTo:'bigtoucan',evolveLv:16,emoji:'🐤',move:'猛撲'},
+  {id:'bigtoucan',name:'巨嘴鳥',element:'normal',rarity:'rare',stage:2,emoji:'🦜',move:'嘴喙突擊'},
+  // 額外普通
+  {id:'mossturt',name:'苔蘚龜',element:'grass',rarity:'common',stage:1,emoji:'🐢',move:'孢子噴射'},
+  {id:'woollamb',name:'小綿羊',element:'normal',rarity:'common',stage:1,emoji:'🐑',move:'頭錘'},
+  {id:'glowmoth',name:'螢光蛾',element:'fairy',rarity:'common',stage:1,emoji:'🦋',move:'鱗粉'},
+  {id:'pebblecrab',name:'岩殼蟹',element:'normal',rarity:'common',stage:1,emoji:'🦀',move:'鉗擊'},
+  // 傳說
+  {id:'phoenixlord',name:'熾炎鳳凰',element:'fire',rarity:'legendary',stage:3,emoji:'🐦‍🔥',move:'鳳凰烈焰'},
+  {id:'abysssovereign',name:'深淵海皇',element:'water',rarity:'legendary',stage:3,emoji:'🐋',move:'滅世海嘯'},
+  {id:'ancienttree',name:'森靈古樹',element:'grass',rarity:'legendary',stage:3,emoji:'🌳',move:'大地共鳴'},
+  // 神話
+  {id:'thunderqilin',name:'雷帝麒麟',element:'electric',rarity:'mythic',stage:3,emoji:'🦄',move:'天雷審判'},
+  {id:'voidcat',name:'虛空幻貓',element:'psychic',rarity:'mythic',stage:3,emoji:'😼',move:'虛無吞噬'},
+];
+const SPECIES_MAP = Object.fromEntries(SPECIES.map(s=>[s.id,s]));
+const BASIC_MOVE = {name:'衝撞',type:'normal',power:26,maxPp:30};
+
+function movesOf(sp){
+  const base = RARITY_BASE[sp.rarity];
+  const elemMove = {name:sp.move,type:sp.element,power:base.move,maxPp:15};
+  const moves=[elemMove,BASIC_MOVE];
+  if(sp.stage===3 || sp.rarity==='legendary' || sp.rarity==='mythic'){ // 三階最終形態/傳說/神話多一招必殺
+    moves.unshift({name:sp.move+'・真髓',type:sp.element,power:Math.round(base.move*1.35),maxPp:8});
+  }
+  return moves;
+}
+
+/* AI 對戰梯隊 */
+const STAGES = [
+  {name:'新手訓練場',lv:3,team:['woollamb']},
+  {name:'森林小徑',lv:5,team:['sproutrat','pebblecrab']},
+  {name:'河畔營地',lv:7,team:['droplfrog','sparkmouse']},
+  {name:'炙熱丘陵',lv:9,team:['firecub','glowmoth']},
+  {name:'寒冰洞窟',lv:12,team:['frostbun','frostbun']},
+  {name:'幽影森林',lv:15,team:['shadowpup','dreamcat','mossturt']},
+  {name:'月光神殿',lv:18,team:['stardustf','moonmaiden']},
+  {name:'雷鳴高塔',lv:21,team:['thunderfox','sparkmouse','bigtoucan']},
+  {name:'進化者道館',lv:25,team:['flamewolf','tidalturt','vinemink']},
+  {name:'冰霜峻嶺',lv:28,team:['glacewolf','seerowl','nighthound']},
+  {name:'王域競技場',lv:32,team:['inferlion','abyssdrake','forestking']},
+  {name:'傳說遺跡',lv:38,team:['phoenixlord','abysssovereign']},
+  {name:'神話裂界',lv:45,team:['thunderqilin','voidcat','ancienttree']},
+];
+
+/* ============================================================
+   狀態層
+   ============================================================ */
+let S = null;
+const SAVE_KEY = 'ectcg_save_v1';
+function freshState(){
+  return {coins:500,gems:12,pity:{epic:0,legendary:0,mythic:0},
+    cards:[],team:[],stageCleared:-1,wins:0,losses:0,starterChosen:false,loop:0};
+}
+function load(){
+  try{ const raw=localStorage.getItem(SAVE_KEY); S = raw?JSON.parse(raw):freshState(); }
+  catch(e){ S = freshState(); }
+  if(!S.loop) S.loop=0;
+}
+function save(){ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }
+function uid(){ return 'c'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
+
+function expToNext(level){ return Math.round(20*Math.pow(level,1.5)); }
+function statScale(level){ return 1+(level-1)*0.11; }
+function computeStats(card){
+  const sp=SPECIES_MAP[card.speciesId], base=RARITY_BASE[sp.rarity], sc=statScale(card.level);
+  return {hp:Math.round(base.hp*sc), atk:Math.round(base.atk*sc), def:Math.round(base.def*sc), spd:Math.round(base.spd*sc)};
+}
+function addCard(speciesId, level){
+  const card={uid:uid(), speciesId, level:level||1, exp:0};
+  S.cards.push(card);
+  return card;
+}
+function addExp(card, amt){
+  const sp=SPECIES_MAP[card.speciesId];
+  card.exp+=amt;
+  let leveled=false;
+  while(card.exp>=expToNext(card.level) && card.level<60){
+    card.exp-=expToNext(card.level);
+    card.level++; leveled=true;
+  }
+  if(leveled && sp.evolvesTo && card.level>=sp.evolveLv){
+    return {evolveReady:true};
+  }
+  return {evolveReady:false};
+}
+function doEvolve(card){
+  const sp=SPECIES_MAP[card.speciesId];
+  if(!sp.evolvesTo || card.level<sp.evolveLv) return false;
+  card.speciesId = sp.evolvesTo;
+  return true;
+}
+
+/* ============================================================
+   抽卡
+   ============================================================ */
+function rollRarity(){
+  S.pity.epic++; S.pity.legendary++; S.pity.mythic++;
+  if(S.pity.mythic>=100){ S.pity.mythic=0; S.pity.legendary=0; S.pity.epic=0; return 'mythic'; }
+  if(S.pity.legendary>=40){ S.pity.legendary=0; S.pity.epic=0; return 'legendary'; }
+  if(S.pity.epic>=10){ S.pity.epic=0; return 'epic'; }
+  const roll=Math.random()*100; let acc=0;
+  for(const key of ['mythic','legendary','epic','rare','common']){
+    acc+=RARITY[key].weight;
+    if(roll<acc){
+      if(key==='epic') S.pity.epic=0;
+      if(key==='legendary'){ S.pity.epic=0; S.pity.legendary=0; }
+      if(key==='mythic'){ S.pity.epic=0; S.pity.legendary=0; S.pity.mythic=0; }
+      return key;
+    }
+  }
+  return 'common';
+}
+function pullOne(){
+  const rarity=rollRarity();
+  const pool=SPECIES.filter(s=>s.rarity===rarity && s.stage!==2 ? true : true); // 抽卡池含所有階段
+  const basePool = SPECIES.filter(s=>s.rarity===rarity);
+  const sp = basePool[Math.floor(Math.random()*basePool.length)];
+  const card = addCard(sp.id,1);
+  return card;
+}
+function doGacha(count){
+  const cost = count*10;
+  if(S.gems<cost) return null;
+  S.gems-=cost;
+  const results=[];
+  for(let i=0;i<count;i++) results.push(pullOne());
+  if(S.team.length<4){
+    for(const c of results){ if(S.team.length<4) S.team.push(c.uid); }
+  }
+  save();
+  return results;
+}
+
+/* ============================================================
+   UI 共用
+   ============================================================ */
+let currentTab='home';
+function toast(msg){
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  document.getElementById('toastRoot').appendChild(el);
+  setTimeout(()=>el.remove(),2200);
+}
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+function openModal(html){ document.getElementById('modalRoot').innerHTML=`<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`; }
+
+function cardMini(card, opts){
+  opts=opts||{};
+  const sp=SPECIES_MAP[card.speciesId];
+  const inTeam = S.team.includes(card.uid);
+  return `<div class="card" onclick="${opts.onclick||`showCardDetail('${card.uid}')`}">
+    <div class="rar rar-${sp.rarity}">${RARITY[sp.rarity].label}</div>
+    ${inTeam?'<div class="team-mark">⭐</div>':''}
+    <div class="em">${sp.emoji}</div>
+    <div class="nm">${sp.name}</div>
+    <div class="lv">Lv.${card.level} ${ELEMENTS[sp.element].icon}</div>
+  </div>`;
+}
+
+function showCardDetail(cuid){
+  const card=S.cards.find(c=>c.uid===cuid); if(!card) return;
+  const sp=SPECIES_MAP[card.speciesId];
+  const stats=computeStats(card);
+  const inTeam=S.team.includes(card.uid);
+  const canEvolve = sp.evolvesTo && card.level>=sp.evolveLv;
+  const nextSp = sp.evolvesTo?SPECIES_MAP[sp.evolvesTo]:null;
+  openModal(`
+    <h3>${sp.emoji} ${sp.name} <span class="el-badge" style="color:${ELEMENTS[sp.element].color}">${ELEMENTS[sp.element].icon} ${ELEMENTS[sp.element].name}</span></h3>
+    <div class="row"><span>稀有度</span><span style="color:${RARITY[sp.rarity].color}">${RARITY[sp.rarity].label}</span></div>
+    <div class="row"><span>等級</span><span>Lv.${card.level}　EXP ${card.exp}/${expToNext(card.level)}</span></div>
+    <div class="row"><span>HP</span><span>${stats.hp}</span></div>
+    <div class="row"><span>攻擊</span><span>${stats.atk}</span></div>
+    <div class="row"><span>防禦</span><span>${stats.def}</span></div>
+    <div class="row"><span>速度</span><span>${stats.spd}</span></div>
+    <div class="hint"><b>招式</b>　${movesOf(sp).map(m=>`${m.name}(${ELEMENTS[m.type].icon}威力${m.power})`).join('　')}</div>
+    ${nextSp?`<div class="hint">${canEvolve?`可進化為 <b>${nextSp.emoji}${nextSp.name}</b>`:`Lv.${sp.evolveLv} 可進化為 ${nextSp.emoji}${nextSp.name}`}</div>`:''}
+    <div class="flex" style="margin-top:12px">
+      ${canEvolve?`<button class="b-gold grow" onclick="evolveCard('${card.uid}')">✨ 進化</button>`:''}
+      <button class="${inTeam?'b-red':'b-green'} grow" onclick="toggleTeam('${card.uid}')">${inTeam?'移出隊伍':'加入隊伍'}</button>
+      <button class="b-ghost" onclick="closeModal()">關閉</button>
+    </div>`);
+}
+function evolveCard(cuid){
+  const card=S.cards.find(c=>c.uid===cuid); if(!card) return;
+  if(doEvolve(card)){ save(); toast('✨ 進化成功！'); closeModal(); render(); }
+}
+function toggleTeam(cuid){
+  const i=S.team.indexOf(cuid);
+  if(i>=0){ S.team.splice(i,1); }
+  else{
+    if(S.team.length>=4){ toast('隊伍最多 4 隻，請先移出其他成員'); return; }
+    S.team.push(cuid);
+  }
+  save(); closeModal(); render();
+}
+
+/* ============================================================
+   首次進入：選始祖
+   ============================================================ */
+const STARTERS=['firecub','droplfrog','sproutrat'];
+function showStarterPick(){
+  openModal(`
+    <h3>選擇你的第一張夥伴卡</h3>
+    <div class="hint">開始這段元素卡牌之旅，選一位夥伴陪你出發。</div>
+    <div class="grid" style="margin-top:12px">
+      ${STARTERS.map(id=>{const sp=SPECIES_MAP[id];
+        return `<div class="pick-card" onclick="pickStarter('${id}')">
+          <div class="em">${sp.emoji}</div><div style="font-weight:700;margin-top:6px">${sp.name}</div>
+          <div class="el-badge" style="color:${ELEMENTS[sp.element].color};margin-top:6px">${ELEMENTS[sp.element].icon} ${ELEMENTS[sp.element].name}</div>
+        </div>`;}).join('')}
+    </div>`);
+}
+function pickStarter(id){
+  const card=addCard(id,5);
+  S.team.push(card.uid);
+  S.starterChosen=true;
+  save(); closeModal(); render();
+  toast('歡迎來到元素卡牌的世界！');
+}
+
+/* ============================================================
+   對戰引擎
+   ============================================================ */
+let battle=null; // {player:[], enemy:[], stageIdx, log:[]}
+function buildBattleMon(speciesId, level){
+  const sp=SPECIES_MAP[speciesId];
+  const dummyCard={speciesId,level};
+  const stats=computeStats(dummyCard);
+  const moves=movesOf(sp).map(m=>({...m,pp:m.maxPp}));
+  return {speciesId, level, stats, hp:stats.hp, maxHp:stats.hp, moves, fainted:false};
+}
+function startStage(stageIdx){
+  const stage=STAGES[stageIdx];
+  if(!stage){ toast('目前沒有更多關卡了'); return; }
+  if(S.team.length===0){ toast('請先組建隊伍！'); return; }
+  const playerMons = S.team.map(cuid=>{
+    const card=S.cards.find(c=>c.uid===cuid);
+    const stats=computeStats(card);
+    const sp=SPECIES_MAP[card.speciesId];
+    const moves=movesOf(sp).map(m=>({...m,pp:m.maxPp}));
+    return {cuid, speciesId:card.speciesId, level:card.level, stats, hp:stats.hp, maxHp:stats.hp, moves, fainted:false};
+  });
+  const lvBonus = stage.lv + S.loop*4;
+  const enemyMons = stage.team.map(id=>buildBattleMon(id, lvBonus));
+  battle={player:playerMons, enemy:enemyMons, stageIdx, log:['⚔️ 戰鬥開始！'], over:false, activeP:0, activeE:0};
+  currentTab='battle'; renderBattleView();
+}
+function battleLog(msg){ battle.log.push(msg); if(battle.log.length>40) battle.log.shift(); }
+function aliveIdx(list, from){ for(let i=from;i<list.length;i++) if(!list[i].fainted) return i; return -1; }
+function pickEnemyMove(mon, target){
+  const usable=mon.moves.filter(m=>m.pp>0);
+  if(usable.length===0) return BASIC_MOVE;
+  let best=usable[0], bestScore=-1;
+  for(const m of usable){
+    const mult=typeMultiplier(m.type, SPECIES_MAP[target.speciesId].element);
+    const score=m.power*mult+Math.random()*5;
+    if(score>bestScore){bestScore=score; best=m;}
+  }
+  return best;
+}
+function doDamage(attacker, defender, move){
+  if(move.pp!==undefined) move.pp--;
+  const defSp=SPECIES_MAP[defender.speciesId];
+  const mult=typeMultiplier(move.type, defSp.element);
+  const variance=0.9+Math.random()*0.2;
+  let dmg=Math.round((move.power*(attacker.stats.atk/Math.max(6,defender.stats.def)))*mult*variance*0.55);
+  dmg=Math.max(1,dmg);
+  defender.hp=Math.max(0,defender.hp-dmg);
+  if(defender.hp===0) defender.fainted=true;
+  return {dmg,mult};
+}
+function playerUseMove(moveIdx){
+  if(!battle||battle.over) return;
+  const p=battle.player[battle.activeP], e=battle.enemy[battle.activeE];
+  const move=p.moves[moveIdx];
+  if(move.pp<=0){ toast('這個招式沒有 PP 了'); return; }
+  const order = p.stats.spd>=e.stats.spd ? ['p','e'] : ['e','p'];
+  for(const side of order){
+    if(battle.over) break;
+    if(side==='p'){
+      const pSp=SPECIES_MAP[p.speciesId];
+      const r=doDamage(p,e,move);
+      battleLog(`${pSp.emoji} ${pSp.name} 使用 ${move.name}！${r.mult>1?'效果絕佳！':r.mult<1?'效果不太好...':''} 造成 ${r.dmg} 傷害`);
+      if(e.fainted){
+        battleLog(`${SPECIES_MAP[e.speciesId].name} 倒下了！`);
+        const next=aliveIdx(battle.enemy, battle.activeE+1);
+        if(next<0){ endBattle(true); return; }
+        battle.activeE=next;
+        battleLog(`敵方派出 ${SPECIES_MAP[battle.enemy[next].speciesId].name}！`);
+      }
+    } else {
+      const eMon=battle.enemy[battle.activeE];
+      if(eMon.fainted) continue;
+      const eMove=pickEnemyMove(eMon, battle.player[battle.activeP]);
+      const eSp=SPECIES_MAP[eMon.speciesId];
+      const r=doDamage(eMon, battle.player[battle.activeP], eMove);
+      battleLog(`敵方 ${eSp.emoji} ${eSp.name} 使用 ${eMove.name}！${r.mult>1?'效果絕佳！':r.mult<1?'效果不太好...':''} 造成 ${r.dmg} 傷害`);
+      if(battle.player[battle.activeP].fainted){
+        battleLog(`${SPECIES_MAP[battle.player[battle.activeP].speciesId].name} 倒下了！`);
+        const next=aliveIdx(battle.player, 0);
+        if(next<0){ endBattle(false); return; }
+        battle.activeP=next;
+      }
+    }
+  }
+  renderBattleView();
+}
+function playerSwitch(idx){
+  if(!battle||battle.over) return;
+  if(battle.player[idx].fainted){ toast('這隻已經倒下了'); return; }
+  battle.activeP=idx;
+  battleLog(`換上 ${SPECIES_MAP[battle.player[idx].speciesId].name}！`);
+  renderBattleView();
+}
+function endBattle(won){
+  battle.over=true;
+  const stage=STAGES[battle.stageIdx];
+  if(won){
+    const coinReward=60+battle.stageIdx*22;
+    const expReward=35+battle.stageIdx*9;
+    const gemReward = (battle.stageIdx%3===2)?8:0;
+    S.coins+=coinReward; S.gems+=gemReward; S.wins++;
+    if(battle.stageIdx>S.stageCleared) S.stageCleared=battle.stageIdx;
+    if(battle.stageIdx===STAGES.length-1) S.loop++;
+    let evolveNotices=[];
+    for(const pm of battle.player){
+      const card=S.cards.find(c=>c.uid===pm.cuid);
+      if(card){ const r=addExp(card, expReward); if(r.evolveReady) evolveNotices.push(card); }
+    }
+    save();
+    battleLog(`🏆 勝利！獲得 ${coinReward} 金幣、${expReward} EXP${gemReward?`、${gemReward} 元素石`:''}`);
+    if(evolveNotices.length) battleLog(`✨ 有夥伴達到進化等級，可到「卡牌」頁面進化！`);
+  } else {
+    S.losses++; save();
+    battleLog('💀 戰敗了...再訓練一下吧！');
+  }
+  renderBattleView();
+}
+
+/* ============================================================
+   渲染
+   ============================================================ */
+function render(){
+  const app=document.getElementById('app');
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="brand">元素<span>卡牌</span>對戰</div>
+      <div class="curbar">
+        <div class="cur">💰 ${S.coins.toLocaleString()}</div>
+        <div class="cur">💎 ${S.gems}</div>
+      </div>
+    </div>
+    <div id="pages"></div>
+    <div class="tabbar">
+      <button data-tab="home" class="${currentTab==='home'?'active':''}" onclick="switchTab('home')"><span class="ic">🏠</span>首頁</button>
+      <button data-tab="gacha" class="${currentTab==='gacha'?'active':''}" onclick="switchTab('gacha')"><span class="ic">🃏</span>抽卡</button>
+      <button data-tab="cards" class="${currentTab==='cards'?'active':''}" onclick="switchTab('cards')"><span class="ic">🎒</span>卡牌</button>
+      <button data-tab="battle" class="${currentTab==='battle'?'active':''}" onclick="switchTab('battle')"><span class="ic">⚔️</span>對戰</button>
+    </div>`;
+  renderPage();
+  if(!S.starterChosen) showStarterPick();
+}
+function switchTab(tab){ currentTab=tab; battle=(tab==='battle')?battle:battle; renderPage(); updateTabbar(); }
+function updateTabbar(){
+  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===currentTab));
+}
+function renderPage(){
+  const pages=document.getElementById('pages');
+  if(!pages) return;
+  if(currentTab==='home') pages.innerHTML=viewHome();
+  else if(currentTab==='gacha') pages.innerHTML=viewGacha();
+  else if(currentTab==='cards') pages.innerHTML=viewCards();
+  else if(currentTab==='battle') pages.innerHTML=battle?viewBattle():viewStageSelect();
+}
+function renderBattleView(){ const pages=document.getElementById('pages'); if(pages) pages.innerHTML=viewBattle(); }
+
+function viewHome(){
+  const teamCount=S.team.length;
+  return `
+    <div class="panel">
+      <h2>訓練師檔案</h2>
+      <div class="row"><span>卡牌收藏</span><span>${S.cards.length} 張</span></div>
+      <div class="row"><span>隊伍成員</span><span>${teamCount} / 4</span></div>
+      <div class="row"><span>戰績</span><span>${S.wins} 勝 ${S.losses} 敗</span></div>
+      <div class="row"><span>目前進度</span><span>${S.stageCleared>=0?STAGES[S.stageCleared].name:'尚未通關'}${S.loop>0?`（循環 x${S.loop}）`:''}</span></div>
+    </div>
+    <div class="panel">
+      <h2>快速開始</h2>
+      <div class="flex">
+        <button class="b-gold grow" onclick="switchTab('gacha')">🃏 去抽卡</button>
+        <button class="b-green grow" onclick="switchTab('battle')">⚔️ 去對戰</button>
+      </div>
+      <div class="hint">收集元素怪獸卡、組成 4 張隊伍，利用屬性克制在戰鬥中取勝！<br>
+      <b>屬性克制</b>：火剋草/冰、水剋火、草剋水、電剋水、冰剋草、惡剋超能、超能剋一般、妖精剋惡。</div>
+    </div>`;
+}
+function viewGacha(){
+  return `
+    <div class="panel">
+      <h2>元素召喚</h2>
+      <div class="hint">消耗 <b>元素石</b> 召喚新的怪獸夥伴。稀有度越高，數值與招式威力越強。</div>
+      <div class="row"><span>史詩保底</span><span>${S.pity.epic}/10</span></div>
+      <div class="row"><span>傳說保底</span><span>${S.pity.legendary}/40</span></div>
+      <div class="row"><span>神話保底</span><span>${S.pity.mythic}/100</span></div>
+      <div class="flex" style="margin-top:10px">
+        <button class="b-gold grow" onclick="doPull(1)">召喚 ×1　💎10</button>
+        <button class="b-gold grow" onclick="doPull(10)">召喚 ×10　💎100</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>機率</h2>
+      ${Object.entries(RARITY).map(([k,v])=>`<div class="row"><span style="color:${v.color}">${v.label}</span><span>${v.weight}%</span></div>`).join('')}
+    </div>`;
+}
+function doPull(count){
+  const results=doGacha(count);
+  if(!results){ toast('元素石不足'); return; }
+  renderPage();
+  openModal(`
+    <h3>召喚結果</h3>
+    <div class="grid">${results.map(c=>cardMini(c,{onclick:'closeModal()'})).join('')}</div>
+    <div class="flex" style="margin-top:12px"><button class="b-ghost grow" onclick="closeModal()">關閉</button></div>`);
+}
+function viewCards(){
+  const teamCards=S.team.map(uid=>S.cards.find(c=>c.uid===uid)).filter(Boolean);
+  const others=S.cards.filter(c=>!S.team.includes(c.uid));
+  return `
+    <div class="panel">
+      <h2>戰鬥隊伍 (${teamCards.length}/4)</h2>
+      ${teamCards.length? `<div class="grid">${teamCards.map(c=>cardMini(c)).join('')}</div>` : `<div class="hint">尚未選擇隊伍成員，點下方卡牌加入隊伍</div>`}
+    </div>
+    <div class="panel">
+      <h2>全部收藏 (${S.cards.length})</h2>
+      ${others.length? `<div class="grid">${others.map(c=>cardMini(c)).join('')}</div>` : `<div class="hint">去抽卡取得更多夥伴吧！</div>`}
+    </div>`;
+}
+function viewStageSelect(){
+  return `
+    <div class="panel">
+      <h2>選擇關卡</h2>
+      ${STAGES.map((st,i)=>{
+        const locked = i>S.stageCleared+1;
+        const cleared = i<=S.stageCleared;
+        return `<div class="stage-item">
+          <div>
+            <div style="font-weight:700;font-size:13px">${cleared?'✅ ':''}${st.name}</div>
+            <div class="hint" style="margin-top:2px">Lv.${st.lv+S.loop*4} 敵方 ${st.team.length} 隻</div>
+          </div>
+          <button class="${locked?'b-ghost':'b-green'} b-sm" ${locked?'disabled':''} onclick="startStage(${i})">${locked?'🔒 未解鎖':'挑戰'}</button>
+        </div>`;
+      }).join('')}
+      ${S.loop>0?`<div class="hint">已完成全部關卡 ${S.loop} 輪循環，敵方等級持續提升，可持續刷取資源。</div>`:''}
+    </div>`;
+}
+function viewBattle(){
+  if(!battle) return viewStageSelect();
+  const p=battle.player[battle.activeP];
+  const pSp=SPECIES_MAP[p.speciesId];
+  const eArr=battle.enemy, e=eArr[battle.activeE], eSp=SPECIES_MAP[e.speciesId];
+  return `
+    <div class="panel">
+      <h2>敵方隊伍</h2>
+      <div class="battle-side">
+        ${eArr.map((m,i)=>`<div class="mon-card ${m.fainted?'fainted':''} ${i===battle.activeE?'':''}">
+          <div class="em2">${SPECIES_MAP[m.speciesId].emoji}</div>
+          <div class="mon-info">
+            <div class="mon-name"><span>${SPECIES_MAP[m.speciesId].name} Lv.${m.level}</span><span>${m.hp}/${m.maxHp}</span></div>
+            <div class="hp-bg"><div class="hp-fill" style="width:${Math.max(0,m.hp/m.maxHp*100)}%;background:${m.hp/m.maxHp<0.3?'var(--red)':'var(--green)'}"></div></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="panel">
+      <h2>我方隊伍</h2>
+      <div class="battle-side">
+        ${battle.player.map((m,i)=>`<div class="mon-card ${m.fainted?'fainted':''}" ${!m.fainted?`onclick="playerSwitch(${i})"`:''} style="cursor:${m.fainted?'default':'pointer'}">
+          <div class="em2">${SPECIES_MAP[m.speciesId].emoji}</div>
+          <div class="mon-info">
+            <div class="mon-name"><span>${i===battle.activeP?'▶ ':''}${SPECIES_MAP[m.speciesId].name} Lv.${m.level}</span><span>${m.hp}/${m.maxHp}</span></div>
+            <div class="hp-bg"><div class="hp-fill" style="width:${Math.max(0,m.hp/m.maxHp*100)}%;background:${m.hp/m.maxHp<0.3?'var(--red)':'var(--green)'}"></div></div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="log">${battle.log.map(l=>`<div>${l}</div>`).join('')}</div>
+      ${battle.over?
+        `<button class="b-gold grow" onclick="battle=null;renderPage()">返回關卡選擇</button>`
+        :
+        `<div class="move-grid">
+          ${p.moves.map((m,i)=>`<button class="move-btn" ${m.pp<=0?'disabled':''} onclick="playerUseMove(${i})">
+            <div>${ELEMENTS[m.type].icon} ${m.name}</div>
+            <div class="mp">威力 ${m.power}　PP ${m.pp}/${m.maxPp}</div>
+          </button>`).join('')}
+        </div>`
+      }
+    </div>`;
+}
+
+/* ============================================================
+   啟動
+   ============================================================ */
+load();
+render();
+</script>
+</body>
+</html>

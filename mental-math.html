@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心算闖關 · MIND SPRINT</title>
+<style>
+  :root{
+    --bg:#080a14; --panel:#141830; --panel2:#1d2242; --line:#2b3260;
+    --txt:#eaeeff; --dim:#8790bb;
+    --cy:#3ce0ff; --pu:#a76bff; --pk:#ff4d8d; --gold:#ffc84a;
+    --green:#3ddc97; --red:#ff5d73;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:radial-gradient(1000px 700px at 50% -20%,#25235c 0%,var(--bg) 58%);
+    color:var(--txt);min-height:100vh;padding:16px 14px 40px}
+  .wrap{max-width:840px;margin:0 auto}
+  .screen{display:none;animation:fade .25s ease}
+  .screen.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* ── 標題 ── */
+  .logo{text-align:center;margin:18px 0 22px}
+  .logo h1{font-size:36px;letter-spacing:8px;font-weight:900;
+    background:linear-gradient(95deg,var(--cy),var(--pu) 45%,var(--pk));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .logo p{color:var(--dim);font-size:12px;letter-spacing:5px;margin-top:6px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+
+  /* ── 總覽列 ── */
+  .totals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .tot{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:10px 12px;text-align:center}
+  .tot .k{font-size:10px;color:var(--dim);letter-spacing:2px}
+  .tot .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+
+  /* ── 關卡地圖 ── */
+  .map{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:11px}
+  .lv{position:relative;background:var(--panel);border:1px solid var(--line);
+    border-radius:13px;padding:12px 13px;cursor:pointer;transition:.15s;overflow:hidden;text-align:left}
+  .lv:hover{transform:translateY(-3px);border-color:var(--cy)}
+  .lv.lock{opacity:.42;cursor:not-allowed;filter:grayscale(.7)}
+  .lv.lock:hover{transform:none;border-color:var(--line)}
+  .lv.boss{border-color:#ff4d8d66;background:linear-gradient(140deg,#3a1236,#141830 70%)}
+  .lv .no{font-size:10px;color:var(--dim);letter-spacing:2px}
+  .lv .nm{font-size:16px;font-weight:800;margin:3px 0 5px}
+  .lv .ds{font-size:11px;color:var(--dim);line-height:1.55;min-height:34px}
+  .lv .st{font-size:14px;letter-spacing:2px;margin-top:6px}
+  .lv .bd{position:absolute;top:9px;right:10px;font-size:9px;font-weight:800;
+    background:var(--pk);color:#fff;padding:2px 7px;border-radius:5px;letter-spacing:1px}
+  .lv .lk{position:absolute;inset:0;display:grid;place-items:center;font-size:26px}
+
+  /* ── 按鈕 ── */
+  .btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    padding:11px 22px;border-radius:11px;font-family:inherit;font-size:14px;
+    font-weight:800;cursor:pointer;transition:.15s;letter-spacing:1px}
+  .btn:hover{border-color:var(--cy);color:var(--cy)}
+  .btn.pri{background:linear-gradient(120deg,var(--cy),var(--pu));border-color:transparent;color:#08101c}
+  .btn.pri:hover{filter:brightness(1.12);color:#08101c}
+  .btn.warn{background:linear-gradient(120deg,var(--gold),var(--pk));border-color:transparent;color:#1a0a14}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+
+  /* ── 遊戲 HUD ── */
+  .hud{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+  .hud .ttl{font-size:14px;font-weight:800;letter-spacing:1px}
+  .hud .ttl span{display:block;font-size:10px;color:var(--dim);letter-spacing:2px;font-weight:500}
+  .hearts{font-size:17px;letter-spacing:2px}
+  .hearts .dead{opacity:.22}
+  .hbar{height:7px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:14px}
+  .hbar i{display:block;height:100%;background:linear-gradient(90deg,var(--cy),var(--pu));
+    border-radius:4px;transition:width .3s}
+
+  .board{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:20px 16px 16px;text-align:center;position:relative;overflow:hidden}
+  .board.ok{animation:okf .4s}
+  .board.no{animation:nof .4s}
+  @keyframes okf{0%{background:#1c4a37}100%{background:var(--panel)}}
+  @keyframes nof{0%,100%{transform:translateX(0);background:var(--panel)}
+    20%{transform:translateX(-9px);background:#4a1c26}60%{transform:translateX(7px);background:#4a1c26}}
+
+  .timer{height:9px;background:var(--panel2);border-radius:5px;overflow:hidden;margin-bottom:16px}
+  .timer i{display:block;height:100%;width:100%;border-radius:5px;
+    background:linear-gradient(90deg,var(--green),var(--gold));transition:width .06s linear}
+  .timer.hot i{background:linear-gradient(90deg,var(--gold),var(--red))}
+
+  .q{font-size:clamp(34px,9vw,56px);font-weight:900;letter-spacing:4px;
+    font-variant-numeric:tabular-nums;line-height:1.25}
+  .ans{margin:14px auto 4px;width:min(340px,100%);height:62px;border-radius:12px;
+    background:var(--panel2);border:2px solid var(--line);display:grid;place-items:center;
+    font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;transition:.15s}
+  .ans.filled{border-color:var(--cy);color:var(--cy)}
+  .ans .ph{color:#5b6390;font-size:16px;letter-spacing:3px;font-weight:600}
+
+  .flash{position:absolute;inset:0;display:grid;place-items:center;
+    background:#0a0d1aee;font-size:26px;font-weight:900;letter-spacing:2px}
+  .flash.g{color:var(--green)} .flash.r{color:var(--red)}
+  .flash small{display:block;font-size:14px;color:var(--dim);margin-top:8px;letter-spacing:1px}
+
+  .combo{position:absolute;top:12px;right:14px;font-size:13px;font-weight:900;
+    color:var(--gold);letter-spacing:1px}
+  .scr{position:absolute;top:12px;left:14px;font-size:13px;font-weight:800;
+    color:var(--dim);font-variant-numeric:tabular-nums}
+
+  /* ── 鍵盤 ── */
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+  .pad button{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    font-family:inherit;font-size:24px;font-weight:800;padding:15px 0;border-radius:12px;
+    cursor:pointer;transition:.1s;font-variant-numeric:tabular-nums}
+  .pad button:hover{background:#283060;border-color:var(--cy)}
+  .pad button:active{transform:scale(.94)}
+  .pad .go{grid-column:span 3;background:linear-gradient(120deg,var(--cy),var(--pu));
+    color:#08101c;border-color:transparent;font-size:18px;letter-spacing:6px;padding:14px 0}
+  .pad .fn{font-size:19px;color:var(--dim)}
+
+  /* ── 倒數 ── */
+  .cd{position:fixed;inset:0;background:#060814f2;display:grid;place-items:center;z-index:20}
+  .cd b{font-size:96px;font-weight:900;letter-spacing:6px;
+    background:linear-gradient(95deg,var(--cy),var(--pk));-webkit-background-clip:text;
+    background-clip:text;color:transparent;animation:pop .6s ease}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* ── 結算 ── */
+  .rs{text-align:center;padding:26px 18px}
+  .rs h2{font-size:26px;letter-spacing:4px;margin-bottom:4px}
+  .rs .sub{color:var(--dim);font-size:12px;letter-spacing:2px;margin-bottom:18px}
+  .stars{font-size:44px;letter-spacing:10px;margin-bottom:18px}
+  .stars i{opacity:.16;font-style:normal;display:inline-block;animation:sp .45s backwards}
+  .stars i.on{opacity:1;filter:drop-shadow(0 0 12px #ffc84a90)}
+  @keyframes sp{from{transform:scale(2.2) rotate(-40deg);opacity:0}}
+  .grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+  .kv{background:var(--panel2);border-radius:11px;padding:11px}
+  .kv .k{font-size:10px;color:var(--dim);letter-spacing:2px}
+  .kv .v{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+  .rs .row{justify-content:center}
+
+  .hint{color:var(--dim);font-size:11.5px;line-height:1.75;letter-spacing:.5px}
+  .hint b{color:var(--cy)}
+  @media(max-width:520px){
+    .totals{grid-template-columns:repeat(3,1fr)}
+    .pad button{font-size:21px;padding:13px 0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ══════ 首頁 ══════ -->
+  <section id="s-home" class="screen on">
+    <div class="logo">
+      <h1>心算闖關</h1>
+      <p>M I N D &nbsp; S P R I N T</p>
+    </div>
+
+    <div class="totals">
+      <div class="tot"><div class="k">總星數</div><div class="v" id="t-star">0 / 30</div></div>
+      <div class="tot"><div class="k">最高總分</div><div class="v" id="t-best">0</div></div>
+      <div class="tot"><div class="k">無盡紀錄</div><div class="v" id="t-endless">—</div></div>
+    </div>
+
+    <div class="map" id="map"></div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:15px;font-weight:800;letter-spacing:2px">∞ 無盡模式</div>
+          <div class="hint" id="endless-note">通關第十關後解鎖</div>
+        </div>
+        <button class="btn warn" id="btn-endless" disabled>挑戰</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="hint">
+        <b>玩法</b>：每題限時作答，答錯或超時扣一顆心，心歸零即闖關失敗。<br>
+        <b>連擊</b>：連對 3 題 ×1.5、5 題 ×2、8 題 ×3 分數倍率。剩餘時間越多、加分越高。<br>
+        <b>操作</b>：可用實體鍵盤 <b>數字鍵</b> 輸入、<b>Enter</b> 送出、<b>Backspace</b> 刪除、<b>-</b> 切換正負。
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="btn-reset">清除進度</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════ 遊戲 ══════ -->
+  <section id="s-game" class="screen">
+    <div class="hud">
+      <div class="ttl" id="g-title">第一關<span>加法暖身</span></div>
+      <div class="hearts" id="g-hearts"></div>
+    </div>
+    <div class="hbar"><i id="g-prog" style="width:0%"></i></div>
+
+    <div class="board" id="board">
+      <div class="scr" id="g-score">0</div>
+      <div class="combo" id="g-combo"></div>
+      <div class="timer" id="g-timerbox"><i id="g-timer"></i></div>
+      <div class="q" id="g-q">—</div>
+      <div class="ans" id="g-ans"><span class="ph">請輸入答案</span></div>
+      <div class="flash" id="g-flash" style="display:none"></div>
+    </div>
+
+    <div class="pad" id="pad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button data-k="neg" class="fn">±</button><button data-k="0">0</button>
+      <button data-k="del" class="fn">⌫</button>
+      <button data-k="go" class="go">送出</button>
+    </div>
+
+    <div class="row" style="margin-top:12px;justify-content:center">
+      <button class="btn" id="btn-quit">放棄離開</button>
+    </div>
+  </section>
+
+  <!-- ══════ 結算 ══════ -->
+  <section id="s-result" class="screen">
+    <div class="card rs">
+      <h2 id="r-title">關卡完成</h2>
+      <div class="sub" id="r-sub"></div>
+      <div class="stars" id="r-stars"><i>★</i><i>★</i><i>★</i></div>
+      <div class="grid4">
+        <div class="kv"><div class="k">本關得分</div><div class="v" id="r-score">0</div></div>
+        <div class="kv"><div class="k">正確率</div><div class="v" id="r-acc">0%</div></div>
+        <div class="kv"><div class="k">最佳連擊</div><div class="v" id="r-combo">0</div></div>
+        <div class="kv"><div class="k">平均秒數</div><div class="v" id="r-avg">0.0s</div></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="r-home">關卡地圖</button>
+        <button class="btn" id="r-retry">再玩一次</button>
+        <button class="btn pri" id="r-next">下一關</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="cd" id="cd" style="display:none"><b id="cd-n">3</b></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   關卡設定
+════════════════════════════════════════════════ */
+const LEVELS = [
+  {nm:'加法暖身', ds:'20 以內的加法，先找回手感',      types:['add'],                         cnt:8,  sec:12, p:{max:20}},
+  {nm:'加減交錯', ds:'30 以內加減混合出題',            types:['add','sub'],                   cnt:10, sec:12, p:{max:30}},
+  {nm:'九九乘法', ds:'一位數乘法全表',                 types:['mul'],                         cnt:10, sec:10, p:{mulA:9,mulB:9}},
+  {nm:'整除練習', ds:'保證整除的除法題',               types:['div'],                         cnt:10, sec:10, p:{divQ:9,divD:9}},
+  {nm:'四則亂鬥', ds:'加減乘除隨機出題，時間縮短',      types:['add','sub','mul','div'],       cnt:12, sec:9,  p:{max:40,mulA:9,mulB:9,divQ:9,divD:9}, boss:true},
+  {nm:'兩位數加減',ds:'99 以內加減，答案可能為負',      types:['add','sub'],                   cnt:12, sec:11, p:{max:99,neg:true}},
+  {nm:'缺項推理', ds:'求出算式中被遮住的數字',          types:['blank'],                       cnt:12, sec:12, p:{max:50,mulA:9,mulB:9}},
+  {nm:'乘法進階', ds:'兩位數 × 一位數',                types:['mul2'],                        cnt:12, sec:11, p:{}},
+  {nm:'三項連算', ds:'三個數字連續運算，注意先乘除',    types:['tri'],                         cnt:12, sec:13, p:{max:20}},
+  {nm:'心算之巔', ds:'所有題型總集合，只有 8 秒',       types:['add','sub','mul','div','blank','mul2','tri'],
+                                                                                             cnt:15, sec:8,  p:{max:60,mulA:9,mulB:9,divQ:9,divD:9,neg:true}, boss:true},
+];
+const LIVES = 3;
+
+/* ══════════════════════════════════════════════
+   存檔
+════════════════════════════════════════════════ */
+const SAVE_KEY = 'mindsprint.save.v1';
+const blank = () => ({stars:{}, scores:{}, endless:0});
+let save = blank();
+try{
+  const raw = localStorage.getItem(SAVE_KEY);
+  if(raw) save = Object.assign(blank(), JSON.parse(raw));
+}catch(e){ save = blank(); }
+const persist = () => { try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} };
+
+/* ══════════════════════════════════════════════
+   工具
+════════════════════════════════════════════════ */
+const $  = id => document.getElementById(id);
+const rnd  = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+/* 音效（無外部檔案） */
+let ac = null;
+function beep(freq, dur=.09, type='square', vol=.05){
+  try{
+    if(!ac) ac = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + dur);
+    o.connect(g).connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + dur);
+  }catch(e){}
+}
+const sfxTap  = () => beep(600,.04,'sine',.03);
+const sfxGood = () => { beep(760,.07); setTimeout(()=>beep(1180,.1),60); };
+const sfxBad  = () => { beep(200,.16,'sawtooth',.045); };
+const sfxWin  = () => [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.14,'triangle',.05), i*110));
+const sfxLose = () => [420,330,240].forEach((f,i)=>setTimeout(()=>beep(f,.2,'sawtooth',.045), i*150));
+
+/* ══════════════════════════════════════════════
+   出題器
+════════════════════════════════════════════════ */
+function makeQuestion(types, p){
+  const t = pick(types);
+  const max  = p.max  || 20;
+  const mulA = p.mulA || 9, mulB = p.mulB || 9;
+  const divQ = p.divQ || 9, divD = p.divD || 9;
+
+  switch(t){
+    case 'add': {
+      const a = rnd(2,max), b = rnd(2,max);
+      return {q:`${a} + ${b}`, a:a+b};
+    }
+    case 'sub': {
+      let a = rnd(2,max), b = rnd(2,max);
+      if(!p.neg && b > a) [a,b] = [b,a];
+      return {q:`${a} − ${b}`, a:a-b};
+    }
+    case 'mul': {
+      const a = rnd(2,mulA), b = rnd(2,mulB);
+      return {q:`${a} × ${b}`, a:a*b};
+    }
+    case 'div': {
+      const b = rnd(2,divD), q = rnd(2,divQ);
+      return {q:`${b*q} ÷ ${b}`, a:q};
+    }
+    case 'mul2': {
+      const a = rnd(11,49), b = rnd(3,9);
+      return {q:`${a} × ${b}`, a:a*b};
+    }
+    case 'blank': {
+      const kind = pick(['add','sub','mul']);
+      if(kind === 'mul'){
+        const a = rnd(2,mulA), b = rnd(2,mulB);
+        return Math.random() < .5
+          ? {q:`? × ${b} = ${a*b}`, a:a}
+          : {q:`${a} × ? = ${a*b}`, a:b};
+      }
+      const a = rnd(3,max), b = rnd(2,max);
+      if(kind === 'add') return {q:`${a} + ? = ${a+b}`, a:b};
+      const big = a + b;
+      return Math.random() < .5
+        ? {q:`${big} − ? = ${a}`, a:b}
+        : {q:`? − ${b} = ${a}`, a:big};
+    }
+    case 'tri': {
+      const m = Math.max(9, Math.min(max, 20));
+      const style = pick(['aa','md','ma']);
+      if(style === 'aa'){                       // a + b - c
+        const a = rnd(5,m), b = rnd(2,m);
+        const c = rnd(2, p.neg ? m : Math.min(m, a+b));   // 未開放負數時保證不小於 0
+        return {q:`${a} + ${b} − ${c}`, a:a+b-c};
+      }
+      if(style === 'md'){                       // a × b + c  （先乘後加）
+        const a = rnd(2,9), b = rnd(2,9), c = rnd(2,m);
+        return {q:`${a} × ${b} + ${c}`, a:a*b+c};
+      }
+      const a = rnd(2,m), b = rnd(2,9), c = rnd(2,9); // a + b × c
+      return {q:`${a} + ${b} × ${c}`, a:a+b*c};
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════
+   遊戲狀態
+════════════════════════════════════════════════ */
+let G = null;      // 進行中的一局
+let tickId = 0;    // 計時器
+let lastTs = 0;
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  $(id).classList.add('on');
+}
+
+/* ── 首頁 ── */
+function renderHome(){
+  const totalStars = Object.values(save.stars).reduce((s,v)=>s+v, 0);
+  $('t-star').textContent = `${totalStars} / ${LEVELS.length*3}`;
+  $('t-best').textContent = Object.values(save.scores).reduce((s,v)=>s+v, 0).toLocaleString();
+  $('t-endless').textContent = save.endless ? save.endless.toLocaleString() : '—';
+
+  const cleared10 = (save.stars[9]||0) > 0;
+  $('btn-endless').disabled = !cleared10;
+  $('endless-note').innerHTML = cleared10
+    ? '難度無上限，時間越來越短 — 撐到心用完為止'
+    : '通關第十關後解鎖';
+
+  $('map').innerHTML = LEVELS.map((lv,i) => {
+    const st = save.stars[i] || 0;
+    const unlocked = i === 0 || (save.stars[i-1]||0) > 0;
+    const stars = [0,1,2].map(k => `<span style="color:${k<st?'var(--gold)':'#39406e'}">★</span>`).join('');
+    return `<div class="lv${unlocked?'':' lock'}${lv.boss?' boss':''}" data-i="${i}">
+      ${lv.boss?'<div class="bd">BOSS</div>':''}
+      <div class="no">LEVEL ${String(i+1).padStart(2,'0')}</div>
+      <div class="nm">${lv.nm}</div>
+      <div class="ds">${lv.ds}</div>
+      <div class="st">${stars}</div>
+      ${unlocked?'':'<div class="lk">🔒</div>'}
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.lv').forEach(el => {
+    el.onclick = () => {
+      if(el.classList.contains('lock')) return;
+      startLevel(+el.dataset.i);
+    };
+  });
+}
+
+/* ── 開局 ── */
+function startLevel(idx){
+  const lv = LEVELS[idx];
+  G = {
+    mode:'level', idx,
+    types:lv.types, p:lv.p,
+    total:lv.cnt, sec:lv.sec,
+    i:0, lives:LIVES, score:0, combo:0, bestCombo:0,
+    correct:0, timeUsed:0, answered:0,
+    cur:null, input:'', neg:false, locked:true
+  };
+  $('g-title').innerHTML = `第 ${idx+1} 關<span>${lv.nm}</span>`;
+  show('s-game');
+  countdown(() => nextQuestion());
+}
+
+function startEndless(){
+  G = {
+    mode:'endless', idx:-1,
+    types:['add','sub','mul','div','blank','mul2','tri'],
+    p:{max:30,mulA:9,mulB:9,divQ:9,divD:9},
+    total:Infinity, sec:12,
+    i:0, lives:LIVES, score:0, combo:0, bestCombo:0,
+    correct:0, timeUsed:0, answered:0,
+    cur:null, input:'', neg:false, locked:true
+  };
+  $('g-title').innerHTML = `∞ 無盡模式<span>ENDLESS</span>`;
+  show('s-game');
+  countdown(() => nextQuestion());
+}
+
+function countdown(done){
+  const el = $('cd'), n = $('cd-n');
+  let k = 3;
+  el.style.display = 'grid';
+  n.textContent = k; n.style.animation = 'none'; void n.offsetWidth; n.style.animation = '';
+  beep(500,.1);
+  const tick = setInterval(() => {
+    k--;
+    if(k === 0){
+      n.textContent = 'GO'; beep(880,.18,'triangle',.06);
+    }else if(k < 0){
+      clearInterval(tick); el.style.display = 'none'; done(); return;
+    }else{
+      n.textContent = k; beep(500,.1);
+    }
+    n.style.animation = 'none'; void n.offsetWidth; n.style.animation = '';
+  }, 620);
+}
+
+/* ── 出題 / 計時 ── */
+function nextQuestion(){
+  if(G.mode === 'endless'){
+    // 每答對 5 題升一階：數字變大、秒數變短
+    const stage = Math.floor(G.correct / 5);
+    G.sec = Math.max(4, 12 - stage);
+    G.p = {max: 20 + stage*10, mulA: Math.min(9, 4+stage), mulB: Math.min(12, 4+stage),
+           divQ: Math.min(12, 4+stage), divD:9, neg: stage >= 3};
+  }
+  G.cur = makeQuestion(G.types, G.p);
+  G.input = ''; G.neg = false; G.locked = false;
+  G.elapsed = 0;
+  G.tLimit = G.sec * 1000;
+
+  $('g-q').textContent = G.cur.q;
+  $('g-timer').style.width = '100%';
+  drawAnswer(); drawHud();
+  loop();
+}
+
+/* 以 interval 累加經過時間；分頁切走時暫停計時，回來不會被判超時 */
+function loop(){
+  clearInterval(tickId);
+  lastTs = performance.now();
+  tickId = setInterval(() => {
+    if(!G || G.locked){ clearInterval(tickId); return; }
+    const now = performance.now(), dt = now - lastTs;
+    lastTs = now;
+    if(document.hidden) return;                 // 暫停
+    G.elapsed += dt;
+    const r = Math.max(0, 1 - G.elapsed / G.tLimit);
+    $('g-timer').style.width = (r*100).toFixed(2) + '%';
+    $('g-timerbox').classList.toggle('hot', r < .35);
+    if(r <= 0){ clearInterval(tickId); judge(true); }
+  }, 50);
+}
+
+function drawHud(){
+  const hearts = [];
+  for(let k=0;k<LIVES;k++) hearts.push(`<span class="${k<G.lives?'':'dead'}">❤</span>`);
+  $('g-hearts').innerHTML = hearts.join('');
+  $('g-score').textContent = G.score.toLocaleString();
+  const mult = comboMult(G.combo);
+  $('g-combo').textContent = G.combo >= 2 ? `連擊 ${G.combo}${mult>1?` ×${mult}`:''}` : '';
+  const pct = G.mode === 'endless' ? ((G.i % 10) / 10 * 100) : (G.i / G.total * 100);
+  $('g-prog').style.width = pct + '%';
+}
+
+function drawAnswer(){
+  const el = $('g-ans');
+  if(G.input === ''){
+    el.innerHTML = '<span class="ph">請輸入答案</span>';
+    el.classList.remove('filled');
+  }else{
+    el.textContent = (G.neg ? '−' : '') + G.input;
+    el.classList.add('filled');
+  }
+}
+
+const comboMult = c => c >= 8 ? 3 : c >= 5 ? 2 : c >= 3 ? 1.5 : 1;
+
+/* ── 判定 ── */
+function judge(timeout){
+  if(G.locked) return;
+  G.locked = true;
+  clearInterval(tickId);
+
+  const used = Math.min(G.tLimit, G.elapsed);
+  G.timeUsed += used / 1000;
+  G.answered++;
+  G.i++;
+
+  const val = timeout || G.input === '' ? NaN : (G.neg ? -1 : 1) * parseInt(G.input, 10);
+  const ok = val === G.cur.a;
+  const board = $('board'), flash = $('g-flash');
+
+  if(ok){
+    G.combo++;
+    G.bestCombo = Math.max(G.bestCombo, G.combo);
+    G.correct++;
+    const rest = Math.max(0, 1 - used / G.tLimit);
+    const gain = Math.round((100 + rest * 60) * comboMult(G.combo));
+    G.score += gain;
+    sfxGood();
+    board.classList.remove('ok'); void board.offsetWidth; board.classList.add('ok');
+    flash.className = 'flash g';
+    flash.innerHTML = `正確 +${gain}` + (comboMult(G.combo) > 1 ? `<small>連擊倍率 ×${comboMult(G.combo)}</small>` : '');
+  }else{
+    G.combo = 0;
+    G.lives--;
+    sfxBad();
+    board.classList.remove('no'); void board.offsetWidth; board.classList.add('no');
+    flash.className = 'flash r';
+    flash.innerHTML = (timeout ? '時間到！' : '答錯了') + `<small>正確答案：${G.cur.a}</small>`;
+  }
+  flash.style.display = 'grid';
+  drawHud();
+
+  setTimeout(() => {
+    flash.style.display = 'none';
+    if(G.lives <= 0){ finish(false); return; }
+    if(G.mode === 'level' && G.i >= G.total){ finish(true); return; }
+    nextQuestion();
+  }, ok ? 520 : 1100);
+}
+
+/* ── 結算 ── */
+function finish(cleared){
+  clearInterval(tickId);
+  const acc = G.answered ? G.correct / G.answered : 0;
+  const avg = G.answered ? G.timeUsed / G.answered : 0;
+  let stars = 0;
+
+  if(G.mode === 'endless'){
+    const prev = save.endless, isRecord = G.score > prev;
+    isRecord ? sfxWin() : sfxLose();
+    if(isRecord){ save.endless = G.score; persist(); }
+    $('r-title').textContent = '無盡結束';
+    $('r-sub').textContent = `答對 ${G.correct} 題　` +
+      (isRecord ? '★ 新紀錄！' : `最佳紀錄 ${prev.toLocaleString()}`);
+    $('r-stars').style.display = 'none';
+    $('r-next').style.display = 'none';
+  }else{
+    $('r-stars').style.display = '';
+    if(cleared){
+      stars = 1;
+      if(acc >= .8)  stars = 2;
+      if(acc === 1 && G.lives === LIVES) stars = 3;
+      sfxWin();
+      const lv = LEVELS[G.idx];
+      save.stars[G.idx]  = Math.max(save.stars[G.idx]  || 0, stars);
+      save.scores[G.idx] = Math.max(save.scores[G.idx] || 0, G.score);
+      persist();
+      $('r-title').textContent = G.idx === LEVELS.length-1 ? '全破！心算之巔' : '關卡完成';
+      $('r-sub').textContent = `第 ${G.idx+1} 關 · ${lv.nm}`;
+    }else{
+      sfxLose();
+      $('r-title').textContent = '闖關失敗';
+      $('r-sub').textContent = `第 ${G.idx+1} 關 · ${LEVELS[G.idx].nm}　心已用盡`;
+    }
+    const hasNext = cleared && G.idx + 1 < LEVELS.length;
+    $('r-next').style.display = hasNext ? '' : 'none';
+    $('r-next').dataset.i = G.idx + 1;
+  }
+
+  document.querySelectorAll('#r-stars i').forEach((el,k) => {
+    el.classList.toggle('on', k < stars);
+    el.style.animationDelay = (k * .18 + .1) + 's';
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  });
+
+  $('r-score').textContent = G.score.toLocaleString();
+  $('r-acc').textContent   = Math.round(acc*100) + '%';
+  $('r-combo').textContent = G.bestCombo;
+  $('r-avg').textContent   = avg.toFixed(1) + 's';
+  $('r-retry').dataset.i   = G.idx;
+  $('r-retry').textContent = G.mode === 'endless' ? '再挑戰' : '再玩一次';
+
+  const mode = G.mode, idx = G.idx;
+  $('r-retry').onclick = () => mode === 'endless' ? startEndless() : startLevel(idx);
+  show('s-result');
+  renderHome();
+}
+
+/* ══════════════════════════════════════════════
+   輸入
+════════════════════════════════════════════════ */
+function key(k){
+  if(!G || G.locked) return;
+  if(k === 'go'){
+    if(G.input === '') return;
+    judge(false); return;
+  }
+  if(k === 'del'){ G.input = G.input.slice(0,-1); sfxTap(); drawAnswer(); return; }
+  if(k === 'neg'){ G.neg = !G.neg; sfxTap(); drawAnswer(); return; }
+  if(G.input.length >= 5) return;
+  if(G.input === '0') G.input = '';
+  G.input += k; sfxTap(); drawAnswer();
+}
+
+$('pad').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if(b) key(b.dataset.k);
+});
+
+document.addEventListener('keydown', e => {
+  if(!$('s-game').classList.contains('on')) return;
+  if(e.key >= '0' && e.key <= '9'){ key(e.key); e.preventDefault(); }
+  else if(e.key === 'Enter'){ key('go'); e.preventDefault(); }
+  else if(e.key === 'Backspace'){ key('del'); e.preventDefault(); }
+  else if(e.key === '-'){ key('neg'); e.preventDefault(); }
+});
+
+/* ══════════════════════════════════════════════
+   按鈕接線
+════════════════════════════════════════════════ */
+$('btn-quit').onclick = () => {
+  clearInterval(tickId);
+  $('g-flash').style.display = 'none';
+  G = null;
+  renderHome(); show('s-home');
+};
+$('btn-endless').onclick = () => startEndless();
+$('r-home').onclick  = () => { renderHome(); show('s-home'); };
+$('r-next').onclick  = e => startLevel(+e.currentTarget.dataset.i);
+$('btn-reset').onclick = () => {
+  if(!confirm('確定清除所有星星與紀錄？')) return;
+  save = blank(); persist(); renderHome();
+};
+
+renderHome();
+</script>
+</body>
+</html>

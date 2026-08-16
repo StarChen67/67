@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d1017">
+<title>星痕御獸錄 II · Monster Tamer</title>
+<style>
+:root[data-theme="dark"]{
+  --bg:#0d1017; --panel:#1b2231; --panel2:#182031; --sub:#141b29;
+  --line:#2e3950; --line2:#3b4a68; --fg:#e6ecf7; --dim:#8b98b0;
+  --acc:#5cc8ff; --gold:#ffd166; --ok:#4ecb71; --bad:#ff5d6c; --warn:#ffb03a;
+  --btn1:#2d3a54; --btn2:#222c42; --pri1:#2a6fa8; --pri2:#1d4f7c;
+  --hdr1:#1a2233; --hdr2:#141a26; --navbg:#121826; --navon:#182136;
+  --glow:#1b2740;
+}
+:root[data-theme="light"]{
+  --bg:#eef2f8; --panel:#ffffff; --panel2:#f6f9fd; --sub:#eef3fa;
+  --line:#d3dced; --line2:#b9c7de; --fg:#1d2534; --dim:#657189;
+  --acc:#1878c8; --gold:#b8860b; --ok:#1f9d4e; --bad:#d63a48; --warn:#c8801a;
+  --btn1:#e6ecf6; --btn2:#d9e2ef; --pri1:#3f9ada; --pri2:#2b7cbb;
+  --hdr1:#ffffff; --hdr2:#eaf0f8; --navbg:#f4f7fc; --navon:#e2ecf8;
+  --glow:#d6e4f5;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:radial-gradient(1200px 700px at 50% -10%,var(--glow) 0%,var(--bg) 60%);
+  color:var(--fg);font:14px/1.5 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+  overflow:hidden;user-select:none;
+}
+#app{max-width:900px;margin:0 auto;height:100%;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+canvas{display:block}
+.hide{display:none!important}
+.wrap{flex-wrap:wrap}
+.mb8{margin-bottom:8px}.mt8{margin-top:8px}.w100{width:100%}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--hdr1),var(--hdr2));flex:none}
+.logo{font-weight:800;letter-spacing:1.5px;font-size:15px;white-space:nowrap;
+  background:linear-gradient(90deg,#7de2ff,#c07dff,#ffd166);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hstat{margin-left:auto;display:flex;gap:12px;font-size:13px;align-items:center;min-width:0}
+.hstat b{color:var(--gold)}
+#hName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
+.badges{display:flex;gap:3px;flex-wrap:wrap;max-width:120px}
+.bdg{width:12px;height:12px;border-radius:50%;border:1px solid var(--line2);background:var(--sub)}
+.bdg.on{background:radial-gradient(circle at 35% 30%,#fff6c8,#ffb62e);border-color:#ffd166;box-shadow:0 0 7px #ffb62e88}
+
+/* ---------- nav ---------- */
+#nav{display:flex;border-bottom:1px solid var(--line);background:var(--navbg);flex:none}
+#nav button{flex:1;padding:8px 2px;font-size:15px;color:var(--dim);border-bottom:2px solid transparent;
+  display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2}
+#nav button span{font-size:10.5px}
+#nav button.on{color:var(--fg);border-bottom-color:var(--acc);background:var(--navon)}
+main{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px;-webkit-overflow-scrolling:touch}
+main::-webkit-scrollbar{width:8px}
+main::-webkit-scrollbar-thumb{background:var(--line2);border-radius:4px}
+
+/* ---------- cards ---------- */
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+  border-radius:12px;padding:12px;margin-bottom:10px}
+.card.sub{background:var(--sub);margin:0 0 10px}
+.card h3{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
+.card h3 .muted{font-weight:400}
+.muted{color:var(--dim);font-size:12px}
+.row{display:flex;gap:8px;align-items:center}
+.grid{display:grid;gap:8px}
+.grid.two{grid-template-columns:1fr 1fr}
+.scroll38{max-height:38vh;overflow:auto}
+.btn{background:linear-gradient(180deg,var(--btn1),var(--btn2));border:1px solid var(--line2);
+  border-radius:9px;padding:9px 14px;font-size:13px;transition:.12s;white-space:nowrap}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn:hover{filter:brightness(1.15)}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:linear-gradient(180deg,var(--pri1),var(--pri2));border-color:#4a95d0;color:#fff}
+.btn.gold{background:linear-gradient(180deg,#7a5c1c,#5c4413);border-color:#b58a2a;color:#ffe9a8}
+.btn.dan{background:linear-gradient(180deg,#8a2b38,#65202a);border-color:#c04a5a;color:#ffe0e4}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.lnk{color:var(--acc);font-size:11px;text-decoration:underline;margin-left:auto;padding:0}
+
+/* ---------- type chips ---------- */
+.tp{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10.5px;font-weight:700;color:#0e1017;margin-right:2px}
+.tp.normal{background:#b9b6a8}.tp.fire{background:#ff6b3d}.tp.water{background:#3da5ff}
+.tp.grass{background:#4ecb71}.tp.elec{background:#ffd63d}.tp.rock{background:#c08a4e}
+.tp.mystic{background:#c07dff}
+
+/* ---------- bars ---------- */
+.bar{height:7px;border-radius:5px;background:rgba(0,0,0,.35);overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;border-radius:5px;transition:width .45s cubic-bezier(.4,0,.2,1);background:var(--ok)}
+.bar.exp{height:4px;margin-top:2px}
+.bar.exp>i{background:linear-gradient(90deg,#5cc8ff,#7de2ff);transition:width .3s}
+.sbar{display:grid;grid-template-columns:34px 1fr 34px auto;gap:6px;align-items:center;font-size:11px;margin-bottom:3px}
+.sbar .b{height:6px;background:rgba(0,0,0,.35);border-radius:4px;overflow:hidden}
+.sbar .b i{display:block;height:100%;background:linear-gradient(90deg,#5cc8ff,#c07dff)}
+.sbar .ev{font-size:10px;white-space:nowrap}
+
+/* ---------- monster rows ---------- */
+.mon{display:flex;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);
+  border-radius:11px;padding:8px 10px;cursor:pointer;transition:.12s}
+.mon:hover{border-color:var(--line2)}
+.mon.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.mon.fnt{opacity:.45;filter:grayscale(.8)}
+.mon .nm{font-weight:600;font-size:13px}
+.mon .mid{flex:1;min-width:0}
+.avatar{width:58px;height:58px;flex:none;border-radius:10px;overflow:hidden;
+  background:radial-gradient(circle at 50% 75%,rgba(92,200,255,.12),transparent);border:1px solid var(--line)}
+.hold{font-size:11px}
+.stx{display:inline-block;font-size:10px;padding:0 5px;border-radius:4px;font-weight:700;color:#111}
+.stx.burn{background:#ff7a45}.stx.para{background:#ffd63d}.stx.psn{background:#c07dff}.stx.slp{background:#8fa3c7}
+
+/* ---------- explore ---------- */
+.areas{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.area{border:1px solid var(--line);border-radius:11px;padding:10px;background:var(--panel2);
+  cursor:pointer;position:relative;overflow:hidden}
+.area.on{background:var(--navon);border-color:var(--acc)}
+.area.lock{opacity:.42;cursor:not-allowed}
+.area b{font-size:13px;position:relative}
+.area .lv{font-size:11px;color:var(--dim);position:relative}
+.area .glow{position:absolute;inset:-40% -20% auto auto;width:120px;height:120px;border-radius:50%;filter:blur(28px);opacity:.32}
+.npcs{margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+.npc{font-size:12px;color:var(--dim);padding:2px 0}
+.npc b{color:var(--fg)}
+.quest{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:6px;background:var(--panel2)}
+#feed{max-height:220px;overflow:auto;font-size:12.5px;line-height:1.7}
+#feed div{padding:2px 0;border-bottom:1px dashed var(--line);color:var(--dim)}
+#feed div b{color:var(--fg)}
+
+/* ---------- bag / shop / dex ---------- */
+.subtabs{display:flex;gap:4px;flex-wrap:wrap}
+.subtabs button{padding:5px 11px;font-size:12px;border:1px solid var(--line);border-radius:20px;color:var(--dim)}
+.subtabs button.on{background:var(--navon);border-color:var(--acc);color:var(--fg)}
+.bgroup{margin-bottom:10px}
+.ghead{font-size:11px;color:var(--dim);margin:0 0 4px 2px}
+.itemrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:10px;background:var(--panel2);margin-bottom:6px}
+.itemrow .ic{width:30px;height:30px;flex:none;border-radius:8px;display:grid;place-items:center;
+  font-size:16px;background:var(--sub)}
+.dexg{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.dexc{border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center;background:var(--panel2);cursor:pointer}
+.dexc:hover{border-color:var(--acc)}
+.dexc.unk{opacity:.32;cursor:default}
+.dexc.lg{border-color:#ffd16688}
+.dexc .n{font-size:11px;margin:2px 0}
+.dexc .q{height:70px;display:grid;place-items:center;font-size:26px}
+.dexc canvas{margin:0 auto}
+.dxc{display:grid;place-items:center;margin:6px 0}
+.lsx{margin-top:8px;text-align:left;max-height:22vh;overflow:auto}
+
+/* ---------- achievements / stats / settings ---------- */
+.achg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.ach{border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:var(--panel2);opacity:.5}
+.ach.on{opacity:1;border-color:var(--gold)}
+.ach b{display:block;font-size:12.5px}
+.ach span{font-size:11px;color:var(--dim)}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.stats>div{border:1px solid var(--line);border-radius:9px;padding:7px 9px;background:var(--panel2);
+  display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.stats span{color:var(--dim)}
+.setrow{display:flex;align-items:center;justify-content:space-between;padding:7px 0;
+  border-bottom:1px dashed var(--line);font-size:13px}
+.setrow:last-child{border-bottom:none}
+.bt2{width:100%;font-size:12px;border-collapse:collapse}
+.bt2 th,.bt2 td{padding:4px 6px;text-align:left;border-bottom:1px dashed var(--line)}
+.bt2 th{color:var(--dim);font-weight:400}
+
+/* ---------- battle ---------- */
+#bt{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;
+  background:radial-gradient(900px 500px at 50% 20%,#1d2b45,#080b12 75%)}
+#bt.wild{background:radial-gradient(900px 500px at 50% 20%,#16321f,#080b12 75%)}
+#bt.boss{background:radial-gradient(900px 500px at 50% 20%,#3a1a2a,#080b12 75%)}
+#bt.pvp{background:radial-gradient(900px 500px at 50% 20%,#2a1f4a,#080b12 75%)}
+#bt,#bt *{color:#e6ecf7}
+.field{flex:1;position:relative;max-width:900px;width:100%;margin:0 auto;min-height:0}
+.wbadge{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:11.5px;
+  padding:3px 12px;border-radius:20px;opacity:0;transition:.3s;white-space:nowrap;z-index:3}
+.wbadge.on{opacity:1;background:#0f1725dd;border:1px solid #3b4a68}
+.wbadge.w-sun{box-shadow:0 0 14px #ffb03a66}
+.wbadge.w-rain{box-shadow:0 0 14px #3da5ff66}
+.wbadge.w-sand{box-shadow:0 0 14px #c08a4e66}
+.slot{position:absolute;display:flex;flex-direction:column;align-items:center;max-width:46%}
+.slot .art{min-height:10px;transition:transform .3s,opacity .3s}
+.slot canvas{filter:drop-shadow(0 8px 14px #0009)}
+.info{background:#121a29ee;border:1px solid #35435e;border-radius:10px;padding:6px 10px;
+  min-width:170px;backdrop-filter:blur(6px)}
+.slot.foe .info{margin-bottom:4px}
+.slot.mine .info{margin-top:4px}
+.info .l1{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;flex-wrap:wrap}
+.info .l1 .lv{margin-left:auto;color:#8b98b0;font-weight:400;font-size:11px}
+.info .hpn{text-align:right;font-size:10.5px;color:#8b98b0;margin-top:1px}
+.info .empty{font-size:12px;text-align:center;color:#5a687f}
+.stgs{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.stg{font-size:9.5px;padding:0 4px;border-radius:3px;font-weight:700}
+.stg.up{background:#2f6f4e;color:#c8ffd8}
+.stg.dn{background:#6f2f3a;color:#ffd8dc}
+.ball-row{display:flex;gap:3px;justify-content:flex-end;margin-top:3px}
+.pb{width:8px;height:8px;border-radius:50%;background:#28313f;border:1px solid #3a465e}
+.pb.alive{background:radial-gradient(circle at 35% 30%,#fff,#ff5d6c);border-color:#ff8b96}
+
+.logbox{background:#0b0f18f0;border-top:1px solid #2b3752;padding:10px 14px;min-height:60px;
+  max-width:900px;width:100%;margin:0 auto;font-size:13.5px;line-height:1.5;flex:none}
+.cmds{background:#111825;border-top:1px solid #2b3752;padding:10px;max-width:900px;width:100%;
+  margin:0 auto;flex:none;max-height:52vh;overflow:auto}
+.cmds .who{font-size:11.5px;color:#8b98b0;margin-bottom:6px}
+.cmd4{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mv{border:1px solid #3b4a68;border-radius:10px;padding:8px 10px;text-align:left;
+  background:linear-gradient(180deg,#243147,#1b2436);cursor:pointer;width:100%}
+.mv:hover{filter:brightness(1.2)}
+.mv.no{opacity:.4;cursor:not-allowed}
+.mv.static{cursor:default}
+.mv.cur{border-color:var(--acc)}
+.mv .t{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600;flex-wrap:wrap}
+.mv .p{font-size:11px;color:#8b98b0;display:flex;gap:8px;margin-top:2px;flex-wrap:wrap}
+.shake{animation:shk .35s}
+@keyframes shk{0%,100%{transform:translate(0)}20%{transform:translate(-8px,3px)}
+  40%{transform:translate(7px,-3px)}60%{transform:translate(-5px,2px)}80%{transform:translate(4px,-1px)}}
+.flash{animation:fls .3s}
+@keyframes fls{0%,100%{filter:none}50%{filter:brightness(3) saturate(0)}}
+.fade{animation:fdo .5s forwards}
+@keyframes fdo{to{opacity:0;transform:translateY(26px) scale(.7)}}
+.enter{animation:ent .4s}
+@keyframes ent{from{opacity:0;transform:translateY(-20px) scale(.6)}}
+
+/* ---------- overlays ---------- */
+.ov{position:fixed;inset:0;z-index:80;background:#060910dd;display:flex;align-items:center;
+  justify-content:center;padding:18px;backdrop-filter:blur(3px);animation:ovin .18s}
+@keyframes ovin{from{opacity:0}}
+.dlg{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line2);
+  border-radius:16px;padding:18px;max-width:430px;width:100%;text-align:center;
+  box-shadow:0 24px 60px #000a;max-height:88vh;overflow:auto}
+.dlg.wide{max-width:600px}
+.dlg h2{margin:0 0 6px;font-size:18px}
+.dlg .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.dlg .grid{text-align:left}
+.starter{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.stc{border:1px solid var(--line);border-radius:12px;padding:8px;cursor:pointer;background:var(--panel2);flex:1}
+.stc:hover{border-color:var(--acc)}
+.stc canvas{margin:0 auto}
+.stc .sn{font-size:12.5px;margin:2px 0;font-weight:600}
+.stc .sd{font-size:10.5px;margin-top:2px}
+input.txt,textarea.txt{background:rgba(0,0,0,.28);border:1px solid var(--line2);border-radius:8px;
+  padding:9px 11px;color:var(--fg);font:inherit;width:100%;text-align:center}
+textarea.txt.ta{height:110px;text-align:left;font-family:ui-monospace,monospace;font-size:11px;
+  resize:vertical;word-break:break-all}
+.spin{width:26px;height:26px;margin:14px auto 0;border:3px solid var(--line2);
+  border-top-color:var(--acc);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:90;display:flex;
+  flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:max-content;max-width:92vw}
+#toast div{background:#0f1725f2;border:1px solid var(--line2);border-radius:20px;padding:7px 16px;
+  font-size:12.5px;animation:tin .3s;box-shadow:0 8px 24px #0007;color:#e6ecf7;text-align:center}
+#toast div.achv{border-color:var(--gold);box-shadow:0 0 20px #ffb62e55}
+@keyframes tin{from{opacity:0;transform:translateY(10px)}}
+
+@media(max-width:600px){
+  .slot{max-width:52%}
+  .info{min-width:145px;padding:5px 8px}
+  .logbox{font-size:12.5px;padding:8px 11px}
+  main{padding:10px}
+  .logo{font-size:13px;letter-spacing:0}
+  .hstat{gap:8px;font-size:12px}
+  #hName{max-width:64px}
+  .badges{max-width:78px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="logo">★ 星痕御獸錄 II</span>
+    <div class="hstat">
+      <span id="hName" class="muted"></span>
+      <span>💰<b id="hGold">0</b></span>
+      <span class="badges" id="hBadges"></span>
+    </div>
+  </header>
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div id="toast"></div>
+<div id="bt" class="hide"></div>
+
+<script src="data.js"></script>
+<script src="sprites.js"></script>
+<script src="audio.js"></script>
+<script src="engine.js"></script>
+<script src="net.js"></script>
+<script src="ui.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
