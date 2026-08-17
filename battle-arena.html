@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>星辰擂台 · Battle Arena</title>
+<style>
+  :root{
+    --bg:#0b0e1a; --bg2:#11152a; --panel:#161b34; --panel2:#1d2344;
+    --text:#eef0ff; --muted:#8a90bd; --line:#2a3160; --accent:#6c5ce7;
+    --good:#2ed573; --bad:#ff6b6b; --gold:#ffd166;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif;
+    background:radial-gradient(1200px 800px at 20% -10%, #1a2050 0%, var(--bg) 55%),var(--bg);
+    color:var(--text); min-height:100vh;}
+  a{color:inherit;}
+  header{
+    position:sticky; top:0; z-index:10;
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    padding:16px 28px; background:rgba(11,14,26,.85); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .logo{
+    width:38px; height:38px; border-radius:10px;
+    background:conic-gradient(from 180deg,#6c5ce7,#ff6b6b,#ffd166,#6c5ce7);
+    box-shadow:0 0 20px rgba(108,92,231,.6);
+    display:flex;align-items:center;justify-content:center;font-size:18px;
+  }
+  .brand h1{font-size:19px; margin:0; letter-spacing:.5px;}
+  .brand span{color:var(--muted); font-size:12px;}
+  .back{font-size:12px; color:var(--muted); text-decoration:none; border:1px solid var(--line); padding:7px 12px; border-radius:8px;}
+  .back:hover{color:var(--text); border-color:var(--accent);}
+
+  main{max-width:920px; margin:0 auto; padding:24px 18px 60px;}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:18px;}
+  .panel h2{margin:0 0 14px; font-size:16px;}
+
+  /* ---- 登入 ---- */
+  #authPanel input{
+    width:100%; padding:10px 12px; margin-bottom:10px; border-radius:8px;
+    border:1px solid var(--line); background:var(--bg2); color:var(--text); font-size:14px;
+  }
+  #authPanel .row{display:flex; gap:10px;}
+  #authPanel .row>*{flex:1;}
+  button{
+    background:linear-gradient(135deg,var(--accent),#0b0e1a 180%); color:#fff; border:none;
+    padding:10px 18px; border-radius:9px; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  button:hover{filter:brightness(1.15);}
+  button:disabled{opacity:.4; cursor:not-allowed; filter:none;}
+  button.ghost{background:var(--bg2); border:1px solid var(--line); color:var(--text);}
+  #authMsg{color:var(--bad); font-size:12.5px; min-height:16px; margin-top:6px;}
+
+  /* ---- 儀表板 ---- */
+  #game{display:none;}
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:14px;}
+  .stat{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px 14px;}
+  .stat .k{color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.5px;}
+  .stat .v{font-size:20px; font-weight:800; margin-top:4px;}
+  .stat .v.gold{color:var(--gold);}
+  .xpbar{height:8px; border-radius:5px; background:var(--bg2); overflow:hidden; margin-top:8px; border:1px solid var(--line);}
+  .xpbar>i{display:block; height:100%; background:linear-gradient(90deg,#6c5ce7,#00cec9);}
+
+  .claimRow{display:flex; align-items:center; gap:12px; margin-top:14px; flex-wrap:wrap;}
+  .claimRow .hint{color:var(--muted); font-size:12px;}
+
+  .actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:6px;}
+  .actions button{flex:1; min-width:160px; padding:14px; font-size:14px;}
+
+  .tabs{display:flex; gap:8px; margin-bottom:14px;}
+  .tabs button{background:var(--panel2); color:var(--muted); border:1px solid var(--line); font-weight:600;}
+  .tabs button.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--line);}
+  th{color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase;}
+  tr.me{background:rgba(108,92,231,.15);}
+  .rank{color:var(--muted); width:36px;}
+  .rank.top1{color:#ffd166; font-weight:800;}
+  .rank.top2{color:#c0c0c0; font-weight:800;}
+  .rank.top3{color:#cd7f32; font-weight:800;}
+
+  /* ---- 戰鬥畫面 ---- */
+  #battleOverlay{
+    display:none; position:fixed; inset:0; background:rgba(5,6,14,.92); z-index:50;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .battleBox{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px;
+    max-width:560px; width:100%; max-height:85vh; display:flex; flex-direction:column;}
+  .vsRow{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:10px;}
+  .fighter{flex:1; text-align:center;}
+  .fighter .name{font-weight:800; font-size:15px;}
+  .fighter .lv{color:var(--muted); font-size:11px;}
+  .hpbar{height:10px; border-radius:6px; background:var(--bg2); overflow:hidden; margin-top:8px; border:1px solid var(--line);}
+  .hpbar>i{display:block; height:100%; background:linear-gradient(90deg,#2ed573,#ffd166,#ff6b6b); transition:width .35s ease;}
+  .vsWord{font-weight:900; color:var(--muted); padding:0 10px;}
+  #battleLog{flex:1; overflow-y:auto; background:var(--bg2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 14px; font-size:12.5px; line-height:1.8; min-height:120px;}
+  #battleLog div.crit{color:var(--gold); font-weight:700;}
+  .resultBanner{text-align:center; font-size:22px; font-weight:900; margin:14px 0 6px; display:none;}
+  .resultBanner.win{color:var(--good);}
+  .resultBanner.lose{color:var(--bad);}
+  .resultBanner.draw{color:var(--muted);}
+  .resultInfo{text-align:center; color:var(--muted); font-size:13px; margin-bottom:12px; display:none;}
+  #battleCloseBtn{display:none; margin-top:4px;}
+
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--panel2); border:1px solid var(--line); padding:10px 20px; border-radius:10px;
+    font-size:13px; z-index:99; opacity:0; transition:opacity .3s; pointer-events:none;
+  }
+  .toast.show{opacity:1;}
+  .userbar{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted);}
+  .userbar b{color:var(--text);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">⚔️</div>
+    <div>
+      <h1>星辰擂台</h1>
+      <span>BATTLE ARENA · 對戰遊戲</span>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="userbar" id="userbar" style="display:none;">
+      在線 <b id="onlineCount">0</b> 人 · <b id="whoAmI"></b>
+      <button class="ghost" id="logoutBtn" style="padding:5px 12px;">登出</button>
+    </div>
+    <a class="back" href="platform.html">← 回遊樂園</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- 登入 / 註冊 -->
+  <div class="panel" id="authPanel">
+    <h2>登入 / 註冊</h2>
+    <input id="nameInput" maxlength="10" placeholder="玩家名稱（2–10 字，中英數）">
+    <input id="passInput" type="password" maxlength="40" placeholder="密碼（至少 4 字）">
+    <div class="row">
+      <button id="loginBtn">登入</button>
+      <button class="ghost" id="registerBtn">註冊新玩家</button>
+    </div>
+    <div id="authMsg"></div>
+    <p style="color:var(--muted); font-size:12px; line-height:1.7; margin-top:14px;">
+      新玩家初始 250 金幣，每分鐘可累積領取 50 金幣。每場對戰需花費 100 金幣，
+      獲勝可獲得 250 金幣與 50 經驗值，落敗則不會有額外懲罰。升級可提升攻擊/防禦/血量/速度。
+      支援配對其他玩家或挑戰電腦。
+    </p>
+  </div>
+
+  <!-- 遊戲主畫面 -->
+  <div id="game">
+    <div class="panel">
+      <div class="stats">
+        <div class="stat"><div class="k">等級</div><div class="v" id="statLevel">1</div></div>
+        <div class="stat"><div class="k">金幣</div><div class="v gold" id="statGold">0</div></div>
+        <div class="stat"><div class="k">積分</div><div class="v" id="statRating">1000</div></div>
+        <div class="stat"><div class="k">戰績</div><div class="v" id="statRecord">0勝 0負</div></div>
+      </div>
+      <div class="xpbar"><i id="xpFill" style="width:0%"></i></div>
+      <p style="color:var(--muted); font-size:11.5px; margin:6px 0 0;">經驗值 <span id="xpText">0 / 100</span></p>
+
+      <div class="claimRow">
+        <button id="claimBtn" class="ghost">領取金幣</button>
+        <span class="hint" id="claimHint">尚未有可領取的金幣</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>對戰</h2>
+      <div class="actions">
+        <button id="battleAiBtn">挑戰電腦（100 金幣）</button>
+        <button id="queueBtn">配對玩家對戰（100 金幣）</button>
+      </div>
+      <p id="queueStatus" style="color:var(--muted); font-size:12.5px; margin-top:10px; display:none;">
+        配對中，等待其他玩家…（<span id="queueN">0</span> 人排隊）
+        <button class="ghost" id="cancelQueueBtn" style="padding:4px 12px; margin-left:8px;">取消</button>
+      </p>
+    </div>
+
+    <div class="panel">
+      <div class="tabs">
+        <button class="active" data-tab="board">排行榜（前 100 名）</button>
+      </div>
+      <table id="boardTable">
+        <thead><tr><th class="rank">#</th><th>玩家</th><th>等級</th><th>積分</th><th>勝</th><th>敗</th></tr></thead>
+        <tbody id="boardBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- 戰鬥畫面 -->
+<div id="battleOverlay">
+  <div class="battleBox">
+    <div class="vsRow">
+      <div class="fighter">
+        <div class="name" id="fMeName">你</div>
+        <div class="lv" id="fMeLv">Lv.1</div>
+        <div class="hpbar"><i id="fMeHp" style="width:100%"></i></div>
+      </div>
+      <div class="vsWord">VS</div>
+      <div class="fighter">
+        <div class="name" id="fFoeName">對手</div>
+        <div class="lv" id="fFoeLv">Lv.1</div>
+        <div class="hpbar"><i id="fFoeHp" style="width:100%"></i></div>
+      </div>
+    </div>
+    <div id="battleLog"></div>
+    <div class="resultBanner" id="resultBanner"></div>
+    <div class="resultInfo" id="resultInfo"></div>
+    <button id="battleCloseBtn">確定</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------- 連線 ---------------- */
+function wsUrl(){
+  if (location.protocol==='http:'||location.protocol==='https:')
+    return (location.protocol==='https:'?'wss://':'ws://')+location.host;
+  return 'ws://localhost:8792';
+}
+let ws=null, connected=false, me=null;
+const handlers={};
+function on(t,fn){(handlers[t]=handlers[t]||[]).push(fn);}
+function emit(t,d){(handlers[t]||[]).forEach(f=>{try{f(d);}catch(e){console.error(e);}});}
+function send(t,d){ if(ws&&ws.readyState===1) ws.send(JSON.stringify({t,d:d||{}})); }
+
+function connect(){
+  return new Promise((res,rej)=>{
+    if(connected) return res(true);
+    let sock;
+    try{ sock=new WebSocket(wsUrl()); }catch(e){ return rej(e); }
+    ws=sock;
+    const to=setTimeout(()=>{ try{sock.close();}catch(e){} rej(new Error('連線逾時')); },6000);
+    sock.onopen=()=>{ clearTimeout(to); connected=true; res(true); };
+    sock.onclose=()=>{ connected=false; };
+    sock.onerror=()=>{ clearTimeout(to); if(!connected) rej(new Error('無法連上伺服器')); };
+    sock.onmessage=e=>{
+      let m; try{ m=JSON.parse(e.data); }catch(_){ return; }
+      const d=m.d||{};
+      if(m.t==='me') me=d;
+      emit(m.t,d);
+    };
+  });
+}
+
+/* ---------------- 小工具 ---------------- */
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(showToast._tm);
+  showToast._tm=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+/* ---------------- 登入/註冊 ---------------- */
+const SESSION_NAME_KEY='battle-arena-name';
+document.getElementById('nameInput').value = localStorage.getItem(SESSION_NAME_KEY) || '';
+
+async function doAuth(kind){
+  const name=document.getElementById('nameInput').value.trim();
+  const pass=document.getElementById('passInput').value;
+  const msg=document.getElementById('authMsg');
+  msg.textContent='';
+  if(!name||!pass){ msg.textContent='請輸入名稱與密碼'; return; }
+  try{
+    await connect();
+  }catch(e){ msg.textContent='無法連線到伺服器：'+e.message; return; }
+  const onErr=d=>{ msg.textContent=d.msg||'發生錯誤'; };
+  const onMe=()=>{ localStorage.setItem(SESSION_NAME_KEY,name); enterGame(); };
+  handlers.err=[onErr]; handlers.me=[onMe];
+  send(kind,{name,pass});
+}
+document.getElementById('loginBtn').addEventListener('click',()=>doAuth('login'));
+document.getElementById('registerBtn').addEventListener('click',()=>doAuth('register'));
+document.getElementById('passInput').addEventListener('keydown',e=>{ if(e.key==='Enter') doAuth('login'); });
+
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  try{ ws&&ws.close(); }catch(e){}
+  connected=false; me=null;
+  document.getElementById('game').style.display='none';
+  document.getElementById('authPanel').style.display='block';
+  document.getElementById('userbar').style.display='none';
+});
+
+/* ---------------- 主畫面 ---------------- */
+function enterGame(){
+  document.getElementById('authPanel').style.display='none';
+  document.getElementById('game').style.display='block';
+  document.getElementById('userbar').style.display='flex';
+  document.getElementById('whoAmI').textContent=me.name;
+
+  handlers.me=[updateMe];
+  handlers.err=[d=>showToast(d.msg||'發生錯誤')];
+  handlers.hello=[d=>{ document.getElementById('onlineCount').textContent=d.online; }];
+  handlers.board=[d=>{
+    document.getElementById('onlineCount').textContent=d.online;
+    renderBoard(d.list);
+  }];
+  handlers.claimed=[d=>{
+    updateMe(d.me);
+    if(d.gained>0) showToast(`領取了 ${d.gained} 金幣！`);
+  }];
+  handlers.queued=[d=>{
+    document.getElementById('queueStatus').style.display='block';
+    document.getElementById('queueN').textContent=d.n;
+  }];
+  handlers.cancelled=[()=>{
+    document.getElementById('queueStatus').style.display='none';
+  }];
+  handlers.battleResult=[showBattle];
+
+  updateMe(me);
+  send('board',{});
+  setInterval(()=>send('board',{}),15000);
+  setInterval(updateClaimHint,1000);
+}
+
+function xpBarPercent(a){ return Math.max(0,Math.min(100, (a.xp/a.xpNeed)*100)); }
+function updateMe(a){
+  me=a;
+  document.getElementById('statLevel').textContent=a.level;
+  document.getElementById('statGold').textContent=a.gold;
+  document.getElementById('statRating').textContent=a.rating;
+  document.getElementById('statRecord').textContent=`${a.wins}勝 ${a.losses}負`;
+  document.getElementById('xpFill').style.width=xpBarPercent(a)+'%';
+  document.getElementById('xpText').textContent=`${a.xp} / ${a.xpNeed}`;
+  updateClaimHint();
+}
+function updateClaimHint(){
+  if(!me) return;
+  const mins=Math.floor((Date.now()-me.lastClaim)/60000);
+  const pending=Math.max(0,mins)*50;
+  const hint=document.getElementById('claimHint');
+  const btn=document.getElementById('claimBtn');
+  if(pending>0){
+    hint.textContent=`可領取 ${pending} 金幣`;
+    btn.disabled=false;
+  }else{
+    const sec=60-Math.floor((Date.now()-me.lastClaim)/1000)%60;
+    hint.textContent=`下一筆 50 金幣還要等 ${sec} 秒`;
+    btn.disabled=true;
+  }
+}
+document.getElementById('claimBtn').addEventListener('click',()=>send('claim',{}));
+
+document.getElementById('battleAiBtn').addEventListener('click',()=>send('battleAI',{}));
+document.getElementById('queueBtn').addEventListener('click',()=>send('queue',{}));
+document.getElementById('cancelQueueBtn').addEventListener('click',()=>send('cancel',{}));
+
+function renderBoard(list){
+  const body=document.getElementById('boardBody');
+  body.innerHTML='';
+  list.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    if(me && p.name===me.name) tr.className='me';
+    const rankCls = i===0?'top1':i===1?'top2':i===2?'top3':'';
+    tr.innerHTML=`<td class="rank ${rankCls}">${i+1}</td><td>${escapeHtml(p.name)}</td>
+      <td>${p.level}</td><td>${p.rating}</td><td>${p.wins}</td><td>${p.losses}</td>`;
+    body.appendChild(tr);
+  });
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- 戰鬥動畫 ---------------- */
+function showBattle(d){
+  document.getElementById('queueStatus').style.display='none';
+  const overlay=document.getElementById('battleOverlay');
+  const logBox=document.getElementById('battleLog');
+  const banner=document.getElementById('resultBanner');
+  const info=document.getElementById('resultInfo');
+  const closeBtn=document.getElementById('battleCloseBtn');
+
+  logBox.innerHTML='';
+  banner.style.display='none'; banner.className='resultBanner';
+  info.style.display='none';
+  closeBtn.style.display='none';
+
+  document.getElementById('fMeName').textContent=me?me.name:'你';
+  document.getElementById('fMeLv').textContent='Lv.'+(me?me.level:'?');
+  document.getElementById('fFoeName').textContent=d.opponent.name;
+  document.getElementById('fFoeLv').textContent='Lv.'+d.opponent.level;
+  document.getElementById('fMeHp').style.width='100%';
+  document.getElementById('fFoeHp').style.width='100%';
+
+  overlay.style.display='flex';
+
+  let i=0;
+  const meHpBar=document.getElementById('fMeHp'), foeHpBar=document.getElementById('fFoeHp');
+  const meName=me?me.name:'你';
+  function step(){
+    if(i>=d.log.length){ finish(); return; }
+    const ev=d.log[i++];
+    const line=document.createElement('div');
+    if(ev.crit) line.className='crit';
+    const pct=Math.round((ev.hpLeft/ev.hpMax)*100);
+    line.textContent=`${ev.attacker} 攻擊 ${ev.defender}，造成 ${ev.dmg} 傷害${ev.crit?'（暴擊！）':''}`;
+    logBox.appendChild(line);
+    logBox.scrollTop=logBox.scrollHeight;
+    if(ev.defender===meName || (ev.defender===d.opponent.name)){
+      const bar = (ev.defender===d.opponent.name) ? foeHpBar : meHpBar;
+      bar.style.width=pct+'%';
+    }
+    setTimeout(step, 260);
+  }
+  function finish(){
+    banner.style.display='block';
+    if(d.draw){ banner.textContent='平手'; banner.classList.add('draw'); }
+    else if(d.win){ banner.textContent='勝利！'; banner.classList.add('win'); }
+    else{ banner.textContent='敗北'; banner.classList.add('lose'); }
+    info.style.display='block';
+    if(d.win){
+      info.textContent=`獲得 ${d.goldGain} 金幣，經驗值 +${d.xpGain}${d.leveledUp?'　🎉 升級了！':''}`;
+    }else if(d.draw){
+      info.textContent='平手不計勝負，沒有懲罰';
+    }else{
+      info.textContent='落敗沒有額外懲罰，再接再厲！';
+    }
+    closeBtn.style.display='inline-block';
+  }
+  setTimeout(step,300);
+
+  closeBtn.onclick=()=>{ overlay.style.display='none'; if(d.me) updateMe(d.me); };
+}
+
+/* ---------------- 自動連線（若已記住名稱，方便重整後快速回來） ---------------- */
+connect().catch(()=>{});
+</script>
+
+</body>
+</html>

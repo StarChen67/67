@@ -30,3 +30,11 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     autoDeploy: true
+
+  - type: web
+    name: star-arcade-battle
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node battle-server.js
+    autoDeploy: true

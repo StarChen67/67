@@ -19,6 +19,7 @@
     display:flex; align-items:center; justify-content:space-between;
     padding:18px 32px; background:rgba(11,14,26,.85); backdrop-filter:blur(8px);
     border-bottom:1px solid var(--line);
+    flex-wrap:wrap; gap:10px;
   }
   .brand{display:flex; align-items:center; gap:12px;}
   .brand .logo{
@@ -26,9 +27,25 @@
     background:conic-gradient(from 180deg,#6c5ce7,#00cec9,#fd79a8,#6c5ce7);
     box-shadow:0 0 20px rgba(108,92,231,.6);
     display:flex;align-items:center;justify-content:center;font-size:20px;
+    flex-shrink:0;
   }
   .brand h1{font-size:20px; margin:0; letter-spacing:.5px;}
   .brand span{color:var(--muted); font-size:12px;}
+
+  .live-pill{
+    display:flex; align-items:center; gap:7px;
+    margin-left:8px; padding:6px 14px; border-radius:999px;
+    background:rgba(46,213,115,.12); border:1px solid rgba(46,213,115,.4);
+    color:#2ed573; font-size:12px; font-weight:700; white-space:nowrap;
+  }
+  .live-dot{
+    width:8px; height:8px; border-radius:50%; background:#2ed573;
+    box-shadow:0 0 8px #2ed573; animation:pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1; transform:scale(1);}
+    50%{opacity:.45; transform:scale(.8);}
+  }
 
   nav.tabs{display:flex; gap:8px;}
   nav.tabs button{
@@ -76,14 +93,15 @@
   .body h3{margin:0; font-size:16px;}
   .body .sub{margin:0; color:var(--accent); font-size:12px; font-weight:700;}
   .body p{margin:0; color:var(--muted); font-size:12.5px; line-height:1.6; flex:1;}
-  .row{display:flex; align-items:center; justify-content:space-between; margin-top:6px;}
+  .row{display:flex; align-items:center; justify-content:space-between; margin-top:6px; gap:10px;}
   .play{
     background:linear-gradient(135deg,var(--accent),#0b0e1a 180%);
     color:#fff; border:none; padding:9px 20px; border-radius:10px; font-weight:700; font-size:13px;
-    cursor:pointer;
+    cursor:pointer; flex-shrink:0;
   }
   .play:hover{filter:brightness(1.15);}
   .hint{font-size:11px; color:var(--muted);}
+  .players{font-size:12px; color:var(--accent); font-weight:700; white-space:nowrap;}
 
   footer{text-align:center; color:var(--muted); font-size:12px; padding:20px; border-top:1px solid var(--line);}
 
@@ -105,6 +123,7 @@
       <h1>星辰遊樂園</h1>
       <span>STAR ARCADE · 個人遊戲平台</span>
     </div>
+    <div class="live-pill" id="livePill"><span class="live-dot"></span><span id="liveCount">-- 人正在遊樂園</span></div>
   </div>
   <nav class="tabs" id="tabs">
     <button data-f="all" class="active">全部遊戲</button>
@@ -126,95 +145,24 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const GAMES = [
-  { title:"星痕御獸錄 II", sub:"Monster Tamer · 最新版", emoji:"🐲", accent:"#ff6b6b",
-    desc:"御獸養成 RPG，收服56種御獸、配種孵蛋、地圖探索、線上 PvP 競技場。",
-    tag:"multi", url:"https://star-arcade-tamer.onrender.com/" },
-
-  { title:"無限卡牌", sub:"Infinite Cards v1.1", emoji:"🃏", accent:"#6c5ce7",
-    desc:"收集構築式卡牌對戰，帳號系統、市場交易、玩家互換、賽季排名。",
-    tag:"multi", url:"https://star-arcade-cards.onrender.com/" },
-
-  { title:"星辰大陸 Online", sub:"多人版 MMO", emoji:"🌌", accent:"#00b894",
-    desc:"開放世界大地圖 MMO，組隊、陣營攻城、拍賣場、玩家交易系統。",
-    tag:"multi", url:"https://star-arcade-mmo.onrender.com/" },
-
-  { title:"星辰大陸 Online", sub:"單機版", emoji:"🪐", accent:"#00cec9",
-    desc:"與多人版同世界觀的離線單人遊玩版本，免伺服器即可遊玩。",
-    tag:"single", url:"singleplayer.html" },
-
-  { title:"要塞防線", sub:"無限塔防", emoji:"🏰", accent:"#e17055",
-    desc:"策略塔防遊戲，抵擋無限波次的敵人進攻，考驗布局與資源分配。",
-    tag:"single", url:"tower-defense.html" },
-
-  { title:"元素怪獸卡牌", sub:"Beast Duel", emoji:"⚔️", accent:"#fdcb6e",
-    desc:"元素屬性卡牌對戰，回合制策略戰鬥，克制關係決定勝負。",
-    tag:"single", url:"beast-duel.html" },
-
-  { title:"心算闖關", sub:"MIND SPRINT", emoji:"🧮", accent:"#0984e3",
-    desc:"考驗反應與心算能力的速算闖關遊戲，越快越準分數越高。",
-    tag:"single", url:"mental-math.html" },
-
-  { title:"倍數合成", sub:"Merge 2ⁿ", emoji:"🔢", accent:"#a29bfe",
-    desc:"數字合併益智遊戲，滑動合併同數字方塊，挑戰最高倍數。",
-    tag:"single", url:"merge-game.html" },
-
-  { title:"星痕御獸錄", sub:"經典版 · Monster Tamer", emoji:"🐉", accent:"#fd79a8",
-    desc:"御獸收集戰鬥遊戲的初代單檔版本，最新內容請見 星痕御獸錄 II。",
-    tag:"single", url:"monster-tamer.html" },
-
-  { title:"星辰召喚", sub:"抽卡遊戲", emoji:"🎴", accent:"#00b894",
-    desc:"機率與抽卡系統試煉，體驗保底機制與稀有度帶來的刺激。",
-    tag:"single", url:"probability-game.html" },
-
-  { title:"星際闖關", sub:"Star Run", emoji:"🚀", accent:"#e84393",
-    desc:"跑酷式關卡挑戰，考驗操作精準度與反應速度。",
-    tag:"single", url:"stage-run.html" },
-
-  { title:"Voxel Craft", sub:"方塊建造", emoji:"🧱", accent:"#55efc4",
-    desc:"類 Minecraft 的體素世界，自由探索、挖掘與建造。",
-    tag:"single", url:"voxel-craft.html" },
-
-  { title:"勇者傳說", sub:"Hero Legend RPG", emoji:"⚔️", accent:"#b388ff",
-    desc:"回合制地城探索RPG，選擇職業、招募夥伴、裝備升級、討伐五大地區首領。",
-    tag:"single", url:"hero-legend.html" },
-
-  { title:"俄羅斯方塊", sub:"Star Blocks", emoji:"🧩", accent:"#5aa9ff",
-    desc:"經典俄羅斯方塊，7 種方塊隨機袋、保留方塊、幽靈方塊預覽、等級加速。",
-    tag:"single", url:"tetris.html" },
-
-  { title:"末日求生記", sub:"Wasteland Survivor", emoji:"☢️", accent:"#e8a33d",
-    desc:"末日文字冒險，管理飢餓/口渴/精神與物資，隨機事件與主線劇情，30 天內找到避難所。",
-    tag:"single", url:"wasteland-survivor.html" },
-
-  { title:"寶石消除", sub:"Gem Match", emoji:"💎", accent:"#d14bff",
-    desc:"經典三消益智遊戲，交換相鄰寶石連成三個以上消除，連鎖越多分數越高。",
-    tag:"single", url:"gem-match.html" },
-
-  { title:"貪食蛇", sub:"Star Snake", emoji:"🐍", accent:"#3ddc97",
-    desc:"經典貪食蛇，吃食物增長蛇身，金色食物稀有加分，支援三種難度與觸控滑動。",
-    tag:"single", url:"snake-game.html" },
-
-  { title:"光速衝刺", sub:"Neon Dash", emoji:"⚡", accent:"#37e6e6",
-    desc:"無盡霓虹跑酷，跳過尖刺坑洞、滑過偵測無人機，蒐集能量球拉高連擊倍率，速度隨時間持續加快。",
-    tag:"single", url:"neon-dash.html" },
-
-  { title:"打磚塊", sub:"Brick Breaker", emoji:"🧱", accent:"#ff9d2e",
-    desc:"經典彈跳球打磚塊，滑動擋板反彈球體，清光磚塊晉級下一關，球速逐關加快。",
-    tag:"single", url:"brick-breaker.html" },
-
-  { title:"深淵獵人", sub:"Abyss Hunter", emoji:"🗡️", accent:"#c85dff",
-    desc:"動作生存射擊，移動閃避、角色自動攻擊敵人，擊殺掉落經驗升級挑選強化，撐得越久分數越高。",
-    tag:"single", url:"abyss-hunter.html" },
-
-  { title:"極速狂飆", sub:"Speed Racer", emoji:"🏎️", accent:"#ff5d3d",
-    desc:"三線道公路賽車，左右切換車道閃避對向來車，收集金幣與氮氣加速衝刺，車速隨時間持續提升。",
-    tag:"single", url:"speed-racer.html" },
-];
+let GAMES = [];
+let activeFilter = 'all';
 
 const grid = document.getElementById('grid');
 const toast = document.getElementById('toast');
-document.getElementById('count').textContent = GAMES.length;
+
+async function loadGames(){
+  grid.innerHTML = '<p style="color:var(--muted);">載入遊戲清單中…</p>';
+  try{
+    const res = await fetch('/api/games');
+    GAMES = await res.json();
+  }catch(e){
+    grid.innerHTML = '<p style="color:var(--muted);">無法連線到平台伺服器，請透過 <code>npm run platform</code> 啟動後再開啟本頁面。</p>';
+    return;
+  }
+  document.getElementById('count').textContent = GAMES.length;
+  render(activeFilter);
+}
 
 function showToast(msg){
   toast.textContent = msg;
@@ -239,10 +187,13 @@ function render(filter){
         <p>${g.desc}</p>
         <div class="row">
           <button class="play">開始遊玩</button>
-          ${g.cmd ? `<span class="hint" title="${g.cmd}">需啟動伺服器</span>` : '<span class="hint">免伺服器</span>'}
+          <span class="players" data-key="${g.key}">👥 -- 人遊玩中</span>
         </div>
+        <span class="hint">${g.cmd ? `需啟動伺服器：${g.cmd}` : '免伺服器'}</span>
       </div>`;
     const launch = () => {
+      currentGame = g.key;
+      heartbeat();
       if (g.cmd){
         showToast(`若尚未啟動，請先在終端機執行： ${g.cmd}`);
       }
@@ -252,6 +203,7 @@ function render(filter){
     card.addEventListener('click', launch);
     grid.appendChild(card);
   });
+  applyStats(latestStats);
 }
 
 document.getElementById('tabs').addEventListener('click', (e)=>{
@@ -259,10 +211,55 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
   if (!btn) return;
   [...document.querySelectorAll('#tabs button')].forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  render(btn.dataset.f);
+  activeFilter = btn.dataset.f;
+  render(activeFilter);
 });
 
-render('all');
+/* ---- 即時人數（心跳式在線人數統計） ---- */
+const SESSION_KEY = 'star-arcade-session-id';
+function getSessionId(){
+  let id = sessionStorage.getItem(SESSION_KEY);
+  if (!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).slice(2)));
+    sessionStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+}
+const sessionId = getSessionId();
+let currentGame = 'lobby';
+let latestStats = { total: 0, byGame: {} };
+
+function applyStats(stats){
+  if (stats) latestStats = stats;
+  const liveCount = document.getElementById('liveCount');
+  if (liveCount) liveCount.textContent = `${latestStats.total} 人正在遊樂園`;
+  document.querySelectorAll('.players').forEach(el=>{
+    const n = (latestStats.byGame && latestStats.byGame[el.dataset.key]) || 0;
+    el.textContent = `👥 ${n} 人遊玩中`;
+  });
+}
+
+async function heartbeat(){
+  try{
+    const res = await fetch('/api/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, game: currentGame }),
+    });
+    if (res.ok) applyStats(await res.json());
+  }catch(e){ /* 平台伺服器未啟動（例如直接開啟本機檔案）時忽略 */ }
+}
+
+heartbeat();
+setInterval(heartbeat, 8000);
+
+window.addEventListener('pagehide', ()=>{
+  try{
+    navigator.sendBeacon('/api/leave', new Blob([JSON.stringify({ sessionId })], { type:'application/json' }));
+  }catch(e){}
+});
+
+loadGames();
 </script>
 
 </body>
