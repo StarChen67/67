@@ -1,0 +1,62 @@
+{
+  "iron_sword": {
+    "id": "iron_sword",
+    "name": "鐵劍",
+    "type": "weapon",
+    "rarity": "普通",
+    "icon": "🗡️",
+    "levelReq": 1,
+    "price": 30,
+    "statBonus": { "atk": 5 }
+  },
+  "oak_staff": {
+    "id": "oak_staff",
+    "name": "橡木法杖",
+    "type": "weapon",
+    "rarity": "普通",
+    "icon": "🪄",
+    "levelReq": 1,
+    "price": 30,
+    "statBonus": { "matk": 5 }
+  },
+  "hunting_bow": {
+    "id": "hunting_bow",
+    "name": "獵弓",
+    "type": "weapon",
+    "rarity": "普通",
+    "icon": "🏹",
+    "levelReq": 1,
+    "price": 30,
+    "statBonus": { "atk": 5 }
+  },
+  "leather_armor": {
+    "id": "leather_armor",
+    "name": "皮甲",
+    "type": "chest",
+    "rarity": "普通",
+    "icon": "🎽",
+    "levelReq": 1,
+    "price": 25,
+    "statBonus": { "def": 4 }
+  },
+  "iron_helmet": {
+    "id": "iron_helmet",
+    "name": "鐵盔",
+    "type": "helmet",
+    "rarity": "普通",
+    "icon": "🪖",
+    "levelReq": 1,
+    "price": 20,
+    "statBonus": { "def": 3 }
+  },
+  "traveler_ring": {
+    "id": "traveler_ring",
+    "name": "旅人戒指",
+    "type": "ring",
+    "rarity": "普通",
+    "icon": "💍",
+    "levelReq": 1,
+    "price": 15,
+    "statBonus": { "critRate": 2 }
+  }
+}

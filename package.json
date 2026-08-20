@@ -7,13 +7,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "cards": "node cards-server.js",
     "platform": "node platform-server.js",
-    "battle": "node battle-server.js"
+    "battle": "node battle-server.js",
+    "realms": "node realms-server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "ws": "^8.21.1"
   }
 }

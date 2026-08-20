@@ -1,0 +1,44 @@
+{
+  "slime": {
+    "id": "slime",
+    "name": "史萊姆",
+    "emoji": "🟢",
+    "level": 1,
+    "hp": 20,
+    "atk": 3,
+    "def": 1,
+    "moveSpeed": 40,
+    "aggroRange": 70,
+    "attackRange": 32,
+    "attackCooldownMs": 1100,
+    "respawnMs": 8000
+  },
+  "goblin": {
+    "id": "goblin",
+    "name": "哥布林",
+    "emoji": "👹",
+    "level": 2,
+    "hp": 40,
+    "atk": 6,
+    "def": 3,
+    "moveSpeed": 70,
+    "aggroRange": 150,
+    "attackRange": 40,
+    "attackCooldownMs": 900,
+    "respawnMs": 12000
+  },
+  "wolf": {
+    "id": "wolf",
+    "name": "野狼",
+    "emoji": "🐺",
+    "level": 3,
+    "hp": 32,
+    "atk": 8,
+    "def": 2,
+    "moveSpeed": 135,
+    "aggroRange": 200,
+    "attackRange": 40,
+    "attackCooldownMs": 800,
+    "respawnMs": 14000
+  }
+}

@@ -6,6 +6,9 @@ services:
     buildCommand: npm install
     startCommand: node platform-server.js
     autoDeploy: true
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
 
   - type: web
     name: star-arcade-tamer
@@ -37,4 +40,12 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: node battle-server.js
+    autoDeploy: true
+
+  - type: web
+    name: star-arcade-realms
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node realms-server.js
     autoDeploy: true

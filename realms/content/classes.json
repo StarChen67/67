@@ -1,0 +1,52 @@
+{
+  "warrior": {
+    "id": "warrior",
+    "name": "戰士",
+    "desc": "高生命、高防禦、近戰肉盾。",
+    "baseStats": { "hp": 120, "mp": 20, "atk": 14, "def": 12, "matk": 4, "mdef": 6, "critRate": 5, "moveSpeed": 100 },
+    "damageStat": "atk",
+    "attackRange": 55,
+    "attackCooldownMs": 700,
+    "skill": { "id": "heavy_slash", "name": "重斬", "mpCost": 8, "cooldownMs": 3000, "multiplier": 2.2, "range": 60 }
+  },
+  "mage": {
+    "id": "mage",
+    "name": "法師",
+    "desc": "遠距離元素魔法，火／冰／雷。",
+    "baseStats": { "hp": 70, "mp": 100, "atk": 6, "def": 5, "matk": 18, "mdef": 10, "critRate": 5, "moveSpeed": 100 },
+    "damageStat": "matk",
+    "attackRange": 200,
+    "attackCooldownMs": 750,
+    "skill": { "id": "fireball", "name": "火球術", "mpCost": 12, "cooldownMs": 2500, "multiplier": 2.5, "range": 220 }
+  },
+  "archer": {
+    "id": "archer",
+    "name": "弓箭手",
+    "desc": "遠距離高暴擊，擅長陷阱。",
+    "baseStats": { "hp": 85, "mp": 40, "atk": 15, "def": 7, "matk": 5, "mdef": 6, "critRate": 12, "moveSpeed": 110 },
+    "damageStat": "atk",
+    "attackRange": 220,
+    "attackCooldownMs": 650,
+    "skill": { "id": "piercing_shot", "name": "穿透射擊", "mpCost": 10, "cooldownMs": 2200, "multiplier": 2.0, "range": 260 }
+  },
+  "priest": {
+    "id": "priest",
+    "name": "牧師",
+    "desc": "治療、護盾、輔助隊友。",
+    "baseStats": { "hp": 80, "mp": 90, "atk": 6, "def": 8, "matk": 14, "mdef": 12, "critRate": 5, "moveSpeed": 100 },
+    "damageStat": "matk",
+    "attackRange": 180,
+    "attackCooldownMs": 800,
+    "skill": { "id": "holy_strike", "name": "聖光斬", "mpCost": 10, "cooldownMs": 2800, "multiplier": 1.8, "range": 200 }
+  },
+  "rogue": {
+    "id": "rogue",
+    "name": "盜賊",
+    "desc": "高攻速、毒、背刺、隱身。",
+    "baseStats": { "hp": 90, "mp": 35, "atk": 13, "def": 6, "matk": 4, "mdef": 5, "critRate": 18, "moveSpeed": 115 },
+    "damageStat": "atk",
+    "attackRange": 55,
+    "attackCooldownMs": 500,
+    "skill": { "id": "backstab", "name": "背刺", "mpCost": 9, "cooldownMs": 2000, "multiplier": 2.3, "range": 60 }
+  }
+}

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>碎界：失落王座</title>
+<style>
+  :root{
+    --bg:#18140f; --surface:#221c15; --surface-2:#2b2318; --text:#ecdfc9;
+    --muted:#a8977c; --border:#3d3323; --accent:#e08a3e; --accent-strong:#f0a75c;
+    --danger:#e0573e; --ok:#5fae7a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .app{ width:100%; max-width:480px; transition:max-width 0.15s; }
+  .app.wide{ max-width:900px; }
+  header{ text-align:center; margin-bottom:22px; }
+  header h1{
+    font-family:"Noto Serif TC","Songti TC",serif; font-size:28px; margin:0 0 6px;
+    color:var(--accent-strong);
+  }
+  header p{ margin:0; color:var(--muted); font-size:13px; }
+  .status{
+    display:flex; align-items:center; gap:6px; justify-content:center; margin-top:10px;
+    font-size:12.5px; color:var(--muted);
+  }
+  .status .dot{ width:8px; height:8px; border-radius:50%; background:var(--danger); }
+  .status.connected .dot{ background:var(--ok); }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:22px; margin-bottom:16px;
+  }
+  .tabs{ display:flex; gap:4px; margin-bottom:16px; }
+  .tab{
+    flex:1; text-align:center; padding:8px; border-radius:8px; cursor:pointer;
+    color:var(--muted); font-size:14px; user-select:none;
+  }
+  .tab.active{ background:var(--surface-2); color:var(--accent-strong); font-weight:600; }
+
+  label{ display:block; font-size:12.5px; color:var(--muted); margin:0 0 5px; }
+  input, select{
+    width:100%; padding:9px 11px; margin-bottom:12px; border-radius:7px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text); font-size:14px;
+  }
+  input:focus, select:focus{ outline:1px solid var(--accent); border-color:var(--accent); }
+  button{
+    width:100%; padding:10px; border-radius:7px; border:none; cursor:pointer;
+    background:var(--accent); color:#1b1208; font-weight:700; font-size:14.5px;
+  }
+  button:hover{ background:var(--accent-strong); }
+  button.secondary{ background:var(--surface-2); color:var(--text); border:1px solid var(--border); }
+  .msg{ font-size:13px; margin:-4px 0 12px; min-height:16px; }
+  .msg.error{ color:var(--danger); }
+  .msg.ok{ color:var(--ok); }
+
+  .char-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+  .char-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2);
+    cursor:pointer;
+  }
+  .char-item:hover{ border-color:var(--accent); }
+  .char-item .name{ font-weight:600; }
+  .char-item .meta{ font-size:12px; color:var(--muted); }
+
+  .class-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+  .class-opt{
+    border:1px solid var(--border); border-radius:8px; padding:10px; cursor:pointer; font-size:13px;
+  }
+  .class-opt.selected{ border-color:var(--accent); background:var(--surface-2); }
+  .class-opt .cname{ font-weight:700; margin-bottom:2px; }
+  .class-opt .cdesc{ color:var(--muted); font-size:11.5px; }
+
+  .sheet{ display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; font-size:14px; }
+  .sheet .row{ display:flex; justify-content:space-between; border-bottom:1px dashed var(--border); padding-bottom:6px; }
+  .sheet .row .k{ color:var(--muted); }
+  .hidden{ display:none !important; }
+
+  /* ---- 世界畫面（階段 2） ---- */
+  #worldCard{ padding:14px; }
+  .hud{ display:flex; align-items:center; gap:12px; margin-bottom:10px; padding:0 4px; }
+  .hud .who{ font-weight:700; white-space:nowrap; }
+  .hud .gold{ font-size:13px; color:var(--accent-strong); white-space:nowrap; }
+  .bars{ flex:1; display:flex; flex-direction:column; gap:4px; }
+  .bar{ height:8px; border-radius:5px; background:var(--surface-2); border:1px solid var(--border); overflow:hidden; }
+  .bar .fill{ height:100%; }
+  .bar.hp .fill{ background:#c0473a; }
+  .bar.mp .fill{ background:#3d7cc9; }
+  .hud button{ width:auto; padding:6px 10px; font-size:12px; }
+  .canvasWrap{ position:relative; }
+  #worldCanvas{
+    display:block; width:100%; aspect-ratio:16/10; border-radius:8px;
+    border:1px solid var(--border); background:#1c2417; cursor:default;
+  }
+  #deathOverlay{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; background:rgba(10,6,4,0.72); border-radius:8px; color:#f0ddc3; text-align:center;
+  }
+  #deathOverlay .big{ font-size:20px; font-weight:700; color:var(--danger); }
+  .hint{ font-size:12px; color:var(--muted); text-align:center; margin:8px 0 0; }
+
+  #interactPrompt{
+    position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+    background:rgba(20,15,10,0.85); border:1px solid var(--border); border-radius:999px;
+    padding:5px 14px; font-size:12.5px; color:var(--accent-strong); white-space:nowrap;
+  }
+
+  .modalMask{
+    position:absolute; inset:0; background:rgba(10,6,4,0.75); border-radius:8px;
+    display:flex; align-items:flex-end; justify-content:center; padding:14px;
+  }
+  .dialogueBox{
+    width:100%; max-width:100%; background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; padding:16px 18px; box-shadow:0 6px 24px rgba(0,0,0,0.4);
+  }
+  .dialogueBox .npcName{ font-weight:700; color:var(--accent-strong); margin-bottom:6px; font-size:14px; }
+  .dialogueBox .npcText{ font-size:14px; line-height:1.6; margin-bottom:14px; }
+  .dialogueBox .opt{
+    display:block; width:100%; text-align:left; background:var(--surface-2); border:1px solid var(--border);
+    color:var(--text); padding:9px 12px; border-radius:7px; margin-bottom:7px; font-size:13.5px; cursor:pointer;
+  }
+  .dialogueBox .opt:hover{ border-color:var(--accent); }
+
+  .shopBox{
+    width:100%; background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:16px 18px; max-height:100%; overflow-y:auto;
+  }
+  .shopBox h4{ margin:0 0 4px; font-size:15px; color:var(--accent-strong); }
+  .shopGold{ font-size:12.5px; color:var(--muted); margin-bottom:12px; }
+  .shopList{ display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .shopItem{
+    display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:8px;
+    padding:8px 10px; background:var(--surface-2);
+  }
+  .shopItem .icon{ font-size:20px; }
+  .shopItem .info{ flex:1; }
+  .shopItem .iname{ font-size:13.5px; font-weight:600; }
+  .shopItem .idesc{ font-size:11.5px; color:var(--muted); }
+  .shopItem button{ width:auto; padding:6px 12px; font-size:12.5px; }
+  .shopItem button:disabled{ opacity:0.5; cursor:not-allowed; }
+  .shopMsg{ font-size:12.5px; min-height:16px; margin-bottom:8px; }
+  #logPanel{
+    margin-top:10px; height:88px; overflow-y:auto; font-size:12.5px; color:var(--muted);
+    border-top:1px solid var(--border); padding-top:8px; display:flex; flex-direction:column; gap:3px;
+  }
+  #logPanel .join{ color:var(--ok); }
+  #logPanel .leave{ color:var(--danger); }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>碎界：失落王座</h1>
+      <p>Shattered Realms: The Lost Throne</p>
+      <div class="status" id="status"><span class="dot"></span><span id="statusText">連線中…</span></div>
+    </header>
+
+    <!-- 登入 / 註冊 -->
+    <div class="card" id="authCard">
+      <div class="tabs">
+        <div class="tab active" data-tab="login">登入</div>
+        <div class="tab" data-tab="register">註冊</div>
+      </div>
+      <form id="loginForm">
+        <label>帳號</label>
+        <input id="loginUsername" autocomplete="username" required>
+        <label>密碼</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" required>
+        <div class="msg" id="loginMsg"></div>
+        <button type="submit">登入</button>
+      </form>
+      <form id="registerForm" class="hidden">
+        <label>帳號（3-20 碼英數字或底線）</label>
+        <input id="registerUsername" autocomplete="username" required>
+        <label>密碼（至少 6 碼）</label>
+        <input id="registerPassword" type="password" autocomplete="new-password" required>
+        <div class="msg" id="registerMsg"></div>
+        <button type="submit">建立帳號</button>
+      </form>
+    </div>
+
+    <!-- 角色選擇 -->
+    <div class="card hidden" id="charListCard">
+      <p style="margin-top:0;color:var(--muted);font-size:13px;">選擇一個角色進入世界，或建立新角色。</p>
+      <div class="char-list" id="charList"></div>
+      <button class="secondary" id="showCreateBtn">＋ 建立新角色</button>
+    </div>
+
+    <!-- 建立角色 -->
+    <div class="card hidden" id="createCard">
+      <label>角色名稱（2-12 個字元）</label>
+      <input id="charName" required>
+      <label>選擇職業</label>
+      <div class="class-grid" id="classGrid"></div>
+      <div class="msg" id="createMsg"></div>
+      <button id="submitCreateBtn">建立角色</button>
+      <button class="secondary" id="cancelCreateBtn" style="margin-top:8px;">返回</button>
+    </div>
+
+    <!-- 世界畫面（階段 2：多人同步骨架） -->
+    <div class="card hidden" id="worldCard">
+      <div class="hud">
+        <div class="who" id="hudName"></div>
+        <div class="bars">
+          <div class="bar hp"><div class="fill" id="hpFill"></div></div>
+          <div class="bar mp"><div class="fill" id="mpFill"></div></div>
+        </div>
+        <div class="gold" id="hudGold">💰 0</div>
+        <button class="secondary" id="toggleSheetBtn">數值</button>
+      </div>
+      <div class="canvasWrap">
+        <canvas id="worldCanvas" width="960" height="600"></canvas>
+        <div id="deathOverlay" class="hidden">
+          <div class="big">已死亡</div>
+          <div id="respawnText">重生中…</div>
+        </div>
+        <div id="interactPrompt" class="hidden"></div>
+        <div id="dialogueMask" class="modalMask hidden">
+          <div class="dialogueBox">
+            <div class="npcName" id="dlgName"></div>
+            <div class="npcText" id="dlgText"></div>
+            <div id="dlgOptions"></div>
+          </div>
+        </div>
+        <div id="shopMask" class="modalMask hidden">
+          <div class="shopBox">
+            <h4 id="shopName"></h4>
+            <div class="shopGold" id="shopGold"></div>
+            <div class="shopMsg" id="shopMsg"></div>
+            <div class="shopList" id="shopList"></div>
+            <button class="secondary" id="shopCloseBtn">關閉</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">方向鍵／WASD 移動・空白鍵普通攻擊・Q 施放技能・E 與 NPC 互動</p>
+      <div id="logPanel"></div>
+      <div class="sheet hidden" id="sheet" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <script src="client.js"></script>
+</body>
+</html>

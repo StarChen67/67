@@ -1,0 +1,64 @@
+{
+  "elder_mira": {
+    "id": "elder_mira",
+    "name": "村長米拉",
+    "emoji": "🧙",
+    "mapId": "morningwind_village",
+    "x": 420,
+    "y": 260,
+    "dialogue": {
+      "start": {
+        "text": "旅人，你終於醒了。",
+        "options": [
+          { "label": "我這是在哪裡？", "next": "where" },
+          { "label": "村子外面究竟發生了什麼事？", "next": "trouble" },
+          { "label": "（先離開）", "action": "end" }
+        ]
+      },
+      "where": {
+        "text": "這裡是晨風村。你三天前昏迷在村口，渾身是傷卻毫髮無損地活了下來。",
+        "options": [
+          { "label": "我為什麼想不起任何事？", "next": "memory" },
+          { "label": "回到剛才的話題", "next": "start" }
+        ]
+      },
+      "memory": {
+        "text": "沒人知道。但你昏迷時，一直喃喃自語著『高塔倒下了』……這句話，老朽已經四百多年沒聽過了。",
+        "options": [
+          { "label": "……", "next": "start" }
+        ]
+      },
+      "trouble": {
+        "text": "村子附近出現了一道詭異的裂縫，最近魔物比往常多了不少。年輕人，如果你想幫忙，就去會會鐵匠老陳，添些裝備吧。",
+        "options": [
+          { "label": "我會小心的。", "next": "start" }
+        ]
+      }
+    }
+  },
+  "blacksmith_chen": {
+    "id": "blacksmith_chen",
+    "name": "鐵匠老陳",
+    "emoji": "🔨",
+    "mapId": "morningwind_village",
+    "x": 500,
+    "y": 340,
+    "dialogue": {
+      "start": {
+        "text": "想打造點什麼？看看我的貨架吧。",
+        "options": [
+          { "label": "看看商品", "action": "openShop" },
+          { "label": "隨便問問", "next": "chat" },
+          { "label": "（先離開）", "action": "end" }
+        ]
+      },
+      "chat": {
+        "text": "這年頭出門在外，身上沒把趁手的傢伙可不行。",
+        "options": [
+          { "label": "回到剛才的話題", "next": "start" }
+        ]
+      }
+    },
+    "shopItemIds": ["iron_sword", "oak_staff", "hunting_bow", "leather_armor", "iron_helmet", "traveler_ring"]
+  }
+}

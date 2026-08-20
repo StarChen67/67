@@ -173,6 +173,24 @@
       "desc": "動作生存射擊，移動閃避、角色自動攻擊敵人，擊殺掉落經驗升級挑選強化，撐得越久分數越高。",
       "tag": "single"
     },
+    "bubble-pop.html": {
+      "key": "bubble-pop",
+      "title": "泡泡龍",
+      "sub": "Bubble Pop",
+      "emoji": "🫧",
+      "accent": "#d14bff",
+      "desc": "經典泡泡消除益智，拖曳瞄準發射泡泡，三顆以上同色相連即可消除，懸空泡泡一併掉落，堆疊到底線前清空畫面。",
+      "tag": "single"
+    },
+    "catch-fruit.html": {
+      "key": "catch-fruit",
+      "title": "接水果",
+      "sub": "Catch the Fruit",
+      "emoji": "🍉",
+      "accent": "#3ddc97",
+      "desc": "移動籃子接住掉落水果，金色水果加分、炸彈扣命、腐爛水果扣分，連續接住可累積連擊加成。",
+      "tag": "single"
+    },
     "speed-racer.html": {
       "key": "speed-racer",
       "title": "極速狂飆",
@@ -180,6 +198,96 @@
       "emoji": "🏎️",
       "accent": "#ff5d3d",
       "desc": "三線道公路賽車，左右切換車道閃避對向來車，收集金幣與氮氣加速衝刺，車速隨時間持續提升。",
+      "tag": "single"
+    },
+    "minesweeper.html": {
+      "key": "minesweeper",
+      "title": "踩地雷",
+      "sub": "Minesweeper",
+      "emoji": "💣",
+      "accent": "#ff4757",
+      "desc": "經典掃雷益智遊戲，長按或標記地雷，展開空白區域找出所有安全格，首次點擊必為安全格，三種難度可選。",
+      "tag": "single"
+    },
+    "sudoku.html": {
+      "key": "sudoku",
+      "title": "數獨",
+      "sub": "Sudoku",
+      "emoji": "🔷",
+      "accent": "#2e86de",
+      "desc": "經典數獨邏輯遊戲，隨機產生唯一解謎題，支援筆記模式、即時衝突提示與提示功能，三種難度可選。",
+      "tag": "single"
+    },
+    "memory-match.html": {
+      "key": "memory-match",
+      "title": "翻牌記憶",
+      "sub": "Memory Match",
+      "emoji": "🧠",
+      "accent": "#a55eea",
+      "desc": "翻牌配對記憶遊戲，找出所有成對圖案，翻牌次數與用時越少評價越高，三種牌組大小可選。",
+      "tag": "single"
+    },
+    "whack-mole.html": {
+      "key": "whack-mole",
+      "title": "打地鼠",
+      "sub": "Whack-a-Mole",
+      "emoji": "🔨",
+      "accent": "#f6b93b",
+      "desc": "60秒限時打地鼠，金色地鼠加倍得分，小心地雷會扣分，考驗反應速度與精準度。",
+      "tag": "single"
+    },
+    "flap-dash.html": {
+      "key": "flap-dash",
+      "title": "飛梭鳥",
+      "sub": "Flap Dash",
+      "emoji": "🐤",
+      "accent": "#ffa447",
+      "desc": "點擊或按空白鍵拍動飛行，穿越無盡障礙物得分，考驗節奏感與反應力。",
+      "tag": "single"
+    },
+    "sokoban.html": {
+      "key": "sokoban",
+      "title": "推箱子",
+      "sub": "Sokoban",
+      "emoji": "📦",
+      "accent": "#c07d4a",
+      "desc": "經典推箱子益智遊戲，將所有箱子推到目標點過關，8 種關卡由易到難，支援復原步驟。",
+      "tag": "single"
+    },
+    "connect-four.html": {
+      "key": "connect-four",
+      "title": "四子棋",
+      "sub": "Connect Four",
+      "emoji": "🔴",
+      "accent": "#eb4d4b",
+      "desc": "經典四子棋對戰電腦AI，率先連成四顆棋子獲勝，三種電腦難度可選，勝負紀錄持續累積。",
+      "tag": "single"
+    },
+    "bubble-shooter.html": {
+      "key": "bubble-shooter",
+      "title": "泡泡消除",
+      "sub": "Bubble Shooter",
+      "emoji": "🔵",
+      "accent": "#7bd3f0",
+      "desc": "瞄準發射泡泡，三顆以上同色相連即可消除，懸空泡泡一併掉落，清空畫面前別讓泡泡堆到底線。",
+      "tag": "single"
+    },
+    "stack-tower.html": {
+      "key": "stack-tower",
+      "title": "疊疊樂",
+      "sub": "Stack Tower",
+      "emoji": "🗼",
+      "accent": "#f0932b",
+      "desc": "疊塔精準挑戰，抓準時機放下方塊，疊得越準塔越穩，一步差錯就前功盡棄。",
+      "tag": "single"
+    },
+    "bulls-cows.html": {
+      "key": "bulls-cows",
+      "title": "猜數字",
+      "sub": "1A2B",
+      "emoji": "🎯",
+      "accent": "#6ab04c",
+      "desc": "邏輯推理猜數字遊戲，依A（位置正確）與B（數字正確但位置錯）提示逐步縮小範圍，猜中全部數字即獲勝。",
       "tag": "single"
     }
   },

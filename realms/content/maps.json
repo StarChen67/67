@@ -1,0 +1,26 @@
+{
+  "morningwind_village": {
+    "id": "morningwind_village",
+    "name": "晨風村",
+    "width": 1600,
+    "height": 1000,
+    "spawn": { "x": 400, "y": 300 },
+    "monsterSpawns": [
+      { "defId": "slime", "x": 750, "y": 700, "count": 3 },
+      { "defId": "goblin", "x": 1150, "y": 260, "count": 2 },
+      { "defId": "wolf", "x": 1300, "y": 800, "count": 2 }
+    ],
+    "decor": [
+      { "type": "house", "x": 300, "y": 220 },
+      { "type": "house", "x": 520, "y": 260 },
+      { "type": "house", "x": 420, "y": 440 },
+      { "type": "well", "x": 420, "y": 320 },
+      { "type": "tree", "x": 140, "y": 150 },
+      { "type": "tree", "x": 720, "y": 180 },
+      { "type": "tree", "x": 180, "y": 560 },
+      { "type": "tree", "x": 780, "y": 520 },
+      { "type": "tree", "x": 950, "y": 260 },
+      { "type": "tree", "x": 600, "y": 620 }
+    ]
+  }
+}
