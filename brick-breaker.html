@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
 <title>打磚塊 — Brick Breaker</title>
 <style>
 :root{
@@ -54,11 +54,35 @@ button:active:not(:disabled){transform:translateY(0)}
 .b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
 
 .controls-row{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.speed-label{font-size:11.5px;color:var(--dim);align-self:center;margin-right:2px}
+.speed-btn.active{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05;border-color:transparent}
 .hint{font-size:11.5px;color:var(--dim);line-height:1.9;text-align:center;margin-top:10px}
 .hint b{color:var(--gold)}
 </style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
 </head>
 <body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
 <div class="wrap">
 
 <header>
@@ -90,8 +114,15 @@ button:active:not(:disabled){transform:translateY(0)}
   <button class="b-purple b-sm" id="restartBtn">重新開始</button>
 </div>
 
+<div class="controls-row" id="speedRow">
+  <span class="speed-label">球速</span>
+  <button class="b-ghost b-sm speed-btn" data-speed="slow">慢</button>
+  <button class="b-ghost b-sm speed-btn" data-speed="normal">正常</button>
+  <button class="b-ghost b-sm speed-btn" data-speed="fast">快</button>
+</div>
+
 <div class="hint">
-  滑鼠移動 / 觸控拖曳擋板　<b>空白鍵</b>或點擊發射球　<b>P</b>暫停
+  滑鼠移動 / 觸控拖曳擋板　<b>空白鍵</b>或點擊發射球　<b>P</b>暫停　可切換<b>球速</b>
 </div>
 
 </div>
@@ -116,24 +147,60 @@ function buildLevel(lv){
   const rows = Math.min(3 + lv, 8);
   const bw = (CW - BRICK_GAP*(COLS+1)) / COLS;
   const list = [];
+  // Levels 1-2 are all one-hit bricks so the game feels fast right away.
+  // From level 3 on, the top rows (worth the most points) start needing 2 hits,
+  // spreading down as levels rise; from level 7 the very top row needs 3.
+  const toughRows = lv <= 2 ? 0 : Math.min(Math.floor((lv-1)/2), rows-1);
   for(let r=0;r<rows;r++){
     for(let c=0;c<COLS;c++){
+      const hp = r < toughRows ? (lv >= 7 && r === 0 ? 3 : 2) : 1;
       list.push({
         x: BRICK_GAP + c*(bw+BRICK_GAP),
         y: BRICK_TOP + r*(BRICK_H+BRICK_GAP),
         w: bw, h: BRICK_H,
         color: ROW_COLORS[r % ROW_COLORS.length],
-        hp: r < 2 ? 1 : (r < rows-2 ? 1 : 2),
+        hp,
         alive: true,
-        points: (rows-r) * 10
+        points: (rows-r) * 10 + (hp-1) * 10
       });
     }
   }
   return list;
 }
 
+const SPEED_MULT = { slow: 0.78, normal: 1, fast: 1.3 };
+let speedSetting = localStorage.getItem('brick_speed') || 'normal';
+if(!SPEED_MULT.hasOwnProperty(speedSetting)) speedSetting = 'normal';
+
+function getBallSpeed(){
+  const base = 5.0 + (level-1)*0.4;
+  return base * SPEED_MULT[speedSetting];
+}
+
+function applySpeedToBall(){
+  if(!ball) return;
+  const newSpeed = getBallSpeed();
+  if(launched){
+    const curSpeed = Math.hypot(ball.dx, ball.dy) || newSpeed;
+    const scale = newSpeed / curSpeed;
+    ball.dx *= scale;
+    ball.dy *= scale;
+  }
+  ball.speed = newSpeed;
+}
+
+function setSpeedSetting(s){
+  if(!SPEED_MULT.hasOwnProperty(s)) return;
+  speedSetting = s;
+  localStorage.setItem('brick_speed', s);
+  document.querySelectorAll('.speed-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.speed === s);
+  });
+  applySpeedToBall();
+}
+
 function resetBall(){
-  const speed = 4.2 + (level-1)*0.35;
+  const speed = getBallSpeed();
   ball = {
     x: paddleX + paddleW/2, y: PADDLE_Y - BALL_R - 1,
     dx: 0, dy: 0, speed
@@ -369,6 +436,11 @@ window.addEventListener('keydown', (e)=>{
     case 'ArrowRight': movePaddleTo(paddleX + paddleW/2 + 24); break;
     case 'Space': launchBall(); break;
   }
+});
+
+document.querySelectorAll('.speed-btn').forEach(btn=>{
+  btn.classList.toggle('active', btn.dataset.speed === speedSetting);
+  btn.addEventListener('click', ()=> setSpeedSetting(btn.dataset.speed));
 });
 
 best = Number(localStorage.getItem('brick_best')||0);

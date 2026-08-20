@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>翻牌記憶 — Memory Match</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#20263f 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:640px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),var(--red),#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;
+            position:relative;flex:1 1 380px;max-width:560px}
+
+.board{display:grid;gap:8px;width:100%}
+.card{aspect-ratio:1;perspective:800px;cursor:pointer}
+.card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;
+            transition:transform .4s cubic-bezier(.4,.2,.2,1)}
+.card.flipped .card-inner{transform:rotateY(180deg)}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+           border-radius:10px;display:flex;align-items:center;justify-content:center;
+           font-size:clamp(18px,5.5vw,32px);border:1px solid var(--line)}
+.card-back{background:linear-gradient(135deg,var(--panel2),#171b30);color:var(--dim2);
+           font-size:clamp(16px,4.5vw,24px)}
+.card-front{background:#12152600;background:linear-gradient(135deg,var(--panel2),var(--panel));
+            transform:rotateY(180deg);border-color:var(--gold)}
+.card.matched .card-inner{transition:transform .4s cubic-bezier(.4,.2,.2,1)}
+.card.matched .card-front{border-color:var(--green);opacity:.55;position:relative}
+.card.matched .card-front::after{content:"✓";position:absolute;top:2px;right:5px;
+      font-size:11px;color:var(--green);font-weight:800}
+.card.matched{cursor:default}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:150px;flex:1 1 150px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.9);border-radius:14px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.7}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+
+.diffrow{display:flex;gap:6px}
+.diffrow button{flex:1;padding:8px 4px;font-size:11.5px}
+.diffrow button.active{outline:2px solid var(--green)}
+
+@media(max-width:640px){
+  .side{width:100%}
+}
+</style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>翻牌記憶</h1>
+    <div class="sub">MEMORY MATCH · 單機益智</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">翻牌次數</div><div class="v" id="moves">0</div></div>
+  <div class="pill"><div class="k">用時</div><div class="v" id="timer">00:00</div></div>
+  <div class="pill"><div class="k">最佳成績</div><div class="v" id="best">--</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">翻牌記憶</h2>
+      <p id="ovText">找出所有相同圖案的卡牌配對。<br>翻兩張牌，相同即配對成功，不同則蓋回去。</p>
+      <button class="b-gold" id="ovBtn">開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>難度</h2>
+      <div class="diffrow">
+        <button class="b-ghost" id="diffEasy">簡單</button>
+        <button class="b-ghost active" id="diffNormal">普通</button>
+        <button class="b-ghost" id="diffHard">困難</button>
+      </div>
+    </div>
+    <div class="card-panel">
+      <h2>遊戲說明</h2>
+      <div class="hint">
+        點擊卡牌翻面<br>
+        兩張<b>相同圖案</b>即配對成功<br>
+        不同則會自動蓋回<br>
+        配對完所有卡牌即獲勝
+      </div>
+    </div>
+    <button class="b-green b-sm" id="restartBtn">重新開始</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const EMOJI_POOL = ['🐉','🦊','🐼','🦄','🐲','⭐','🎃','🍀','🔥','💎','🌙','☀️','🍎','🎵','🎮','🏆','🚀','🌈','🐙','🦋'];
+
+const DIFF = {
+  easy:   { cols: 4, rows: 3, pairs: 6 },
+  normal: { cols: 4, rows: 4, pairs: 8 },
+  hard:   { cols: 6, rows: 4, pairs: 12 },
+};
+
+const boardEl = document.getElementById('board');
+const movesEl = document.getElementById('moves');
+const timerEl = document.getElementById('timer');
+const bestEl = document.getElementById('best');
+const overlayEl = document.getElementById('overlay');
+const ovTitleEl = document.getElementById('ovTitle');
+const ovTextEl = document.getElementById('ovText');
+const ovBtnEl = document.getElementById('ovBtn');
+
+let difficulty = 'normal';
+let cards = [];          // {emoji, matched, flipped}
+let firstPick = null;
+let secondPick = null;
+let lock = false;        // true while a mismatched pair is resolving
+let moves = 0;
+let matchedPairs = 0;
+let totalPairs = 0;
+let running = false;      // true once "開始遊戲" pressed, until win
+let timerStarted = false;
+let startTime = 0;
+let elapsed = 0;
+let timerInterval = null;
+
+function shuffle(arr){
+  for (let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function bestKey(){ return 'memoryBest_' + difficulty; }
+
+function loadBest(){
+  let v = null;
+  try { v = localStorage.getItem(bestKey()); } catch (e) { /* storage unavailable */ }
+  bestEl.textContent = v ? v : '--';
+}
+
+function saveBestIfBetter(){
+  let cur = null;
+  try { cur = localStorage.getItem(bestKey()); } catch (e) { /* storage unavailable */ }
+  if (cur === null || moves < Number(cur)){
+    try { localStorage.setItem(bestKey(), String(moves)); } catch (e) { /* storage unavailable */ }
+    return true;
+  }
+  return false;
+}
+
+function fmtTime(sec){
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function stopTimer(){
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function startTimerIfNeeded(){
+  if (timerStarted) return;
+  timerStarted = true;
+  startTime = Date.now();
+  timerInterval = setInterval(() => {
+    elapsed = (Date.now() - startTime) / 1000;
+    timerEl.textContent = fmtTime(elapsed);
+  }, 250);
+}
+
+function updateMoves(){
+  movesEl.textContent = String(moves);
+}
+
+function buildDeck(){
+  const cfg = DIFF[difficulty];
+  totalPairs = cfg.pairs;
+  const chosen = shuffle(EMOJI_POOL.slice()).slice(0, totalPairs);
+  let deck = chosen.concat(chosen).map(e => ({ emoji: e, matched: false, flipped: false }));
+  deck = shuffle(deck);
+  cards = deck;
+}
+
+function renderBoard(){
+  const cfg = DIFF[difficulty];
+  boardEl.style.gridTemplateColumns = `repeat(${cfg.cols}, 1fr)`;
+  boardEl.style.maxWidth = (cfg.cols * 92) + 'px';
+  boardEl.style.margin = '0 auto';
+  boardEl.innerHTML = '';
+  cards.forEach((card, idx) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.dataset.idx = idx;
+    el.innerHTML =
+      '<div class="card-inner">' +
+        '<div class="card-face card-back">✦</div>' +
+        '<div class="card-face card-front">' + card.emoji + '</div>' +
+      '</div>';
+    el.addEventListener('click', () => onCardClick(idx));
+    boardEl.appendChild(el);
+  });
+  syncCardVisuals();
+}
+
+function syncCardVisuals(){
+  const nodes = boardEl.children;
+  for (let i = 0; i < cards.length; i++){
+    const node = nodes[i];
+    if (!node) continue;
+    node.classList.toggle('flipped', cards[i].flipped || cards[i].matched);
+    node.classList.toggle('matched', cards[i].matched);
+  }
+}
+
+function resetState(){
+  moves = 0;
+  matchedPairs = 0;
+  firstPick = null;
+  secondPick = null;
+  lock = false;
+  timerStarted = false;
+  elapsed = 0;
+  stopTimer();
+  timerEl.textContent = '00:00';
+  updateMoves();
+  loadBest();
+}
+
+function newGame(){
+  resetState();
+  buildDeck();
+  renderBoard();
+}
+
+function onCardClick(idx){
+  if (!running) return;
+  if (lock) return;
+  const card = cards[idx];
+  if (!card || card.matched || card.flipped) return;
+
+  startTimerIfNeeded();
+
+  card.flipped = true;
+  syncCardVisuals();
+
+  if (firstPick === null){
+    firstPick = idx;
+    return;
+  }
+
+  secondPick = idx;
+  moves++;
+  updateMoves();
+  lock = true;
+
+  const a = cards[firstPick], b = cards[secondPick];
+  if (a.emoji === b.emoji){
+    a.matched = true;
+    b.matched = true;
+    matchedPairs++;
+    syncCardVisuals();
+    firstPick = null;
+    secondPick = null;
+    lock = false;
+    if (matchedPairs === totalPairs){
+      winGame();
+    }
+  } else {
+    const fp = firstPick, sp = secondPick;
+    setTimeout(() => {
+      cards[fp].flipped = false;
+      cards[sp].flipped = false;
+      syncCardVisuals();
+      firstPick = null;
+      secondPick = null;
+      lock = false;
+    }, 700);
+  }
+}
+
+function winGame(){
+  running = false;
+  stopTimer();
+  const improved = saveBestIfBetter();
+  loadBest();
+  ovTitleEl.textContent = '恭喜過關！';
+  ovTextEl.innerHTML = `翻牌次數 <b style="color:var(--gold)">${moves}</b> 次，用時 <b style="color:var(--gold)">${fmtTime(elapsed)}</b>。` +
+    (improved ? '<br><b style="color:var(--green)">刷新最佳成績！</b>' : '<br>再試一次挑戰最佳成績！');
+  ovBtnEl.textContent = '再玩一次';
+  overlayEl.classList.add('show');
+}
+
+function startGame(){
+  overlayEl.classList.remove('show');
+  newGame();
+  running = true;
+}
+
+ovBtnEl.addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+function setDifficulty(d, btnId){
+  difficulty = d;
+  document.querySelectorAll('.diffrow button').forEach(b => b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+  running = false;
+  resetState();
+  buildDeck();
+  renderBoard();
+  overlayEl.classList.add('show');
+  ovTitleEl.textContent = '翻牌記憶';
+  ovTextEl.innerHTML = '找出所有相同圖案的卡牌配對。<br>翻兩張牌，相同即配對成功，不同則蓋回去。';
+  ovBtnEl.textContent = '開始遊戲';
+}
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty('easy', 'diffEasy'));
+document.getElementById('diffNormal').addEventListener('click', () => setDifficulty('normal', 'diffNormal'));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty('hard', 'diffHard'));
+
+resetState();
+buildDeck();
+renderBoard();
+</script>
+</body>
+</html>

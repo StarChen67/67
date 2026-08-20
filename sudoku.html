@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>數獨 — Sudoku</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#1a2c3a 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:680px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--blue),var(--gold),#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;
+            position:relative;flex:none;display:flex;flex-direction:column;align-items:center;gap:12px}
+
+.sud-grid{
+  display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);
+  width:min(88vw,400px);aspect-ratio:1;background:#0a0c16;
+  border:2px solid var(--dim2);border-radius:8px;overflow:hidden;
+}
+.sud-cell{
+  display:flex;align-items:center;justify-content:center;position:relative;
+  font-size:clamp(13px,4.2vw,20px);font-weight:800;cursor:pointer;
+  color:var(--blue);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:#0a0c16;transition:background .12s;
+}
+.sud-cell.bx-r{border-right:2px solid var(--dim2)}
+.sud-cell.bx-b{border-bottom:2px solid var(--dim2)}
+.sud-cell.given{color:var(--txt)}
+.sud-cell.peer{background:rgba(255,255,255,.035)}
+.sud-cell.samenum{background:rgba(61,220,151,.10)}
+.sud-cell.selected{background:rgba(90,169,255,.28)}
+.sud-cell.conflict{color:var(--red)!important;background:rgba(255,93,115,.16)}
+.sud-cell.conflict.selected{background:rgba(255,93,115,.30)}
+
+.notes{position:absolute;inset:1px;display:grid;grid-template-columns:repeat(3,1fr);
+      grid-template-rows:repeat(3,1fr);font-size:clamp(6px,1.6vw,9px);color:var(--dim2);
+      font-weight:700;pointer-events:none}
+.notes div{display:flex;align-items:center;justify-content:center}
+
+.numpad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:min(88vw,400px)}
+.numpad button{padding:10px 0;font-size:16px;border-radius:8px;background:var(--panel2);
+      border:1px solid var(--line);color:var(--txt);min-height:44px}
+.numpad button:active{background:var(--panel)}
+.numpad button.erase{color:var(--red)}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:170px;flex:1;max-width:260px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+.actrow{display:flex;gap:6px;flex-wrap:wrap}
+.actrow button{flex:1;min-width:70px}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.92);border-radius:8px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px;z-index:5}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.7}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.hint .k{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+        border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--txt);margin:0 2px}
+
+.diffrow{display:flex;gap:6px}
+.diffrow button{flex:1;padding:8px 4px;font-size:11.5px}
+.diffrow button.active{outline:2px solid var(--green)}
+
+.notesBtn.active{outline:2px solid var(--gold)}
+
+@media(max-width:640px){
+  .side{width:100%;max-width:none;flex-direction:row;flex-wrap:wrap}
+  .side .card-panel{flex:1;min-width:150px}
+}
+</style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>數獨</h1>
+    <div class="sub">SUDOKU · 單機益智</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">已填入</div><div class="v" id="filled">0/81</div></div>
+  <div class="pill"><div class="k">用時</div><div class="v" id="timer">00:00</div></div>
+  <div class="pill"><div class="k">最佳時間</div><div class="v" id="best">--:--</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <div class="sud-grid" id="grid"></div>
+    <div class="numpad" id="numpad"></div>
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">數獨</h2>
+      <p id="ovText">點選格子後輸入 1-9，或使用下方數字鍵盤。<br>相同數字、同行同列同宮會即時提示衝突，助你找出錯誤。</p>
+      <button class="b-gold" id="ovBtn">開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>難度</h2>
+      <div class="diffrow">
+        <button class="b-ghost" id="diffEasy">簡單</button>
+        <button class="b-ghost active" id="diffNormal">普通</button>
+        <button class="b-ghost" id="diffHard">困難</button>
+      </div>
+    </div>
+    <div class="card-panel">
+      <h2>操作</h2>
+      <div class="actrow">
+        <button class="b-green b-sm" id="newGameBtn">新遊戲</button>
+        <button class="b-gold b-sm" id="hintBtn">提示 (3)</button>
+        <button class="b-ghost b-sm" id="clearBtn">清除</button>
+        <button class="b-ghost b-sm notesBtn" id="notesBtn">筆記：關</button>
+      </div>
+    </div>
+    <div class="card-panel">
+      <h2>操作說明</h2>
+      <div class="hint">
+        點選格子後按 <span class="k">1-9</span> 輸入<br>
+        <span class="k">Backspace</span> 清除該格<br>
+        方向鍵可移動選取格<br>
+        開啟「筆記」後點數字為候選數
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* ---------------- Sudoku core: generator + solver (uniqueness verified) ---------------- */
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=(Math.random()*(i+1))|0;
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function isValidPlacement(grid, i, d){
+  const r=(i/9)|0, c=i%9;
+  for(let cc=0;cc<9;cc++){ if(grid[r*9+cc]===d) return false; }
+  for(let rr=0;rr<9;rr++){ if(grid[rr*9+c]===d) return false; }
+  const br=(r/3|0)*3, bc=(c/3|0)*3;
+  for(let dr=0;dr<3;dr++) for(let dc=0;dc<3;dc++){
+    if(grid[(br+dr)*9+(bc+dc)]===d) return false;
+  }
+  return true;
+}
+
+function getCandidates(grid, i){
+  if(grid[i]!==0) return [];
+  const cands=[];
+  for(let d=1;d<=9;d++){ if(isValidPlacement(grid,i,d)) cands.push(d); }
+  return cands;
+}
+
+// Fill a completely empty (or partially filled) grid into a full valid solution via
+// randomized backtracking. Returns true on success (grid is mutated in place).
+function fillGrid(grid){
+  let best=-1, bestCands=null;
+  for(let i=0;i<81;i++){
+    if(grid[i]===0){
+      const cands=getCandidates(grid,i);
+      if(bestCands===null || cands.length<bestCands.length){
+        best=i; bestCands=cands;
+        if(cands.length===0) return false;
+      }
+    }
+  }
+  if(best===-1) return true; // solved
+  shuffle(bestCands);
+  for(const d of bestCands){
+    grid[best]=d;
+    if(fillGrid(grid)) return true;
+    grid[best]=0;
+  }
+  return false;
+}
+
+function newSolvedGrid(){
+  const grid=new Array(81).fill(0);
+  fillGrid(grid);
+  return grid;
+}
+
+// Count solutions up to `limit`, stopping early once reached. Uses MRV (fewest
+// candidates first) so it stays fast even for near-minimal-clue puzzles.
+function countSolutions(grid, limit){
+  let count=0;
+  function helper(g){
+    if(count>=limit) return;
+    let best=-1, bestCands=null;
+    for(let i=0;i<81;i++){
+      if(g[i]===0){
+        const cands=getCandidates(g,i);
+        if(bestCands===null || cands.length<bestCands.length){
+          best=i; bestCands=cands;
+          if(cands.length===0) return; // dead end
+        }
+      }
+    }
+    if(best===-1){ count++; return; } // fully solved -> one solution found
+    for(const d of bestCands){
+      g[best]=d;
+      helper(g);
+      g[best]=0;
+      if(count>=limit) return;
+    }
+  }
+  helper(grid.slice());
+  return count;
+}
+
+// Dig holes out of a full solution down to (approximately) targetClues, verifying
+// after every removal that the puzzle still has a UNIQUE solution. If a removal
+// would create multiple solutions, the cell is put back.
+function makeUniquePuzzle(solved, targetClues){
+  const puzzle=solved.slice();
+  let clues=81;
+  const order=shuffle([...Array(81).keys()]);
+  for(let k=0;k<order.length && clues>targetClues;k++){
+    const pos=order[k];
+    if(puzzle[pos]===0) continue;
+    const backup=puzzle[pos];
+    puzzle[pos]=0;
+    if(countSolutions(puzzle,2)===1){
+      clues--;
+    } else {
+      puzzle[pos]=backup;
+    }
+  }
+  return puzzle;
+}
+
+const DIFF_CLUES = { easy:40, normal:32, hard:26 };
+
+function generatePuzzle(diff){
+  const solved=newSolvedGrid();
+  const puzzle=makeUniquePuzzle(solved, DIFF_CLUES[diff]);
+  return {solved, puzzle};
+}
+
+/* ---------------- Game state / UI ---------------- */
+
+let solution, given, current, notesArr, selected=null;
+let notesMode=false;
+let difficulty='normal';
+let hintsUsed=0, maxHints=3;
+let startTime=null, elapsed=0, timerInt=null, running=false, won=false;
+
+function bestKey(d){ return 'sudokuBest_'+d; }
+function safeGetStorage(key){
+  try { return localStorage.getItem(key); } catch(e){ return null; }
+}
+function safeSetStorage(key,val){
+  try { localStorage.setItem(key,val); } catch(e){ /* storage unavailable, ignore */ }
+}
+function loadBest(d){
+  const v=Number(safeGetStorage(bestKey(d))||0);
+  return v>0?v:null;
+}
+function fmtTime(s){
+  const m=Math.floor(s/60), ss=s%60;
+  return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+}
+function updateBestDisplay(){
+  const b=loadBest(difficulty);
+  document.getElementById('best').textContent = b!==null ? fmtTime(b) : '--:--';
+}
+
+function buildGridDom(){
+  const gridEl=document.getElementById('grid');
+  gridEl.innerHTML='';
+  for(let i=0;i<81;i++){
+    const r=(i/9)|0, c=i%9;
+    const cell=document.createElement('div');
+    cell.className='sud-cell';
+    cell.dataset.i=i;
+    if(c===2||c===5) cell.classList.add('bx-r');
+    if(r===2||r===5) cell.classList.add('bx-b');
+    cell.addEventListener('click',()=>selectCell(i));
+    gridEl.appendChild(cell);
+  }
+}
+
+function buildNumpad(){
+  const np=document.getElementById('numpad');
+  np.innerHTML='';
+  for(let d=1;d<=9;d++){
+    const b=document.createElement('button');
+    b.textContent=d;
+    b.addEventListener('click',()=>inputDigit(d));
+    np.appendChild(b);
+  }
+  const erase=document.createElement('button');
+  erase.textContent='✕';
+  erase.className='erase';
+  erase.addEventListener('click',eraseCell);
+  np.appendChild(erase);
+}
+
+function selectCell(i){
+  if(!running) return;
+  selected=i;
+  render();
+}
+
+function computeConflicts(){
+  const conflict=new Set();
+  // rows
+  for(let r=0;r<9;r++){
+    const seen={};
+    for(let c=0;c<9;c++){
+      const i=r*9+c, v=current[i];
+      if(!v) continue;
+      (seen[v]=seen[v]||[]).push(i);
+    }
+    for(const v in seen){ if(seen[v].length>1) seen[v].forEach(i=>conflict.add(i)); }
+  }
+  // cols
+  for(let c=0;c<9;c++){
+    const seen={};
+    for(let r=0;r<9;r++){
+      const i=r*9+c, v=current[i];
+      if(!v) continue;
+      (seen[v]=seen[v]||[]).push(i);
+    }
+    for(const v in seen){ if(seen[v].length>1) seen[v].forEach(i=>conflict.add(i)); }
+  }
+  // boxes
+  for(let br=0;br<3;br++) for(let bc=0;bc<3;bc++){
+    const seen={};
+    for(let dr=0;dr<3;dr++) for(let dc=0;dc<3;dc++){
+      const r=br*3+dr, c=bc*3+dc, i=r*9+c, v=current[i];
+      if(!v) continue;
+      (seen[v]=seen[v]||[]).push(i);
+    }
+    for(const v in seen){ if(seen[v].length>1) seen[v].forEach(i=>conflict.add(i)); }
+  }
+  return conflict;
+}
+
+function render(){
+  const conflicts=computeConflicts();
+  let selVal=null, selR=null, selC=null, selB=null;
+  if(selected!==null){
+    selR=(selected/9)|0; selC=selected%9; selB=(selR/3|0)*3+(selC/3|0);
+    selVal=current[selected];
+  }
+  let filledCount=0;
+  const cells=document.getElementById('grid').children;
+  for(let i=0;i<81;i++){
+    const cell=cells[i];
+    const r=(i/9)|0, c=i%9, b=(r/3|0)*3+(c/3|0);
+    cell.classList.remove('given','peer','samenum','selected','conflict');
+    cell.innerHTML='';
+    const v=current[i];
+    if(v){
+      filledCount++;
+      cell.textContent=v;
+      if(given[i]) cell.classList.add('given');
+    } else if(notesArr[i]){
+      const nd=document.createElement('div');
+      nd.className='notes';
+      for(let d=1;d<=9;d++){
+        const sd=document.createElement('div');
+        sd.textContent=(notesArr[i]>>(d-1))&1 ? d : '';
+        nd.appendChild(sd);
+      }
+      cell.appendChild(nd);
+    }
+    if(selected!==null){
+      if(r===selR||c===selC||b===selB) cell.classList.add('peer');
+      if(selVal && v===selVal) cell.classList.add('samenum');
+      if(i===selected) cell.classList.add('selected');
+    }
+    if(conflicts.has(i)) cell.classList.add('conflict');
+  }
+  document.getElementById('filled').textContent = filledCount+'/81';
+  document.getElementById('hintBtn').textContent = '提示 ('+Math.max(0,maxHints-hintsUsed)+')';
+  document.getElementById('hintBtn').disabled = hintsUsed>=maxHints;
+}
+
+function inputDigit(d){
+  if(!running || selected===null) return;
+  const i=selected;
+  if(given[i]) return;
+  if(notesMode){
+    if(current[i]!==0) return; // notes only make sense on empty cells
+    notesArr[i] ^= (1<<(d-1));
+    render();
+    return;
+  }
+  current[i]=d;
+  notesArr[i]=0;
+  render();
+  checkWin();
+}
+
+function eraseCell(){
+  if(!running || selected===null) return;
+  const i=selected;
+  if(given[i]) return;
+  current[i]=0;
+  notesArr[i]=0;
+  render();
+}
+
+function useHint(){
+  if(!running || selected===null) return;
+  if(hintsUsed>=maxHints) return;
+  const i=selected;
+  if(given[i] || current[i]===solution[i]) return;
+  current[i]=solution[i];
+  notesArr[i]=0;
+  hintsUsed++;
+  render();
+  checkWin();
+}
+
+function clearEntries(){
+  if(!running) return;
+  for(let i=0;i<81;i++){
+    if(!given[i]){ current[i]=puzzleBackup? puzzleBackup[i]:0; notesArr[i]=0; }
+  }
+  render();
+}
+
+let puzzleBackup=null; // original generated puzzle (all-zero on non-given cells), used by "清除"
+
+function checkWin(){
+  for(let i=0;i<81;i++){ if(current[i]!==solution[i]) return; }
+  won=true;
+  running=false;
+  clearInterval(timerInt);
+  const best=loadBest(difficulty);
+  let improved=false;
+  if(best===null || elapsed<best){
+    safeSetStorage(bestKey(difficulty), String(elapsed));
+    improved=true;
+  }
+  updateBestDisplay();
+  document.getElementById('ovTitle').textContent='恭喜過關！';
+  document.getElementById('ovText').innerHTML =
+    '用時 <b style="color:var(--gold)">'+fmtTime(elapsed)+'</b>，使用提示 '+hintsUsed+' 次。'+
+    (improved ? '<br><b style="color:var(--green)">新紀錄！</b>' : '') +
+    '<br>再挑戰一次？';
+  document.getElementById('ovBtn').textContent='再玩一次';
+  document.getElementById('overlay').classList.add('show');
+}
+
+function tick(){
+  elapsed = Math.floor((Date.now()-startTime)/1000);
+  document.getElementById('timer').textContent = fmtTime(elapsed);
+}
+
+function startPuzzle(diff){
+  difficulty=diff;
+  const {solved, puzzle}=generatePuzzle(diff);
+  solution=solved;
+  current=puzzle.slice();
+  puzzleBackup=puzzle.slice();
+  given=puzzle.map(v=>v!==0);
+  notesArr=new Array(81).fill(0);
+  selected=null;
+  hintsUsed=0;
+  won=false;
+  elapsed=0;
+  startTime=Date.now();
+  clearInterval(timerInt);
+  timerInt=setInterval(tick,1000);
+  running=true;
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('timer').textContent='00:00';
+  updateBestDisplay();
+  render();
+}
+
+function setDifficulty(d, btnId){
+  document.querySelectorAll('.diffrow button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+  difficulty=d;
+  updateBestDisplay();
+  if(running || won){
+    startPuzzle(d);
+  }
+}
+
+function toggleNotes(){
+  notesMode=!notesMode;
+  const btn=document.getElementById('notesBtn');
+  btn.textContent = '筆記：'+(notesMode?'開':'關');
+  btn.classList.toggle('active', notesMode);
+}
+
+/* ---------------- wiring ---------------- */
+
+buildGridDom();
+buildNumpad();
+updateBestDisplay();
+
+document.getElementById('ovBtn').addEventListener('click', ()=>startPuzzle(difficulty));
+document.getElementById('newGameBtn').addEventListener('click', ()=>startPuzzle(difficulty));
+document.getElementById('hintBtn').addEventListener('click', useHint);
+document.getElementById('clearBtn').addEventListener('click', clearEntries);
+document.getElementById('notesBtn').addEventListener('click', toggleNotes);
+
+document.getElementById('diffEasy').addEventListener('click', ()=>setDifficulty('easy','diffEasy'));
+document.getElementById('diffNormal').addEventListener('click', ()=>setDifficulty('normal','diffNormal'));
+document.getElementById('diffHard').addEventListener('click', ()=>setDifficulty('hard','diffHard'));
+
+document.addEventListener('keydown',(e)=>{
+  if(!running || selected===null){
+    if(/^[1-9]$/.test(e.key) || e.key==='Backspace') return;
+  }
+  if(/^[1-9]$/.test(e.key)){ inputDigit(Number(e.key)); e.preventDefault(); return; }
+  if(e.key==='Backspace' || e.key==='Delete'){ eraseCell(); e.preventDefault(); return; }
+  if(selected===null) return;
+  let r=(selected/9)|0, c=selected%9;
+  if(e.key==='ArrowUp'){ r=(r+8)%9; selected=r*9+c; render(); e.preventDefault(); }
+  else if(e.key==='ArrowDown'){ r=(r+1)%9; selected=r*9+c; render(); e.preventDefault(); }
+  else if(e.key==='ArrowLeft'){ c=(c+8)%9; selected=r*9+c; render(); e.preventDefault(); }
+  else if(e.key==='ArrowRight'){ c=(c+1)%9; selected=r*9+c; render(); e.preventDefault(); }
+});
+
+// Pre-generate an initial puzzle in the background so the very first "開始遊戲"
+// click feels instant (generation itself is already fast, well under 1s).
+difficulty='normal';
+</script>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>飛梭鳥 — Flap Dash</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#1a2140 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:640px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),var(--blue),var(--green));
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;
+            position:relative;flex:none;width:100%;max-width:400px}
+canvas#board{display:block;width:100%;height:auto;border-radius:8px;background:#060812;touch-action:none;cursor:pointer}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:150px;flex:1;max-width:220px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+.overlay{position:absolute;inset:10px;background:rgba(6,8,18,.88);border-radius:8px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px}
+.overlay.show{display:flex}
+.overlay h2{font-size:22px;letter-spacing:3px;
+   background:linear-gradient(90deg,var(--gold),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.8;max-width:280px}
+.overlay .big{font-size:16px;color:var(--txt);font-weight:700}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px;width:100%}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.hint .k{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+        border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--txt);margin:0 2px}
+
+@media(max-width:640px){
+  .main{flex-direction:column;align-items:center}
+  .side{width:100%;max-width:400px;flex-direction:row;flex-wrap:wrap}
+  .side .card-panel{flex:1;min-width:140px}
+  .side button{flex:1;min-width:100px}
+}
+</style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>飛梭鳥</h1>
+    <div class="sub">FLAP DASH · 反應遊戲</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">分數</div><div class="v" id="score">0</div></div>
+  <div class="pill"><div class="k">最高分</div><div class="v" id="best">0</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <canvas id="board" width="400" height="600"></canvas>
+
+    <div class="overlay show" id="ovStart">
+      <h2>飛梭鳥</h2>
+      <p>點擊畫面或按空白鍵飛行，穿越障礙物得分，撞到就結束。<br>間隙會隨分數提升逐漸變窄，考驗你的反應力！</p>
+      <button class="b-gold" id="btnStart">點擊開始</button>
+    </div>
+
+    <div class="overlay" id="ovOver">
+      <h2>遊戲結束</h2>
+      <div class="big" id="ovScoreText">分數：0</div>
+      <p id="ovNote"></p>
+      <button class="b-green" id="btnRetry">重新開始</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>操作說明</h2>
+      <div class="hint">
+        <span class="k">點擊 / 觸控</span>飛行一下<br>
+        <span class="k">空白鍵</span>亦可飛行<br>
+        穿越障礙物間隙得分<br>
+        撞到障礙物或邊界即結束
+      </div>
+    </div>
+    <button class="b-ghost b-sm" id="restartBtn">重新開始</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const cv = document.getElementById('board');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+const elScore = document.getElementById('score');
+const elBest = document.getElementById('best');
+const ovStart = document.getElementById('ovStart');
+const ovOver = document.getElementById('ovOver');
+const ovScoreText = document.getElementById('ovScoreText');
+const ovNote = document.getElementById('ovNote');
+
+const BEST_KEY = 'flapDashBest';
+let best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10);
+elBest.textContent = best;
+
+const GRAVITY = 1500;      // px/s^2
+const FLAP_V = -430;       // px/s impulse (set, not cumulative)
+const PIPE_SPEED = 190;    // px/s constant scroll speed
+const PIPE_W = 60;
+const BIRD_X = W * 0.28;
+const BIRD_R = 14;
+const GAP_START = 220;
+const GAP_MIN = 170;
+const GAP_STEP = 3;        // shrink per point scored
+const PIPE_SPACING = 240;  // horizontal distance between pipe pairs
+const MARGIN = 40;         // min distance from top/bottom canvas edge to gap
+
+const STATE = { START:0, READY:1, PLAY:2, OVER:3 };
+let state = STATE.START;
+
+let bird, pipes, score, bobT;
+
+function reset(){
+  bird = { y: H/2, vy: 0 };
+  pipes = [];
+  score = 0;
+  bobT = 0;
+  updateHud();
+}
+reset();
+
+function updateHud(){
+  elScore.textContent = score;
+  elBest.textContent = best;
+}
+
+function currentGap(){
+  return Math.max(GAP_MIN, GAP_START - score * GAP_STEP);
+}
+
+function spawnPipe(x){
+  const gap = currentGap();
+  const minTop = MARGIN;
+  const maxTop = H - MARGIN - gap;
+  const gapTop = minTop + Math.random() * Math.max(0, maxTop - minTop);
+  pipes.push({ x, gapTop, gap, scored:false });
+}
+
+function flap(){
+  if(state === STATE.START) return; // overlay covers canvas; ignore
+  if(state === STATE.READY){
+    state = STATE.PLAY;
+    pipes = [];
+    spawnPipe(W + 40);
+    bird.vy = FLAP_V;
+    return;
+  }
+  if(state === STATE.PLAY){
+    bird.vy = FLAP_V;
+  }
+}
+
+function circleRectOverlap(cx, cy, r, rx, ry, rw, rh){
+  const nx = Math.max(rx, Math.min(cx, rx + rw));
+  const ny = Math.max(ry, Math.min(cy, ry + rh));
+  const dx = cx - nx, dy = cy - ny;
+  return (dx*dx + dy*dy) < r*r;
+}
+
+function gameOver(){
+  state = STATE.OVER;
+  let isBest = false;
+  if(score > best){
+    best = score;
+    localStorage.setItem(BEST_KEY, String(best));
+    isBest = true;
+  }
+  ovScoreText.textContent = '分數：' + score;
+  ovNote.textContent = isBest ? '新紀錄！太強了！' : ('最高紀錄：' + best);
+  ovOver.classList.add('show');
+  updateHud();
+}
+
+function startGame(){
+  ovStart.classList.remove('show');
+  ovOver.classList.remove('show');
+  reset();
+  state = STATE.READY;
+}
+
+document.getElementById('btnStart').addEventListener('click', startGame);
+document.getElementById('btnRetry').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+cv.addEventListener('pointerdown', (e) => { e.preventDefault(); flap(); });
+document.addEventListener('keydown', (e) => {
+  if(e.code === 'Space'){
+    e.preventDefault();
+    flap();
+  }
+});
+
+function update(dt){
+  if(state === STATE.READY){
+    bobT += dt;
+    bird.y = H/2 + Math.sin(bobT * 3) * 10;
+    return;
+  }
+  if(state !== STATE.PLAY) return;
+
+  bird.vy += GRAVITY * dt;
+  bird.y += bird.vy * dt;
+
+  // bounds collision
+  if(bird.y - BIRD_R <= 0){
+    bird.y = BIRD_R;
+    gameOver();
+    return;
+  }
+  if(bird.y + BIRD_R >= H){
+    bird.y = H - BIRD_R;
+    gameOver();
+    return;
+  }
+
+  // spawn pipes based on spacing
+  const last = pipes[pipes.length - 1];
+  if(!last || (W - last.x) >= PIPE_SPACING){
+    spawnPipe(W + PIPE_W);
+  }
+
+  for(const p of pipes){
+    p.x -= PIPE_SPEED * dt;
+
+    const topRect = { x:p.x, y:0, w:PIPE_W, h:p.gapTop };
+    const botY = p.gapTop + p.gap;
+    const botRect = { x:p.x, y:botY, w:PIPE_W, h:H - botY };
+
+    if(circleRectOverlap(BIRD_X, bird.y, BIRD_R, topRect.x, topRect.y, topRect.w, topRect.h) ||
+       circleRectOverlap(BIRD_X, bird.y, BIRD_R, botRect.x, botRect.y, botRect.w, botRect.h)){
+      gameOver();
+      return;
+    }
+
+    if(!p.scored && (p.x + PIPE_W) < (BIRD_X - BIRD_R)){
+      p.scored = true;
+      score++;
+    }
+  }
+
+  pipes = pipes.filter(p => p.x + PIPE_W > -20);
+  updateHud();
+}
+
+function drawBackground(){
+  const grd = ctx.createLinearGradient(0,0,0,H);
+  grd.addColorStop(0, '#131a3a');
+  grd.addColorStop(1, '#060812');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = '#ffffff';
+  for(let i=0;i<36;i++){
+    const sx = (i*53) % W;
+    const sy = (i*97) % H;
+    ctx.globalAlpha = 0.15 + (i%5)*0.08;
+    ctx.fillRect(sx, sy, 2, 2);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPipes(){
+  for(const p of pipes){
+    const botY = p.gapTop + p.gap;
+    const grdTop = ctx.createLinearGradient(p.x,0,p.x+PIPE_W,0);
+    grdTop.addColorStop(0,'#22a173');
+    grdTop.addColorStop(1,'#3ddc97');
+    ctx.fillStyle = grdTop;
+    ctx.fillRect(p.x, 0, PIPE_W, p.gapTop);
+    ctx.fillRect(p.x, botY, PIPE_W, H - botY);
+
+    ctx.fillStyle = '#1f2440';
+    ctx.fillRect(p.x-3, Math.max(0,p.gapTop-16), PIPE_W+6, 16);
+    ctx.fillRect(p.x-3, botY, PIPE_W+6, 16);
+  }
+}
+
+function drawBird(){
+  const angle = Math.max(-0.5, Math.min(0.9, bird.vy / 700));
+  ctx.save();
+  ctx.translate(BIRD_X, bird.y);
+  ctx.rotate(angle);
+
+  // wing
+  ctx.fillStyle = '#5aa9ff';
+  ctx.beginPath();
+  ctx.moveTo(-4, 2);
+  ctx.lineTo(-16, -6);
+  ctx.lineTo(-14, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // body
+  ctx.fillStyle = '#ffc84a';
+  ctx.shadowColor = '#ffc84a';
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.arc(0, 0, BIRD_R, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // eye
+  ctx.fillStyle = '#0a0c16';
+  ctx.beginPath();
+  ctx.arc(6, -4, 2.4, 0, Math.PI*2);
+  ctx.fill();
+
+  // beak
+  ctx.fillStyle = '#ff9d2e';
+  ctx.beginPath();
+  ctx.moveTo(10, 1);
+  ctx.lineTo(20, 3);
+  ctx.lineTo(10, 7);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function draw(){
+  drawBackground();
+  drawPipes();
+  if(state !== STATE.START) drawBird();
+}
+
+let lastT = null;
+function frame(t){
+  if(lastT === null) lastT = t;
+  let dt = (t - lastT) / 1000;
+  lastT = t;
+  if(dt > 0.05) dt = 0.05;
+
+  update(dt);
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

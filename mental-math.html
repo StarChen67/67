@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>心算闖關 · MIND SPRINT</title>
 <style>
   :root{
@@ -143,8 +143,30 @@
     .pad button{font-size:21px;padding:13px 0}
   }
 </style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
 </head>
 <body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
 <div class="wrap">
 
   <!-- ══════ 首頁 ══════ -->
@@ -158,6 +180,19 @@
       <div class="tot"><div class="k">總星數</div><div class="v" id="t-star">0 / 30</div></div>
       <div class="tot"><div class="k">最高總分</div><div class="v" id="t-best">0</div></div>
       <div class="tot"><div class="k">無盡紀錄</div><div class="v" id="t-endless">—</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:15px;font-weight:800;letter-spacing:2px">⏱ 倒數速度</div>
+          <div class="hint">選擇適合的作答步調，隨時可以切換</div>
+        </div>
+        <div class="row" id="speed-select">
+          <button class="btn" id="btn-speed-normal" data-speed="normal">正常速度</button>
+          <button class="btn" id="btn-speed-slow" data-speed="slow">慢速模式</button>
+        </div>
+      </div>
     </div>
 
     <div class="map" id="map"></div>
@@ -258,11 +293,14 @@ const LEVELS = [
 ];
 const LIVES = 3;
 
+/* 倒數速度：正常速度＝原始秒數；慢速模式＝每題時間拉長，適合國小生從容作答 */
+const SPEED_MULT = { normal: 1, slow: 1.75 };
+
 /* ══════════════════════════════════════════════
    存檔
 ════════════════════════════════════════════════ */
 const SAVE_KEY = 'mindsprint.save.v1';
-const blank = () => ({stars:{}, scores:{}, endless:0});
+const blank = () => ({stars:{}, scores:{}, endless:0, speed:'normal'});
 let save = blank();
 try{
   const raw = localStorage.getItem(SAVE_KEY);
@@ -372,8 +410,23 @@ function show(id){
   $(id).classList.add('on');
 }
 
+/* ── 倒數速度切換 ── */
+function renderSpeed(){
+  document.querySelectorAll('#speed-select .btn').forEach(b => {
+    b.classList.toggle('pri', b.dataset.speed === (save.speed || 'normal'));
+  });
+}
+document.querySelectorAll('#speed-select .btn').forEach(b => {
+  b.onclick = () => {
+    save.speed = b.dataset.speed;
+    persist();
+    renderSpeed();
+  };
+});
+
 /* ── 首頁 ── */
 function renderHome(){
+  renderSpeed();
   const totalStars = Object.values(save.stars).reduce((s,v)=>s+v, 0);
   $('t-star').textContent = `${totalStars} / ${LEVELS.length*3}`;
   $('t-best').textContent = Object.values(save.scores).reduce((s,v)=>s+v, 0).toLocaleString();
@@ -469,7 +522,7 @@ function nextQuestion(){
   G.cur = makeQuestion(G.types, G.p);
   G.input = ''; G.neg = false; G.locked = false;
   G.elapsed = 0;
-  G.tLimit = G.sec * 1000;
+  G.tLimit = G.sec * 1000 * (SPEED_MULT[save.speed] || 1);
 
   $('g-q').textContent = G.cur.q;
   $('g-timer').style.width = '100%';

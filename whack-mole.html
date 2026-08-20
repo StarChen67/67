@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>打地鼠 — Whack-a-Mole</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{overscroll-behavior:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#3a2a12 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:640px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),#ff9d2e,var(--red));
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.pill .v.flash-green{color:var(--green)}
+.pill .v.flash-gold{color:var(--gold)}
+.pill .v.flash-red{color:var(--red)}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;
+            position:relative;flex:none;width:100%;max-width:420px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+.hole{
+  position:relative;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 50% 38%,#4a3216 0%,#2b1c0c 60%,#160e05 100%);
+  border:3px solid #5a3d18;
+  box-shadow:inset 0 6px 12px rgba(0,0,0,.65),0 2px 0 rgba(255,255,255,.03);
+  overflow:hidden;cursor:pointer;touch-action:manipulation;
+  transition:box-shadow .15s;
+}
+.hole::before{
+  content:"";position:absolute;left:50%;top:60%;width:72%;height:42%;
+  transform:translate(-50%,-50%);background:#0a0704;border-radius:50%;
+  box-shadow:inset 0 4px 10px rgba(0,0,0,.85);z-index:1;
+}
+.hole.gold{box-shadow:inset 0 6px 12px rgba(0,0,0,.65),0 0 16px 4px rgba(255,200,74,.55)}
+.hole.bomb{box-shadow:inset 0 6px 12px rgba(0,0,0,.65),0 0 16px 4px rgba(255,93,115,.5)}
+
+.mole-el{
+  position:absolute;left:50%;bottom:-75%;top:auto;
+  transform:translateX(-50%) scale(.55);
+  font-size:clamp(26px,8vw,42px);line-height:1;
+  opacity:0;pointer-events:none;z-index:2;
+  transition:bottom .16s cubic-bezier(.34,1.6,.64,1),transform .16s cubic-bezier(.34,1.6,.64,1),opacity .12s;
+  filter:drop-shadow(0 4px 4px rgba(0,0,0,.5));
+}
+.hole.up .mole-el{bottom:6%;opacity:1;transform:translateX(-50%) scale(1);pointer-events:auto}
+.hole.up.hit .mole-el{
+  bottom:10%;opacity:0;transform:translateX(-50%) scale(1.4) rotate(12deg);
+  transition:bottom .15s ease-in,transform .15s ease-in,opacity .15s ease-in;
+}
+
+.popup{
+  position:absolute;left:50%;top:35%;transform:translate(-50%,0);
+  font-size:16px;font-weight:800;pointer-events:none;z-index:3;
+  animation:popFloat .7s ease-out forwards;
+}
+@keyframes popFloat{
+  0%{opacity:1;transform:translate(-50%,0) scale(.8)}
+  30%{transform:translate(-50%,-8px) scale(1.1)}
+  100%{opacity:0;transform:translate(-50%,-40px) scale(1)}
+}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.9);border-radius:14px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px;z-index:5}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.8;max-width:320px}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:150px;width:100%;max-width:420px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.hint .k{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+        border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--txt);margin:0 2px}
+
+.diffrow{display:flex;gap:6px}
+.diffrow button{flex:1;padding:8px 4px;font-size:11.5px}
+.diffrow button.active{outline:2px solid var(--green)}
+
+@media(min-width:641px){
+  .main{flex-wrap:nowrap;align-items:flex-start}
+  .board-wrap{flex:none}
+  .side{max-width:200px}
+}
+</style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>打地鼠</h1>
+    <div class="sub">WHACK-A-MOLE · 反應遊戲</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">分數</div><div class="v" id="score">0</div></div>
+  <div class="pill"><div class="k">剩餘時間</div><div class="v" id="timeLeft">60</div></div>
+  <div class="pill"><div class="k">最高分</div><div class="v" id="best">0</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <div class="grid" id="grid"></div>
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">打地鼠</h2>
+      <p id="ovText">9 個洞裡的地鼠會隨機冒出，點擊 / 點按打中牠得分！<br>
+        ⭐ <b style="color:var(--gold)">金色地鼠</b> 分數更高但停留更短，手要快！<br>
+        💣 <b style="color:var(--red)">炸彈</b> 千萬別打，打中會扣分！<br>
+        限時 60 秒，看你能拿下多高分數！</p>
+      <button class="b-gold" id="ovBtn">開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>難度</h2>
+      <div class="diffrow">
+        <button class="b-ghost" id="diffEasy">簡單</button>
+        <button class="b-ghost active" id="diffNormal">普通</button>
+        <button class="b-ghost" id="diffHard">困難</button>
+      </div>
+    </div>
+    <div class="card-panel">
+      <h2>玩法說明</h2>
+      <div class="hint">
+        <span class="k">🐹</span>一般地鼠 +10<br>
+        <span class="k">⭐</span>金色地鼠 +30<br>
+        <span class="k">💣</span>炸彈 −15<br>
+        手機請直接點按洞口
+      </div>
+    </div>
+    <button class="b-green b-sm" id="restartBtn">重新開始</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const SESSION_LEN = 60;
+const HOLE_COUNT = 9;
+
+const DIFF = {
+  easy:   { spawnMin:750, spawnMax:1150, durStart:1000, durMin:600, doubleChance:0.04 },
+  normal: { spawnMin:550, spawnMax:900,  durStart:900,  durMin:480, doubleChance:0.12 },
+  hard:   { spawnMin:380, spawnMax:680,  durStart:800,  durMin:420, doubleChance:0.22 },
+};
+
+let difficulty = 'normal';
+let score = 0, best = 0, timeLeft = SESSION_LEN;
+let hits = 0, misses = 0, bombsHit = 0;
+let running = false;
+let countdownTimer = null;
+let spawnTimer = null;
+
+try { best = Number(localStorage.getItem('whackMoleBest') || 0); } catch(e) { best = 0; }
+
+const gridEl = document.getElementById('grid');
+const holeEls = [];
+const holesState = [];
+
+for (let i = 0; i < HOLE_COUNT; i++){
+  const hole = document.createElement('div');
+  hole.className = 'hole';
+  hole.dataset.idx = i;
+  const mole = document.createElement('div');
+  mole.className = 'mole-el';
+  mole.textContent = '🐹';
+  hole.appendChild(mole);
+  gridEl.appendChild(hole);
+  holeEls.push(hole);
+  holesState.push({ occupied:false, type:null, hit:false, timeoutId:null });
+
+  const handler = (e) => { e.preventDefault(); onHoleActivate(i); };
+  hole.addEventListener('pointerdown', handler);
+}
+
+function rand(min, max){ return Math.random() * (max - min) + min; }
+function randInt(min, max){ return Math.floor(rand(min, max + 1)); }
+
+function updateStats(){
+  document.getElementById('score').textContent = score;
+  document.getElementById('timeLeft').textContent = timeLeft;
+  document.getElementById('best').textContent = best;
+}
+
+function flashStat(color){
+  const el = document.getElementById('score');
+  el.classList.remove('flash-green','flash-gold','flash-red');
+  void el.offsetWidth;
+  el.classList.add('flash-' + color);
+  setTimeout(() => el.classList.remove('flash-' + color), 260);
+}
+
+function showPopup(idx, text, color){
+  const hole = holeEls[idx];
+  const p = document.createElement('div');
+  p.className = 'popup';
+  p.textContent = text;
+  p.style.color = color;
+  hole.appendChild(p);
+  setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 750);
+}
+
+function clearHole(idx){
+  const state = holesState[idx];
+  if (state.timeoutId){ clearTimeout(state.timeoutId); state.timeoutId = null; }
+  state.occupied = false;
+  state.type = null;
+  state.hit = false;
+  holeEls[idx].classList.remove('up','gold','bomb','hit');
+}
+
+function retractHole(idx){
+  const state = holesState[idx];
+  if (!state.occupied) return;
+  if (!state.hit && (state.type === 'normal' || state.type === 'gold')){
+    misses++;
+  }
+  clearHole(idx);
+}
+
+function spawnMole(){
+  if (!running) return;
+  const cfg = DIFF[difficulty];
+  const emptyIdx = [];
+  for (let i = 0; i < HOLE_COUNT; i++) if (!holesState[i].occupied) emptyIdx.push(i);
+  if (emptyIdx.length === 0) return;
+
+  let count = 1;
+  if (emptyIdx.length >= 2 && Math.random() < cfg.doubleChance) count = 2;
+
+  for (let n = 0; n < count && emptyIdx.length > 0; n++){
+    const pick = emptyIdx.splice(randInt(0, emptyIdx.length - 1), 1)[0];
+    spawnAt(pick, cfg);
+  }
+}
+
+function spawnAt(idx, cfg){
+  const progress = 1 - (timeLeft / SESSION_LEN);
+  const baseDur = cfg.durStart - (cfg.durStart - cfg.durMin) * progress;
+
+  let type = 'normal';
+  const r = Math.random();
+  if (r < 0.10) type = 'bomb';
+  else if (r < 0.25) type = 'gold';
+
+  const state = holesState[idx];
+  state.occupied = true;
+  state.type = type;
+  state.hit = false;
+
+  const hole = holeEls[idx];
+  const mole = hole.querySelector('.mole-el');
+  mole.textContent = type === 'gold' ? '⭐' : (type === 'bomb' ? '💣' : '🐹');
+  hole.classList.remove('gold','bomb','hit');
+  if (type === 'gold') hole.classList.add('gold');
+  if (type === 'bomb') hole.classList.add('bomb');
+  hole.classList.add('up');
+
+  const duration = type === 'gold' ? Math.max(350, baseDur * 0.6) : baseDur;
+  state.timeoutId = setTimeout(() => retractHole(idx), duration);
+}
+
+function scheduleSpawn(){
+  if (!running) return;
+  const cfg = DIFF[difficulty];
+  const delay = rand(cfg.spawnMin, cfg.spawnMax);
+  spawnTimer = setTimeout(() => {
+    spawnMole();
+    scheduleSpawn();
+  }, delay);
+}
+
+function onHoleActivate(idx){
+  if (!running) return;
+  const state = holesState[idx];
+  if (!state.occupied || state.hit) return;
+
+  state.hit = true;
+  if (state.timeoutId){ clearTimeout(state.timeoutId); state.timeoutId = null; }
+  const hole = holeEls[idx];
+  hole.classList.add('hit');
+
+  if (state.type === 'bomb'){
+    score = Math.max(0, score - 15);
+    bombsHit++;
+    flashStat('red');
+    showPopup(idx, '-15', 'var(--red)');
+  } else if (state.type === 'gold'){
+    score += 30;
+    hits++;
+    flashStat('gold');
+    showPopup(idx, '+30', 'var(--gold)');
+  } else {
+    score += 10;
+    hits++;
+    flashStat('green');
+    showPopup(idx, '+10', 'var(--green)');
+  }
+  updateStats();
+
+  setTimeout(() => clearHole(idx), 160);
+}
+
+function tick(){
+  timeLeft--;
+  updateStats();
+  if (timeLeft <= 0){
+    endGame();
+  }
+}
+
+function stopAllTimers(){
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+  clearTimeout(spawnTimer);
+  spawnTimer = null;
+  for (let i = 0; i < HOLE_COUNT; i++) clearHole(i);
+}
+
+function startGame(){
+  stopAllTimers();
+  score = 0; timeLeft = SESSION_LEN;
+  hits = 0; misses = 0; bombsHit = 0;
+  running = true;
+  document.getElementById('overlay').classList.remove('show');
+  updateStats();
+  countdownTimer = setInterval(tick, 1000);
+  scheduleSpawn();
+}
+
+function endGame(){
+  running = false;
+  stopAllTimers();
+
+  let isNewBest = false;
+  if (score > best){
+    best = score;
+    try { localStorage.setItem('whackMoleBest', String(best)); } catch(e) {}
+    isNewBest = true;
+  }
+
+  document.getElementById('ovTitle').textContent = '時間到！';
+  document.getElementById('ovText').innerHTML =
+    `本局分數 <b style="color:var(--gold)">${score}</b>` +
+    (isNewBest ? ' <b style="color:var(--green)">🎉 新紀錄！</b>' : '') +
+    `<br>打中地鼠 ${hits} 隻・錯過 ${misses} 隻・誤觸炸彈 ${bombsHit} 次<br>再試一次，挑戰更高分！`;
+  document.getElementById('ovBtn').textContent = '再玩一次';
+  document.getElementById('overlay').classList.add('show');
+  updateStats();
+}
+
+document.getElementById('ovBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+function setDifficulty(d, btnId){
+  difficulty = d;
+  document.querySelectorAll('.diffrow button').forEach(b => b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+}
+document.getElementById('diffEasy').addEventListener('click', () => setDifficulty('easy','diffEasy'));
+document.getElementById('diffNormal').addEventListener('click', () => setDifficulty('normal','diffNormal'));
+document.getElementById('diffHard').addEventListener('click', () => setDifficulty('hard','diffHard'));
+
+updateStats();
+</script>
+</body>
+</html>

@@ -383,7 +383,8 @@ Battle.prototype.execute=async function(acts){
     if(!alive(cur)||cur.u!==o.m.u)continue;   // 已倒下或已被換下
     await this.doAction(o.si,o.sl,cur,o.a);
     await this.flush();
-    if(this.checkEnd())return;
+    await this.checkFaints();
+    if(this.over)return;
   }
 };
 
@@ -509,9 +510,9 @@ Battle.prototype.doMove=async function(m,a){
     if(s.p>0)await this.hitDamage(m,f,s,spread);
     else await this.hitStatus(m,f,s);
     await this.flush();
-    if(this.checkEnd())return;
+    await this.checkFaints();
+    if(this.over)return;
   }
-  await this.checkFaints();
 };
 
 Battle.prototype.hitDamage=async function(m,f,s,spread){

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>推箱子 — Sokoban</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#2a2440 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:680px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),var(--blue),#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;
+            position:relative;flex:none}
+.grid{display:grid;background:#0a0c16;border-radius:8px;overflow:hidden}
+.tile{display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.tile.wall{background:var(--panel2);border:1px solid var(--line)}
+.tile.floor{background:#0a0c16;border:1px solid rgba(255,255,255,0.03)}
+.tile.goal{background:rgba(255,200,74,0.10);box-shadow:inset 0 0 0 2px rgba(255,200,74,0.4)}
+.tile.box{background:rgba(90,169,255,0.14);box-shadow:inset 0 0 0 2px rgba(90,169,255,0.5)}
+.tile.box-goal{background:rgba(61,220,151,0.18);box-shadow:inset 0 0 0 2px rgba(61,220,151,0.65)}
+.tile .content{line-height:1}
+.tile .content.dim{opacity:.55}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.88);border-radius:8px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.7;max-width:280px}
+.ovrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.4;cursor:default}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:160px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+.level-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.level-grid button{padding:8px 2px;font-size:12px;position:relative;background:var(--panel2);
+                    border:1px solid var(--line);color:var(--txt)}
+.level-grid button.active{outline:2px solid var(--blue)}
+.level-grid button.done{color:var(--gold)}
+.btnrow{display:flex;gap:8px}
+.btnrow button{flex:1}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.hint .k{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+        border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--txt);margin:0 2px}
+
+/* touch controls */
+.touch{display:none;gap:8px;margin-top:12px;justify-content:center;flex-wrap:wrap;max-width:220px;margin-left:auto;margin-right:auto}
+.touch .row{display:flex;gap:8px;justify-content:center;width:100%}
+.touch button{width:56px;height:56px;font-size:20px;border-radius:12px;background:var(--panel2);
+              border:1px solid var(--line);color:var(--txt);display:flex;align-items:center;justify-content:center}
+.touch button:active{background:var(--panel)}
+@media(max-width:640px){
+  .touch{display:flex}
+  .side{width:100%}
+}
+</style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>推箱子</h1>
+    <div class="sub">SOKOBAN · 益智推箱</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">步數</div><div class="v" id="statMoves">0</div></div>
+  <div class="pill"><div class="k">關卡</div><div class="v" id="statLevel">1/8</div></div>
+  <div class="pill"><div class="k">已完成</div><div class="v" id="statDone">0/8</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <div class="grid" id="grid"></div>
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">推箱子</h2>
+      <p id="ovText">將所有 📦 箱子推到 🎯 目標點上即可過關。<br>方向鍵 / WASD 移動，走到箱子旁往同方向再按一次即可推動。<br>箱子只能推、不能拉，小心別把箱子推進死角！</p>
+      <div class="ovrow" id="ovStartBtns"><button class="b-gold" id="ovStartBtn">開始遊戲</button></div>
+      <div class="ovrow" id="ovWinBtns" style="display:none">
+        <button class="b-green" id="ovNextBtn">下一關</button>
+        <button class="b-ghost" id="ovRetryBtn">重玩</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>選擇關卡</h2>
+      <div class="level-grid" id="levelGrid"></div>
+    </div>
+    <div class="btnrow">
+      <button class="b-ghost b-sm" id="undoBtn">復原</button>
+      <button class="b-green b-sm" id="restartBtn">重玩本關</button>
+    </div>
+    <div class="card-panel">
+      <h2>操作說明</h2>
+      <div class="hint">
+        <span class="k">↑↓←→</span>移動<br>
+        <span class="k">WASD</span>亦可<br>
+        <span class="k">Z</span> / <span class="k">Backspace</span>復原<br>
+        推箱子時箱子前方需為空地或目標點
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="touch">
+  <div class="row"><button id="tUp">▲</button></div>
+  <div class="row">
+    <button id="tLeft">◀</button>
+    <button id="tDown">▼</button>
+    <button id="tRight">▶</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+// symbols: # wall, ' ' floor, . goal, $ box, * box-on-goal, @ player, + player-on-goal
+const LEVELS = [
+  // Level 1 - 1 box, tutorial (push up)
+  [
+    "#######",
+    "#  .  #",
+    "#     #",
+    "#  $  #",
+    "#  @  #",
+    "#######"
+  ],
+  // Level 2 - 1 box, push up then left
+  [
+    "#######",
+    "#.    #",
+    "#     #",
+    "#  $  #",
+    "#  @  #",
+    "#     #",
+    "#######"
+  ],
+  // Level 3 - 2 boxes, push up
+  [
+    "#########",
+    "#  .  . #",
+    "#       #",
+    "#  $  $ #",
+    "#  @    #",
+    "#       #",
+    "#########"
+  ],
+  // Level 4 - 2 boxes, up+left and right
+  [
+    "#########",
+    "#.      #",
+    "#       #",
+    "#  $    #",
+    "#  @    #",
+    "#     $.#",
+    "#########"
+  ],
+  // Level 5 - 3 boxes, push up
+  [
+    "#########",
+    "# . . . #",
+    "#       #",
+    "# $ $ $ #",
+    "# @     #",
+    "#       #",
+    "#########"
+  ],
+  // Level 6 - 3 boxes, cross shape, up/down/right
+  [
+    "#########",
+    "#   .   #",
+    "#       #",
+    "#   $   #",
+    "#   @ $.#",
+    "#   $   #",
+    "#       #",
+    "#   .   #",
+    "#########"
+  ],
+  // Level 7 - 4 boxes, push up, with decorative pillar
+  [
+    "###########",
+    "# . . . . #",
+    "#         #",
+    "# $ $ $ $ #",
+    "# @       #",
+    "#    #    #",
+    "###########"
+  ],
+  // Level 8 - 4 boxes, cross shape, all directions, hardest
+  [
+    "###########",
+    "#    .    #",
+    "#         #",
+    "#    $    #",
+    "#         #",
+    "#. $ @ $ .#",
+    "#         #",
+    "#    $    #",
+    "#         #",
+    "#    .    #",
+    "###########"
+  ]
+];
+
+const COMPLETED_KEY = 'sokobanCompleted';
+function loadCompleted(){
+  try{
+    const raw = localStorage.getItem(COMPLETED_KEY);
+    if(!raw) return new Set();
+    return new Set(JSON.parse(raw));
+  }catch(e){ return new Set(); }
+}
+function saveCompleted(set){
+  try{
+    localStorage.setItem(COMPLETED_KEY, JSON.stringify(Array.from(set)));
+  }catch(e){ /* localStorage unavailable (privacy mode, sandboxed preview, etc.) */ }
+}
+let completed = loadCompleted();
+
+let curIndex = 0;
+let level = null;       // {rows, cols, walls}
+let goals = null;       // Set of "x,y"
+let boxes = [];         // [{x,y}]
+let player = null;      // {x,y}
+let history = [];       // stack of {player, boxes}
+let moveCount = 0;
+let won = false;
+let started = false;
+let cellPx = 40;
+
+function parseLevel(map){
+  const rows = map.length;
+  const cols = Math.max(...map.map(r => r.length));
+  const walls = [];
+  const gset = new Set();
+  const bx = [];
+  let pl = null;
+  for(let y=0;y<rows;y++){
+    walls.push([]);
+    const row = map[y];
+    for(let x=0;x<cols;x++){
+      const ch = row[x] || ' ';
+      let isWall = false, isGoal = false;
+      switch(ch){
+        case '#': isWall = true; break;
+        case '.': isGoal = true; break;
+        case '*': isGoal = true; bx.push({x,y}); break;
+        case '$': bx.push({x,y}); break;
+        case '+': isGoal = true; pl = {x,y}; break;
+        case '@': pl = {x,y}; break;
+      }
+      walls[y].push(isWall);
+      if(isGoal) gset.add(x+','+y);
+    }
+  }
+  return { rows, cols, walls, goals: gset, boxes: bx, player: pl };
+}
+
+function loadLevel(idx){
+  curIndex = idx;
+  const parsed = parseLevel(LEVELS[idx]);
+  level = { rows: parsed.rows, cols: parsed.cols, walls: parsed.walls };
+  goals = parsed.goals;
+  boxes = parsed.boxes.map(b => ({x:b.x, y:b.y}));
+  player = { x: parsed.player.x, y: parsed.player.y };
+  history = [];
+  moveCount = 0;
+  won = false;
+  buildGrid();
+  updateStats();
+  renderLevelGrid();
+  render();
+}
+
+function isWall(x,y){
+  if(x<0||y<0||y>=level.rows||x>=level.cols) return true;
+  return level.walls[y][x];
+}
+function boxIndexAt(x,y){
+  return boxes.findIndex(b => b.x===x && b.y===y);
+}
+
+function pushHistory(){
+  history.push({
+    player: {x:player.x, y:player.y},
+    boxes: boxes.map(b => ({x:b.x, y:b.y}))
+  });
+  if(history.length > 500) history.shift();
+}
+
+function tryMove(dx,dy){
+  if(won || !started) return;
+  const nx = player.x + dx, ny = player.y + dy;
+  if(isWall(nx,ny)) return;
+  const bi = boxIndexAt(nx,ny);
+  if(bi >= 0){
+    const bx2 = nx+dx, by2 = ny+dy;
+    if(isWall(bx2,by2) || boxIndexAt(bx2,by2) >= 0) return; // blocked push
+    pushHistory();
+    boxes[bi].x = bx2; boxes[bi].y = by2;
+    player.x = nx; player.y = ny;
+    moveCount++;
+    afterMove();
+    return;
+  }
+  pushHistory();
+  player.x = nx; player.y = ny;
+  moveCount++;
+  afterMove();
+}
+
+function afterMove(){
+  updateStats();
+  render();
+  checkWin();
+}
+
+function checkWin(){
+  for(const g of goals){
+    const [gx,gy] = g.split(',').map(Number);
+    if(boxIndexAt(gx,gy) < 0) return;
+  }
+  won = true;
+  completed.add(curIndex);
+  saveCompleted(completed);
+  renderLevelGrid();
+  updateStats();
+  showWinOverlay();
+}
+
+function undo(){
+  if(history.length === 0) return;
+  const snap = history.pop();
+  player = snap.player;
+  boxes = snap.boxes;
+  moveCount = Math.max(0, moveCount - 1);
+  updateStats();
+  render();
+}
+
+function restartLevel(){
+  loadLevel(curIndex);
+  started = true;
+  hideOverlay();
+}
+
+function buildGrid(){
+  const boardMax = Math.min(window.innerWidth - 60, 460);
+  cellPx = Math.floor(boardMax / level.cols);
+  cellPx = Math.max(24, Math.min(46, cellPx));
+  const gridEl = document.getElementById('grid');
+  gridEl.style.gridTemplateColumns = `repeat(${level.cols}, ${cellPx}px)`;
+  gridEl.style.gridAutoRows = `${cellPx}px`;
+}
+
+function render(){
+  const gridEl = document.getElementById('grid');
+  const frag = document.createDocumentFragment();
+  const fontSize = Math.floor(cellPx * 0.55) + 'px';
+  for(let y=0;y<level.rows;y++){
+    for(let x=0;x<level.cols;x++){
+      const div = document.createElement('div');
+      div.className = 'tile';
+      div.style.width = cellPx+'px';
+      div.style.height = cellPx+'px';
+      if(isWall(x,y)){
+        div.classList.add('wall');
+        frag.appendChild(div);
+        continue;
+      }
+      div.classList.add('floor');
+      const isGoal = goals.has(x+','+y);
+      const bi = boxIndexAt(x,y);
+      const isPlayer = player.x===x && player.y===y;
+      if(isGoal) div.classList.add('goal');
+      let content = '';
+      if(bi >= 0){
+        div.classList.add(isGoal ? 'box-goal' : 'box');
+        content = isGoal ? '✅' : '📦';
+      } else if(isPlayer){
+        content = '🧑';
+      } else if(isGoal){
+        content = '<span class="content dim">🎯</span>';
+        div.style.fontSize = fontSize;
+        div.innerHTML = content;
+        frag.appendChild(div);
+        continue;
+      }
+      div.style.fontSize = fontSize;
+      div.textContent = content;
+      frag.appendChild(div);
+    }
+  }
+  gridEl.innerHTML = '';
+  gridEl.appendChild(frag);
+}
+
+function updateStats(){
+  document.getElementById('statMoves').textContent = moveCount;
+  document.getElementById('statLevel').textContent = (curIndex+1) + '/' + LEVELS.length;
+  document.getElementById('statDone').textContent = completed.size + '/' + LEVELS.length;
+  document.getElementById('undoBtn').disabled = history.length === 0;
+}
+
+function renderLevelGrid(){
+  const el = document.getElementById('levelGrid');
+  el.innerHTML = '';
+  LEVELS.forEach((lvl, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'b-sm';
+    if(i === curIndex) btn.classList.add('active');
+    if(completed.has(i)) btn.classList.add('done');
+    btn.textContent = (completed.has(i) ? '★' : '') + '第' + (i+1) + '關';
+    btn.addEventListener('click', () => {
+      loadLevel(i);
+      started = true;
+      hideOverlay();
+    });
+    el.appendChild(btn);
+  });
+}
+
+function hideOverlay(){
+  document.getElementById('overlay').classList.remove('show');
+}
+function showStartOverlay(){
+  document.getElementById('ovTitle').textContent = '推箱子';
+  document.getElementById('ovText').innerHTML = '將所有 📦 箱子推到 🎯 目標點上即可過關。<br>方向鍵 / WASD 移動，走到箱子旁往同方向再按一次即可推動。<br>箱子只能推、不能拉，小心別把箱子推進死角！';
+  document.getElementById('ovStartBtns').style.display = 'flex';
+  document.getElementById('ovWinBtns').style.display = 'none';
+  document.getElementById('overlay').classList.add('show');
+}
+function showWinOverlay(){
+  const isLast = curIndex === LEVELS.length - 1;
+  document.getElementById('ovTitle').textContent = isLast ? '全部過關！' : '過關！';
+  document.getElementById('ovText').innerHTML = `第 ${curIndex+1} 關完成，共花費 <b style="color:var(--gold)">${moveCount}</b> 步。` + (isLast ? '<br>恭喜通關所有關卡！' : '');
+  document.getElementById('ovStartBtns').style.display = 'none';
+  document.getElementById('ovWinBtns').style.display = 'flex';
+  document.getElementById('ovNextBtn').style.display = isLast ? 'none' : '';
+  document.getElementById('overlay').classList.add('show');
+}
+
+document.getElementById('ovStartBtn').addEventListener('click', () => {
+  started = true;
+  hideOverlay();
+});
+document.getElementById('ovNextBtn').addEventListener('click', () => {
+  const next = Math.min(curIndex+1, LEVELS.length-1);
+  loadLevel(next);
+  started = true;
+  hideOverlay();
+});
+document.getElementById('ovRetryBtn').addEventListener('click', () => {
+  restartLevel();
+});
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('restartBtn').addEventListener('click', restartLevel);
+
+document.addEventListener('keydown', (e) => {
+  switch(e.key){
+    case 'ArrowUp': case 'w': case 'W': tryMove(0,-1); e.preventDefault(); break;
+    case 'ArrowDown': case 's': case 'S': tryMove(0,1); e.preventDefault(); break;
+    case 'ArrowLeft': case 'a': case 'A': tryMove(-1,0); e.preventDefault(); break;
+    case 'ArrowRight': case 'd': case 'D': tryMove(1,0); e.preventDefault(); break;
+    case 'z': case 'Z': case 'Backspace': undo(); e.preventDefault(); break;
+  }
+});
+
+document.getElementById('tUp').addEventListener('click', ()=>tryMove(0,-1));
+document.getElementById('tDown').addEventListener('click', ()=>tryMove(0,1));
+document.getElementById('tLeft').addEventListener('click', ()=>tryMove(-1,0));
+document.getElementById('tRight').addEventListener('click', ()=>tryMove(1,0));
+
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { buildGrid(); render(); }, 150);
+});
+
+loadLevel(0);
+showStartOverlay();
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
 <title>要塞防線 — 無限塔防</title>
 <style>
 :root{
@@ -97,13 +97,36 @@ button:disabled{opacity:.35;cursor:not-allowed}
 .hint{font-size:11.5px;color:var(--dim);line-height:1.7;margin-top:6px}
 .hint b{color:var(--gold)}
 </style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
 </head>
 <body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
 <div class="wrap">
   <header>
     <div>
       <h1>要塞防線</h1>
-      <div class="sub">十塔 · 無限升級 · 無限波次 · 100×120 戰場</div>
+      <div class="sub">十塔 · 無限升級 · 無限波次 · 12×10 戰場</div>
     </div>
     <div class="stats-top">
       <div class="pill"><div class="k">金幣</div><div class="v" id="stGold">0</div></div>
@@ -184,7 +207,7 @@ button:disabled{opacity:.35;cursor:not-allowed}
 (function(){
 "use strict";
 
-const COLS=100, ROWS=120, CELL=12;
+const COLS=12, ROWS=10, CELL=48;
 const canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d');
 canvas.width=COLS*CELL; canvas.height=ROWS*CELL;
@@ -249,9 +272,9 @@ const DIFF_PRESETS={
  hell:{name:'地獄',startGold:120,startLives:10,hpMult:1.8,goldMult:0.8,desc:'極限挑戰，一步錯就崩盤。'}
 };
 const MAP_PRESETS={
- simple:{name:'簡單',lanes:4,maxOffset:0,toothChance:0,toothMax:0,desc:'路線平直，較少轉彎。'},
- medium:{name:'中等',lanes:7,maxOffset:2,toothChance:0.06,toothMax:2,desc:'多段轉折，適中迷宮感。'},
- complex:{name:'複雜',lanes:10,maxOffset:3,toothChance:0.12,toothMax:3,desc:'長距離蜿蜒路線，考驗布局。'}
+ simple:{name:'簡單',lanes:2,maxOffset:0,toothChance:0,toothMax:0,desc:'路線平直，較少轉彎。'},
+ medium:{name:'中等',lanes:3,maxOffset:1,toothChance:0.2,toothMax:1,desc:'多段轉折，適中迷宮感。'},
+ complex:{name:'複雜',lanes:4,maxOffset:1,toothChance:0.3,toothMax:1,desc:'長距離蜿蜒路線，考驗布局。'}
 };
 
 /* ---------------- 路徑產生 ---------------- */
@@ -280,7 +303,7 @@ function buildConnector(col,rowFrom,rowTo){
 }
 function generatePath(mapKey){
   const preset=MAP_PRESETS[mapKey];
-  const marginLeft=3, marginRight=3, marginTop=4, marginBottom=4;
+  const marginLeft=1, marginRight=1, marginTop=1, marginBottom=1;
   const leftCol=marginLeft, rightCol=COLS-1-marginRight;
   const usableRows=ROWS-marginTop-marginBottom;
   const lanes=preset.lanes;
@@ -590,8 +613,8 @@ function render(){
   if(!S) return;
   // 網格
   ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
-  for(let c=0;c<=COLS;c+=5){ ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,ROWS*CELL); ctx.stroke(); }
-  for(let r=0;r<=ROWS;r+=5){ ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(COLS*CELL,r*CELL); ctx.stroke(); }
+  for(let c=0;c<=COLS;c++){ ctx.beginPath(); ctx.moveTo(c*CELL,0); ctx.lineTo(c*CELL,ROWS*CELL); ctx.stroke(); }
+  for(let r=0;r<=ROWS;r++){ ctx.beginPath(); ctx.moveTo(0,r*CELL); ctx.lineTo(COLS*CELL,r*CELL); ctx.stroke(); }
   // 路徑
   ctx.fillStyle='#2a2f52';
   for(const c of S.path.cells) ctx.fillRect(c.col*CELL,c.row*CELL,CELL,CELL);

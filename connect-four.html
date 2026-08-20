@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>四子棋 — Connect Four</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#16234a 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:680px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),var(--red),var(--blue));
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.pill.win .v{color:var(--gold)}
+.pill.loss .v{color:var(--red)}
+.pill.draw .v{color:var(--dim)}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;
+            position:relative;flex:none;width:100%;max-width:460px}
+
+.turn-indicator{text-align:center;font-size:12.5px;color:var(--dim);letter-spacing:1px;
+                 margin-bottom:8px;min-height:16px}
+.turn-indicator b{color:var(--gold)}
+.turn-indicator.think b{color:var(--red)}
+
+.arrows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;padding:0 8px}
+.colArrow{background:transparent;border:none;color:var(--dim2);font-size:15px;padding:4px 0;
+          border-radius:6px;cursor:pointer;transition:color .12s,background .12s}
+.colArrow:hover:not(:disabled){color:var(--gold);background:var(--panel2)}
+.colArrow:disabled{opacity:.25;cursor:default}
+
+.board-frame{background:linear-gradient(160deg,#1c3a6e,#12203f);
+             border:2px solid var(--line);border-radius:14px;padding:10px 8px;
+             box-shadow:inset 0 2px 10px rgba(0,0,0,.4)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);gap:6px;
+      cursor:pointer}
+.cell{aspect-ratio:1/1;border-radius:50%;position:relative;overflow:hidden;
+      background:radial-gradient(circle at 35% 30%,#080a12,#000 70%);
+      box-shadow:inset 0 3px 6px rgba(0,0,0,.65),inset 0 0 0 1px rgba(255,255,255,.03)}
+.disc{position:absolute;inset:6%;border-radius:50%;transform:scale(0);
+      transition:transform .38s cubic-bezier(.34,1.56,.64,1)}
+.cell.filled .disc{transform:scale(1)}
+.disc.gold{background:radial-gradient(circle at 32% 28%,#fff0c2,var(--gold) 55%,#c9891a);
+           box-shadow:0 2px 4px rgba(0,0,0,.4)}
+.disc.red{background:radial-gradient(circle at 32% 28%,#ffb3bd,var(--red) 55%,#a52c40);
+          box-shadow:0 2px 4px rgba(0,0,0,.4)}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.9);border-radius:14px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px;z-index:5}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.7;max-width:320px}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:150px;flex:1 1 200px;max-width:260px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.legend{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim);margin-top:4px}
+.legend .dot{width:12px;height:12px;border-radius:50%;flex:none}
+
+.diffrow{display:flex;gap:6px}
+.diffrow button{flex:1;padding:8px 4px;font-size:11.5px}
+.diffrow button.active{outline:2px solid var(--green)}
+.diffrow button:disabled{opacity:.4;cursor:default}
+
+@media(max-width:640px){
+  .side{width:100%;max-width:none}
+}
+</style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>四子棋</h1>
+    <div class="sub">CONNECT FOUR · 對戰電腦</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill win"><div class="k">你的勝場</div><div class="v" id="statWin">0</div></div>
+  <div class="pill loss"><div class="k">電腦勝場</div><div class="v" id="statLoss">0</div></div>
+  <div class="pill draw"><div class="k">平手</div><div class="v" id="statDraw">0</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <div class="turn-indicator" id="turnIndicator">尚未開始</div>
+    <div class="arrows" id="arrows"></div>
+    <div class="board-frame">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">四子棋</h2>
+      <p id="ovText">點擊欄位讓棋子落下，率先在橫、直或斜方向連成四子者獲勝！<br>先後手可於左側面板調整。</p>
+      <button class="b-gold" id="ovBtn">開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>難度</h2>
+      <div class="diffrow">
+        <button class="b-ghost" id="diffEasy">簡單</button>
+        <button class="b-ghost active" id="diffNormal">普通</button>
+        <button class="b-ghost" id="diffHard">困難</button>
+      </div>
+    </div>
+    <div class="card-panel">
+      <h2>先後手</h2>
+      <div class="diffrow">
+        <button class="b-ghost active" id="firstBtn">先手</button>
+        <button class="b-ghost" id="secondBtn">後手</button>
+      </div>
+    </div>
+    <div class="card-panel">
+      <h2>棋子</h2>
+      <div class="legend"><div class="dot" style="background:var(--gold)"></div>你</div>
+      <div class="legend"><div class="dot" style="background:var(--red)"></div>電腦</div>
+    </div>
+    <div class="card-panel">
+      <h2>操作說明</h2>
+      <div class="hint">
+        點擊欄位或上方箭頭<br>將棋子投入該欄。<br>
+        <b>先手</b>由你優先落子，<br><b>後手</b>則電腦先手。<br>
+        手機直接點擊棋盤即可。
+      </div>
+    </div>
+    <button class="b-green b-sm" id="restartBtn">重新開始</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const ROWS = 6, COLS = 7;
+const EMPTY = 0, PLAYER = 1, AI = 2;
+const CENTER_COL = 3;
+const DIFF_DEPTH = { easy: 0, normal: 4, hard: 6 };
+
+let board = makeEmptyBoard();
+let cellEls = [];
+let arrowEls = [];
+let difficulty = 'normal';
+let humanStarts = true;
+let currentPlayer = PLAYER;
+let gameActive = false;
+let boardLocked = true;
+
+function makeEmptyBoard(){
+  const b = [];
+  for(let r=0;r<ROWS;r++){ b.push(new Array(COLS).fill(EMPTY)); }
+  return b;
+}
+
+/* ---------- build DOM board ---------- */
+const gridEl = document.getElementById('grid');
+const arrowsEl = document.getElementById('arrows');
+
+for(let r=0;r<ROWS;r++){
+  cellEls.push([]);
+  for(let c=0;c<COLS;c++){
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const disc = document.createElement('div');
+    disc.className = 'disc';
+    cell.appendChild(disc);
+    gridEl.appendChild(cell);
+    cellEls[r].push(cell);
+  }
+}
+
+for(let c=0;c<COLS;c++){
+  const btn = document.createElement('button');
+  btn.className = 'colArrow';
+  btn.textContent = '▼';
+  btn.addEventListener('click', () => handleColumnClick(c));
+  arrowsEl.appendChild(btn);
+  arrowEls.push(btn);
+}
+
+gridEl.addEventListener('click', (e) => {
+  const rect = gridEl.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const col = Math.floor(x / (rect.width / COLS));
+  handleColumnClick(col);
+});
+
+document.addEventListener('keydown', (e) => {
+  const n = Number(e.key);
+  if(n>=1 && n<=7){ handleColumnClick(n-1); }
+});
+
+/* ---------- stats ---------- */
+function loadStats(){
+  try{
+    const raw = JSON.parse(localStorage.getItem('connectFourStats'));
+    if(raw && typeof raw.win==='number') return raw;
+  }catch(e){}
+  return { win:0, loss:0, draw:0 };
+}
+function saveStats(s){ try{ localStorage.setItem('connectFourStats', JSON.stringify(s)); }catch(e){} }
+function updateStatsPills(s){
+  document.getElementById('statWin').textContent = s.win;
+  document.getElementById('statLoss').textContent = s.loss;
+  document.getElementById('statDraw').textContent = s.draw;
+}
+let stats = loadStats();
+updateStatsPills(stats);
+
+/* ---------- board logic ---------- */
+function getValidCols(b){
+  const cols = [];
+  for(let c=0;c<COLS;c++){ if(b[0][c]===EMPTY) cols.push(c); }
+  return cols;
+}
+function orderColumns(cols){
+  const order = [3,2,4,1,5,0,6];
+  return order.filter(c => cols.includes(c));
+}
+function dropDisc(b, col, player){
+  for(let r=ROWS-1;r>=0;r--){
+    if(b[r][col]===EMPTY){ b[r][col]=player; return r; }
+  }
+  return -1;
+}
+function isBoardFull(b){
+  return getValidCols(b).length===0;
+}
+function checkWinAt(b, row, col, player){
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for(const [dr,dc] of dirs){
+    let cnt = 1;
+    let r=row+dr, c=col+dc;
+    while(r>=0&&r<ROWS&&c>=0&&c<COLS&&b[r][c]===player){ cnt++; r+=dr; c+=dc; }
+    r=row-dr; c=col-dc;
+    while(r>=0&&r<ROWS&&c>=0&&c<COLS&&b[r][c]===player){ cnt++; r-=dr; c-=dc; }
+    if(cnt>=4) return true;
+  }
+  return false;
+}
+
+/* ---------- heuristic evaluation ---------- */
+function scoreWindow(w, aiP, huP){
+  let ai=0, hu=0, em=0;
+  for(const v of w){ if(v===aiP) ai++; else if(v===huP) hu++; else em++; }
+  let s=0;
+  if(ai===4) s+=100000;
+  else if(ai===3 && em===1) s+=100;
+  else if(ai===2 && em===2) s+=10;
+  if(hu===4) s-=100000;
+  else if(hu===3 && em===1) s-=120;
+  else if(hu===2 && em===2) s-=8;
+  return s;
+}
+function evaluateBoard(b, aiP, huP){
+  let score = 0;
+  for(let r=0;r<ROWS;r++){
+    if(b[r][CENTER_COL]===aiP) score += 6;
+    else if(b[r][CENTER_COL]===huP) score -= 4;
+  }
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS-3;c++){
+      score += scoreWindow([b[r][c],b[r][c+1],b[r][c+2],b[r][c+3]], aiP, huP);
+    }
+  }
+  for(let c=0;c<COLS;c++){
+    for(let r=0;r<ROWS-3;r++){
+      score += scoreWindow([b[r][c],b[r+1][c],b[r+2][c],b[r+3][c]], aiP, huP);
+    }
+  }
+  for(let r=0;r<ROWS-3;r++){
+    for(let c=0;c<COLS-3;c++){
+      score += scoreWindow([b[r][c],b[r+1][c+1],b[r+2][c+2],b[r+3][c+3]], aiP, huP);
+    }
+  }
+  for(let r=3;r<ROWS;r++){
+    for(let c=0;c<COLS-3;c++){
+      score += scoreWindow([b[r][c],b[r-1][c+1],b[r-2][c+2],b[r-3][c+3]], aiP, huP);
+    }
+  }
+  return score;
+}
+
+/* ---------- minimax with alpha-beta ---------- */
+function minimax(b, depth, alpha, beta, maximizing, aiP, huP, lastRow, lastCol, lastPlayer){
+  if(lastPlayer!==0 && checkWinAt(b, lastRow, lastCol, lastPlayer)){
+    return lastPlayer===aiP ? (1000000 + depth) : (-1000000 - depth);
+  }
+  const valid = getValidCols(b);
+  if(valid.length===0) return 0;
+  if(depth===0) return evaluateBoard(b, aiP, huP);
+
+  const order = orderColumns(valid);
+  if(maximizing){
+    let value = -Infinity;
+    for(const col of order){
+      const r = dropDisc(b, col, aiP);
+      value = Math.max(value, minimax(b, depth-1, alpha, beta, false, aiP, huP, r, col, aiP));
+      b[r][col] = EMPTY;
+      alpha = Math.max(alpha, value);
+      if(alpha >= beta) break;
+    }
+    return value;
+  } else {
+    let value = Infinity;
+    for(const col of order){
+      const r = dropDisc(b, col, huP);
+      value = Math.min(value, minimax(b, depth-1, alpha, beta, true, aiP, huP, r, col, huP));
+      b[r][col] = EMPTY;
+      beta = Math.min(beta, value);
+      if(alpha >= beta) break;
+    }
+    return value;
+  }
+}
+
+function getAIMove(b, aiP, huP, depth){
+  const valid = getValidCols(b);
+
+  // 1. immediate winning move
+  for(const col of valid){
+    const r = dropDisc(b, col, aiP);
+    const win = checkWinAt(b, r, col, aiP);
+    b[r][col] = EMPTY;
+    if(win) return col;
+  }
+  // 2. block opponent's immediate winning move
+  for(const col of valid){
+    const r = dropDisc(b, col, huP);
+    const win = checkWinAt(b, r, col, huP);
+    b[r][col] = EMPTY;
+    if(win) return col;
+  }
+  // 3. difficulty-based fallback
+  if(depth<=0){
+    // easy: mostly random, slight center preference
+    const weighted = [];
+    valid.forEach(c => {
+      const w = 4 - Math.abs(c - CENTER_COL);
+      for(let i=0;i<Math.max(1,w);i++) weighted.push(c);
+    });
+    return weighted[Math.floor(Math.random()*weighted.length)];
+  }
+
+  let bestScore = -Infinity;
+  let bestCol = valid[0];
+  const order = orderColumns(valid);
+  let alpha = -Infinity, beta = Infinity;
+  for(const col of order){
+    const r = dropDisc(b, col, aiP);
+    const score = minimax(b, depth-1, alpha, beta, false, aiP, huP, r, col, aiP);
+    b[r][col] = EMPTY;
+    if(score > bestScore){ bestScore = score; bestCol = col; }
+    alpha = Math.max(alpha, bestScore);
+  }
+  return bestCol;
+}
+
+/* ---------- rendering ---------- */
+function renderDisc(row, col, player){
+  const cell = cellEls[row][col];
+  const disc = cell.querySelector('.disc');
+  disc.classList.remove('gold','red');
+  disc.classList.add(player===PLAYER ? 'gold' : 'red');
+  cell.classList.add('filled');
+}
+function clearBoardDisplay(){
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const cell = cellEls[r][c];
+      cell.classList.remove('filled');
+      const disc = cell.querySelector('.disc');
+      disc.classList.remove('gold','red');
+    }
+  }
+}
+function updateTurnIndicator(){
+  const el = document.getElementById('turnIndicator');
+  el.classList.remove('think');
+  if(!gameActive){
+    el.innerHTML = '尚未開始';
+  } else if(currentPlayer===PLAYER && !boardLocked){
+    el.innerHTML = '輪到 <b>你</b> 的回合';
+  } else {
+    el.innerHTML = '<b>電腦思考中…</b>';
+    el.classList.add('think');
+  }
+}
+function updateArrowsState(){
+  const valid = getValidCols(board);
+  const canClick = gameActive && !boardLocked && currentPlayer===PLAYER;
+  arrowEls.forEach((btn, c) => {
+    btn.disabled = !canClick || !valid.includes(c);
+  });
+}
+function updateSidePanelLocks(){
+  document.getElementById('firstBtn').disabled = gameActive;
+  document.getElementById('secondBtn').disabled = gameActive;
+}
+
+/* ---------- overlay ---------- */
+const overlayEl = document.getElementById('overlay');
+function showOverlay(title, text, btnText){
+  document.getElementById('ovTitle').textContent = title;
+  document.getElementById('ovText').innerHTML = text;
+  document.getElementById('ovBtn').textContent = btnText;
+  overlayEl.classList.add('show');
+}
+function hideOverlay(){ overlayEl.classList.remove('show'); }
+
+/* ---------- game flow ---------- */
+function endRound(result){
+  gameActive = false;
+  boardLocked = true;
+  updateArrowsState();
+  updateSidePanelLocks();
+  updateTurnIndicator();
+  document.getElementById('turnIndicator').innerHTML = '本局結束';
+  document.getElementById('turnIndicator').classList.remove('think');
+
+  if(result==='player'){
+    stats.win++;
+    showOverlay('你獲勝了！', '恭喜連成四子，成功擊敗電腦！', '再玩一次');
+  } else if(result==='ai'){
+    stats.loss++;
+    showOverlay('電腦獲勝', '電腦搶先連成四子，再接再厲！', '再玩一次');
+  } else {
+    stats.draw++;
+    showOverlay('平手', '棋盤已滿，未分出勝負。', '再玩一次');
+  }
+  saveStats(stats);
+  updateStatsPills(stats);
+}
+
+function computeAndPlayAIMove(){
+  const depth = DIFF_DEPTH[difficulty];
+  const col = getAIMove(board, AI, PLAYER, depth);
+  const row = dropDisc(board, col, AI);
+  renderDisc(row, col, AI);
+
+  if(checkWinAt(board, row, col, AI)){ endRound('ai'); return; }
+  if(isBoardFull(board)){ endRound('draw'); return; }
+
+  currentPlayer = PLAYER;
+  boardLocked = false;
+  updateTurnIndicator();
+  updateArrowsState();
+}
+
+function handleColumnClick(col){
+  if(!gameActive || boardLocked || currentPlayer!==PLAYER) return;
+  if(col<0 || col>=COLS) return;
+  const valid = getValidCols(board);
+  if(!valid.includes(col)) return;
+
+  const row = dropDisc(board, col, PLAYER);
+  renderDisc(row, col, PLAYER);
+
+  if(checkWinAt(board, row, col, PLAYER)){ endRound('player'); return; }
+  if(isBoardFull(board)){ endRound('draw'); return; }
+
+  currentPlayer = AI;
+  boardLocked = true;
+  updateTurnIndicator();
+  updateArrowsState();
+  setTimeout(computeAndPlayAIMove, 300 + Math.random()*300);
+}
+
+function startGame(){
+  board = makeEmptyBoard();
+  clearBoardDisplay();
+  hideOverlay();
+  gameActive = true;
+  boardLocked = false;
+  currentPlayer = humanStarts ? PLAYER : AI;
+  updateSidePanelLocks();
+  updateTurnIndicator();
+  updateArrowsState();
+
+  if(currentPlayer===AI){
+    boardLocked = true;
+    updateTurnIndicator();
+    updateArrowsState();
+    setTimeout(computeAndPlayAIMove, 400 + Math.random()*200);
+  }
+}
+
+document.getElementById('ovBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+/* ---------- difficulty ---------- */
+function setDifficulty(d, btnId){
+  difficulty = d;
+  document.querySelectorAll('#diffEasy,#diffNormal,#diffHard').forEach(b=>b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+}
+document.getElementById('diffEasy').addEventListener('click', ()=>setDifficulty('easy','diffEasy'));
+document.getElementById('diffNormal').addEventListener('click', ()=>setDifficulty('normal','diffNormal'));
+document.getElementById('diffHard').addEventListener('click', ()=>setDifficulty('hard','diffHard'));
+
+/* ---------- first / second ---------- */
+function setFirst(isFirst){
+  if(gameActive) return;
+  humanStarts = isFirst;
+  document.getElementById('firstBtn').classList.toggle('active', isFirst);
+  document.getElementById('secondBtn').classList.toggle('active', !isFirst);
+}
+document.getElementById('firstBtn').addEventListener('click', ()=>setFirst(true));
+document.getElementById('secondBtn').addEventListener('click', ()=>setFirst(false));
+
+/* ---------- init ---------- */
+updateTurnIndicator();
+updateArrowsState();
+updateSidePanelLocks();
+</script>
+</body>
+</html>

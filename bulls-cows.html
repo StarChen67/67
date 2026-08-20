@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>猜數字 — Bulls and Cows</title>
+<style>
+:root{
+  --bg:#0c0e18; --panel:#161a2c; --panel2:#1f2440; --line:#2c3358;
+  --txt:#e9ecff; --dim:#8891b8; --dim2:#5f6890;
+  --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#22203a 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+}
+.wrap{max-width:640px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:22px;letter-spacing:2px;
+   background:linear-gradient(90deg,var(--gold),var(--blue),#d14bff);
+   -webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11px;color:var(--dim);margin-top:2px}
+a.back{font-size:11.5px;color:var(--dim);text-decoration:none;border:1px solid var(--line);
+        padding:6px 10px;border-radius:8px;background:var(--panel)}
+a.back:hover{color:var(--txt);border-color:var(--dim2)}
+
+.stats-top{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+      padding:7px 12px;text-align:center;min-width:70px;flex:1}
+.pill .k{font-size:10px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+
+.main{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+.board-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;
+            position:relative;flex:1;min-width:280px;min-height:400px}
+
+.guess-row{display:flex;gap:8px;margin-bottom:6px}
+#guessInput{flex:1;font-size:22px;letter-spacing:8px;text-align:center;padding:10px 6px;
+            border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+            color:var(--txt);font-variant-numeric:tabular-nums;min-width:0}
+#guessInput:focus{outline:none;border-color:var(--blue)}
+.error-msg{color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;text-align:center}
+
+.history{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.hist-empty{color:var(--dim2);font-size:12.5px;text-align:center;padding:16px 0}
+.history-item{display:flex;justify-content:space-between;align-items:center;gap:8px;
+              background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+              padding:7px 10px;font-size:13px}
+.history-item .idx{color:var(--dim2);font-size:11px;min-width:26px}
+.history-item .g{font-weight:700;letter-spacing:4px;font-variant-numeric:tabular-nums;flex:1;text-align:center}
+.history-item .ab{white-space:nowrap;font-size:12.5px}
+.history-item .ab b.a{color:var(--green)}
+.history-item .ab b.b{color:var(--blue)}
+
+.side{display:flex;flex-direction:column;gap:10px;min-width:150px;flex:none;width:220px}
+.card-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card-panel h2{font-size:11px;letter-spacing:2px;color:var(--dim);font-weight:600;margin-bottom:8px;text-align:center}
+
+.overlay{position:absolute;inset:0;background:rgba(10,12,22,.9);border-radius:14px;
+        display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+        text-align:center;padding:20px}
+.overlay.show{display:flex}
+.overlay h2{font-size:20px;letter-spacing:2px}
+.overlay p{font-size:12.5px;color:var(--dim);line-height:1.7}
+
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+       padding:11px 16px;font-size:13.5px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,var(--green),#22a173);color:#062a1c}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-red{background:linear-gradient(135deg,var(--red),#c23652);color:#3a0510}
+.b-sm{padding:8px 12px;font-size:12px;border-radius:8px}
+.b-block{width:100%}
+
+.hint{font-size:11.5px;color:var(--dim);line-height:1.9}
+.hint b{color:var(--gold)}
+.hint .k{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+        border-radius:5px;padding:1px 6px;font-size:10.5px;color:var(--txt);margin:0 2px}
+
+.diffrow{display:flex;gap:6px}
+.diffrow button{flex:1;padding:8px 4px;font-size:11.5px}
+.diffrow button.active{outline:2px solid var(--green)}
+
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.keypad button{padding:12px 0;font-size:15px;border-radius:8px;background:var(--panel2);
+               border:1px solid var(--line);color:var(--txt)}
+.keypad button:active{background:var(--panel)}
+.keypad button.wide{font-size:11px}
+
+.side-actions{display:flex;flex-direction:column;gap:8px}
+
+@media(max-width:640px){
+  .side{width:100%}
+  .board-wrap{min-width:0}
+}
+</style>
+<!-- star-arcade-shell -->
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  canvas{ max-width:100%; height:auto; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>猜數字</h1>
+    <div class="sub">1A2B · 邏輯推理</div>
+  </div>
+  <a class="back" href="platform.html">← 回遊樂園</a>
+</header>
+
+<div class="stats-top">
+  <div class="pill"><div class="k">位數</div><div class="v" id="digitLen">4</div></div>
+  <div class="pill"><div class="k">猜測次數</div><div class="v" id="guessCount">0</div></div>
+  <div class="pill"><div class="k">用時</div><div class="v" id="timer">00:00</div></div>
+  <div class="pill"><div class="k">最少次數</div><div class="v" id="best">—</div></div>
+</div>
+
+<div class="main">
+  <div class="board-wrap">
+    <div class="guess-row">
+      <input type="text" id="guessInput" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="輸入 4 位數字" maxlength="4">
+      <button class="b-gold" id="submitBtn">送出</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="history" id="history">
+      <div class="hist-empty">尚無猜測紀錄</div>
+    </div>
+
+    <div class="overlay show" id="overlay">
+      <h2 id="ovTitle">猜數字</h2>
+      <p id="ovText">
+        電腦會隨機產生一組<b>不重複</b>的數字。<br>
+        猜猜看是多少！每次猜測後會提示：<br>
+        <b style="color:var(--green)">A</b> = 數字與位置皆正確（Bulls）<br>
+        <b style="color:var(--blue)">B</b> = 數字存在但位置錯誤（Cows）<br>
+        猜出全部 A 即為獲勝！
+      </p>
+      <button class="b-gold" id="ovBtn">開始遊戲</button>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="card-panel">
+      <h2>難度</h2>
+      <div class="diffrow">
+        <button class="b-ghost" id="diffEasy">簡單</button>
+        <button class="b-ghost active" id="diffNormal">普通</button>
+        <button class="b-ghost" id="diffHard">困難</button>
+      </div>
+    </div>
+
+    <div class="card-panel">
+      <h2>數字鍵盤</h2>
+      <div class="keypad" id="keypad">
+        <button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button>
+        <button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button>
+        <button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button>
+        <button class="wide" id="kpClear">清除</button><button data-d="0">0</button><button class="wide" id="kpBack">⌫</button>
+      </div>
+    </div>
+
+    <div class="card-panel">
+      <h2>玩法說明</h2>
+      <div class="hint">
+        數字皆<b>不重複</b><br>
+        首位可以是 <span class="k">0</span><br>
+        <span class="k">Enter</span> 送出猜測<br>
+        猜對全部位置即獲勝
+      </div>
+    </div>
+
+    <div class="side-actions">
+      <button class="b-green b-sm b-block" id="restartBtn">重新開始</button>
+      <button class="b-red b-sm b-block" id="giveUpBtn">放棄／看答案</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const LENGTHS = { easy: 3, normal: 4, hard: 5 };
+let difficulty = 'normal';
+let length = LENGTHS[difficulty];
+let secret = '';
+let guesses = [];
+let guessCount = 0;
+let elapsed = 0;
+let startTime = null;
+let timerInterval = null;
+let ended = true; // true until first round actually starts
+let giveUpArmed = false;
+let giveUpTimer = null;
+
+const $ = (id) => document.getElementById(id);
+const guessInput = $('guessInput');
+
+function randomSecret(n){
+  const digits = [0,1,2,3,4,5,6,7,8,9];
+  for (let i = digits.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [digits[i], digits[j]] = [digits[j], digits[i]];
+  }
+  return digits.slice(0, n).join('');
+}
+
+function computeAB(secretStr, guessStr){
+  let a = 0, b = 0;
+  const s = secretStr.split(''), g = guessStr.split('');
+  for (let i = 0; i < g.length; i++){
+    if (g[i] === s[i]) a++;
+  }
+  for (let i = 0; i < g.length; i++){
+    if (g[i] !== s[i] && s.includes(g[i])) b++;
+  }
+  return { a, b };
+}
+
+function formatTime(sec){
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function tick(){
+  elapsed = Math.floor((Date.now() - startTime) / 1000);
+  $('timer').textContent = formatTime(elapsed);
+}
+
+function updateStats(){
+  $('digitLen').textContent = length;
+  $('guessCount').textContent = guessCount;
+  $('timer').textContent = formatTime(elapsed);
+}
+
+function safeGetItem(key){
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function safeSetItem(key, value){
+  try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+}
+
+function updateBestDisplay(){
+  const v = safeGetItem('bullsCowsBest_' + difficulty);
+  $('best').textContent = v ? v : '—';
+}
+
+function renderHistory(){
+  const container = $('history');
+  if (guesses.length === 0){
+    container.innerHTML = '<div class="hist-empty">尚無猜測紀錄</div>';
+    return;
+  }
+  container.innerHTML = guesses.map((item, idx) => {
+    const num = guesses.length - idx;
+    return `<div class="history-item"><span class="idx">#${num}</span><span class="g">${item.guess}</span><span class="ab"><b class="a">${item.a}A</b> <b class="b">${item.b}B</b></span></div>`;
+  }).join('');
+}
+
+function cancelGiveUpArm(){
+  giveUpArmed = false;
+  clearTimeout(giveUpTimer);
+  const btn = $('giveUpBtn');
+  if (btn) btn.textContent = '放棄／看答案';
+}
+
+function newRound(){
+  length = LENGTHS[difficulty];
+  secret = randomSecret(length);
+  guesses = [];
+  guessCount = 0;
+  elapsed = 0;
+  ended = false;
+  clearInterval(timerInterval);
+  startTime = Date.now();
+  timerInterval = setInterval(tick, 1000);
+
+  guessInput.value = '';
+  guessInput.maxLength = length;
+  guessInput.placeholder = `輸入 ${length} 位數字`;
+  $('errorMsg').textContent = '';
+
+  renderHistory();
+  updateStats();
+  updateBestDisplay();
+  cancelGiveUpArm();
+  $('overlay').classList.remove('show');
+  guessInput.focus();
+}
+
+function submitGuess(){
+  if (ended) return;
+  const guess = guessInput.value.trim();
+  const errEl = $('errorMsg');
+
+  if (!/^\d+$/.test(guess) || guess.length !== length){
+    errEl.textContent = `請輸入 ${length} 位不重複數字`;
+    return;
+  }
+  if (new Set(guess.split('')).size !== length){
+    errEl.textContent = `請輸入 ${length} 位不重複數字`;
+    return;
+  }
+  errEl.textContent = '';
+
+  const { a, b } = computeAB(secret, guess);
+  guessCount++;
+  guesses.unshift({ guess, a, b });
+  renderHistory();
+  updateStats();
+  guessInput.value = '';
+
+  if (a === length){
+    winRound();
+  }
+}
+
+function winRound(){
+  ended = true;
+  clearInterval(timerInterval);
+
+  const bestKey = 'bullsCowsBest_' + difficulty;
+  const prevBest = safeGetItem(bestKey);
+  let newBest = false;
+  if (!prevBest || guessCount < Number(prevBest)){
+    if (safeSetItem(bestKey, String(guessCount))) newBest = true;
+  }
+  updateBestDisplay();
+
+  $('ovTitle').textContent = '猜中了！';
+  $('ovText').innerHTML = `答案是 <b style="color:var(--gold)">${secret}</b><br>` +
+    `共猜了 <b>${guessCount}</b> 次，耗時 <b>${formatTime(elapsed)}</b>` +
+    (newBest ? '<br><span style="color:var(--green)">★ 新紀錄！</span>' : '');
+  $('ovBtn').textContent = '再玩一次';
+  $('overlay').classList.add('show');
+}
+
+function doGiveUp(){
+  if (ended) return;
+  ended = true;
+  clearInterval(timerInterval);
+
+  $('ovTitle').textContent = '放棄本局';
+  $('ovText').innerHTML = `答案是 <b style="color:var(--gold)">${secret}</b><br>共猜了 <b>${guessCount}</b> 次`;
+  $('ovBtn').textContent = '再玩一次';
+  $('overlay').classList.add('show');
+}
+
+function onGiveUpClick(){
+  if (ended) return;
+  if (!giveUpArmed){
+    giveUpArmed = true;
+    $('giveUpBtn').textContent = '確定放棄？(再按一次)';
+    giveUpTimer = setTimeout(cancelGiveUpArm, 3000);
+  } else {
+    cancelGiveUpArm();
+    doGiveUp();
+  }
+}
+
+function setDifficulty(d, btnId){
+  difficulty = d;
+  document.querySelectorAll('.diffrow button').forEach(b => b.classList.remove('active'));
+  $(btnId).classList.add('active');
+  newRound();
+}
+
+$('submitBtn').addEventListener('click', submitGuess);
+$('ovBtn').addEventListener('click', newRound);
+$('restartBtn').addEventListener('click', newRound);
+$('giveUpBtn').addEventListener('click', onGiveUpClick);
+
+$('diffEasy').addEventListener('click', () => setDifficulty('easy', 'diffEasy'));
+$('diffNormal').addEventListener('click', () => setDifficulty('normal', 'diffNormal'));
+$('diffHard').addEventListener('click', () => setDifficulty('hard', 'diffHard'));
+
+guessInput.addEventListener('input', () => {
+  guessInput.value = guessInput.value.replace(/\D/g, '').slice(0, length);
+  $('errorMsg').textContent = '';
+});
+guessInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitGuess();
+});
+
+document.querySelectorAll('.keypad button[data-d]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (ended) return;
+    if (guessInput.value.length < length){
+      guessInput.value += btn.dataset.d;
+      $('errorMsg').textContent = '';
+    }
+  });
+});
+$('kpClear').addEventListener('click', () => {
+  if (ended) return;
+  guessInput.value = '';
+  $('errorMsg').textContent = '';
+});
+$('kpBack').addEventListener('click', () => {
+  if (ended) return;
+  guessInput.value = guessInput.value.slice(0, -1);
+  $('errorMsg').textContent = '';
+});
+
+// initial idle state (overlay shown, no active round yet)
+guessInput.maxLength = length;
+guessInput.placeholder = `輸入 ${length} 位數字`;
+updateStats();
+updateBestDisplay();
+</script>
+</body>
+</html>
