@@ -151,10 +151,18 @@ let activeFilter = 'all';
 const grid = document.getElementById('grid');
 const toast = document.getElementById('toast');
 
+// platform.html 可能被部署在 GitHub Pages 這種純靜態環境，此時同源沒有
+// platform-server.js 可用，改打 Render 上實際跑著這支伺服器的網域。
+// 本機用 npm run platform 開發，或直接由 platform-server.js 自己 serve 這個
+// 頁面時，同源就有 API，維持相對路徑即可。
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.endsWith('.onrender.com'))
+  ? ''
+  : 'https://star-arcade.onrender.com';
+
 async function loadGames(){
   grid.innerHTML = '<p style="color:var(--muted);">載入遊戲清單中…</p>';
   try{
-    const res = await fetch('/api/games');
+    const res = await fetch(`${API_BASE}/api/games`);
     if(!res.ok) throw new Error('api/games not available');
     GAMES = await res.json();
   }catch(e){
@@ -250,7 +258,7 @@ function applyStats(stats){
 
 async function heartbeat(){
   try{
-    const res = await fetch('/api/heartbeat', {
+    const res = await fetch(`${API_BASE}/api/heartbeat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId, game: currentGame }),
@@ -264,7 +272,7 @@ setInterval(heartbeat, 8000);
 
 window.addEventListener('pagehide', ()=>{
   try{
-    navigator.sendBeacon('/api/leave', new Blob([JSON.stringify({ sessionId })], { type:'application/json' }));
+    navigator.sendBeacon(`${API_BASE}/api/leave`, new Blob([JSON.stringify({ sessionId })], { type:'application/json' }));
   }catch(e){}
 });
 

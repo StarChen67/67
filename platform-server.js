@@ -104,6 +104,15 @@ function scanGames() {
 const server = http.createServer(async (req, res) => {
   const url = req.url.split("?")[0];
 
+  if (url.startsWith("/api/")) {
+    // 允許 GitHub Pages 等不同來源的靜態頁面跨網域打這幾支 API
+    // （platform.html 部署在 GitHub Pages，但這支伺服器另外跑在 Render 上）
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
+  }
+
   if (url === "/api/games" && req.method === "GET") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(scanGames()));
