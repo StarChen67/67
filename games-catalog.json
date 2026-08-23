@@ -289,6 +289,15 @@
       "accent": "#6ab04c",
       "desc": "邏輯推理猜數字遊戲，依A（位置正確）與B（數字正確但位置錯）提示逐步縮小範圍，猜中全部數字即獲勝。",
       "tag": "single"
+    },
+    "wasteland-shelter.html": {
+      "key": "wasteland-shelter",
+      "title": "末日餘生：荒野避難所",
+      "sub": "Wasteland Shelter",
+      "emoji": "🏚️",
+      "accent": "#8bd977",
+      "desc": "基地經營生存 RPG：探索森林採集資源、獵殺有等級的凶獸、開寶箱刷裝備，回避難所存物資、製造武器、種田升級，持續循環的末日求生。",
+      "tag": "single"
     }
   },
   "extra": [
