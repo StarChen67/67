@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>末日餘生：荒野避難所</title>
+<style id="star-arcade-shell-style">
+  html{ -webkit-text-size-adjust:100%; font-size:106%; }
+  body{ max-width:100vw; overflow-x:hidden; }
+  .sa-home-btn{
+    position:fixed; top:12px; right:12px; z-index:999999;
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; text-decoration:none; color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+    -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+  @media (max-width:480px){
+    .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; }
+  }
+</style>
+<style>
+:root{
+  --bg:#0b0f14; --panel:#141a22; --panel2:#1c2430; --line:#2a3442;
+  --txt:#e9ecff; --dim:#8a95a8; --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff; --purple:#c85dff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#1a2f1f 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;
+}
+.wrap{max-width:1100px;margin:0 auto;padding:10px 10px 30px}
+button{font-family:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;padding:9px 14px;font-size:13px;color:#fff;transition:transform .1s,filter .1s}
+button:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{opacity:.35;cursor:not-allowed}
+.b-gold{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05}
+.b-green{background:linear-gradient(135deg,#3ddc97,#22a173);color:#062a1c}
+.b-red{background:linear-gradient(135deg,#ff5d73,#c8324a)}
+.b-blue{background:linear-gradient(135deg,#5aa9ff,#3a7fd1)}
+.b-purple{background:linear-gradient(135deg,#c85dff,#8b5cff)}
+.b-ghost{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+.b-sm{padding:6px 10px;font-size:11.5px;border-radius:8px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.panel h2{font-size:12px;letter-spacing:2px;color:var(--dim);font-weight:700;margin-bottom:8px}
+.flex{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hidden{display:none !important}
+
+/* -------- 主選單 -------- */
+#mainMenu{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+#mainMenu h1{font-size:30px;background:linear-gradient(90deg,var(--gold),#7be07b,#4fd0e0);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:6px}
+#mainMenu .sub{color:var(--dim);font-size:12.5px;margin-bottom:26px;max-width:420px;line-height:1.7}
+#mainMenu .menuBtns{display:flex;flex-direction:column;gap:10px;width:220px}
+#mainMenu button{padding:12px;font-size:14px}
+
+/* -------- HUD -------- */
+#hud{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;min-width:82px}
+.pill .k{font-size:9.5px;color:var(--dim);letter-spacing:1px}
+.pill .v{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.barwrap{width:100px;height:7px;background:#000;border-radius:4px;overflow:hidden;margin-top:3px}
+.barwrap .fill{height:100%}
+#hpFill{background:linear-gradient(90deg,#ff5d73,#c8324a)}
+#xpFill{background:linear-gradient(90deg,#5aa9ff,#3a7fd1)}
+#quickRes{display:flex;gap:6px;flex-wrap:wrap}
+#quickRes span{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:11.5px}
+#modeTag{font-size:11px;color:var(--dim)}
+
+/* -------- 世界地圖 -------- */
+#worldWrap{width:100%;overflow:hidden;border-radius:12px;border:1px solid var(--line);background:#080a12;position:relative;touch-action:none}
+#gameCanvas{display:block;width:100%;aspect-ratio:900/520;max-height:66vh}
+#interactHint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(10,14,10,.8);border:1px solid var(--gold);color:var(--gold);font-size:12px;padding:6px 12px;border-radius:8px;display:none}
+#burnHint{position:absolute;top:8px;left:8px;color:var(--red);font-size:11px;background:rgba(0,0,0,.5);padding:3px 8px;border-radius:6px;display:none}
+
+/* -------- 觸控按鍵 -------- */
+#touchControls{display:none;margin-top:8px;justify-content:space-between;align-items:flex-end}
+.dpad{display:grid;grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px 44px;gap:3px}
+.dpad button{padding:0;font-size:16px;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px}
+.dpad button:active{background:var(--panel)}
+.actionBtns{display:flex;gap:8px;align-items:flex-end}
+.actionBtns button{width:58px;height:58px;border-radius:50%;font-size:20px}
+@media (max-width:760px){ #touchControls{display:flex} }
+
+/* -------- 背包/角色面板 -------- */
+.modal-mask{position:fixed;inset:0;background:rgba(4,5,10,.78);display:none;align-items:center;justify-content:center;z-index:80;padding:14px}
+.modal-mask.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:86vh;overflow:auto}
+.modal h2{font-size:16px;margin-bottom:10px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+.tabs button.active{background:linear-gradient(135deg,var(--gold),#ff9d2e);color:#3a2a05;border-color:transparent}
+.itemGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}
+.itemCard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 4px;text-align:center}
+.itemCard .ic{font-size:22px}
+.itemCard .nm{font-size:10px;margin-top:2px}
+.itemCard .qt{font-size:10px;color:var(--gold)}
+.itemCard .acts{display:flex;gap:3px;justify-content:center;margin-top:4px;flex-wrap:wrap}
+.statRow{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid #23294560}
+.statRow>span:first-child{color:var(--dim)}
+.recipeRow{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:6px}
+.recipeRow .costs{font-size:10.5px;color:var(--dim)}
+.plot{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.plot .ic{font-size:30px}
+.plot .prog{height:6px;background:#000;border-radius:3px;margin-top:6px;overflow:hidden}
+.plot .prog .fill{height:100%;background:var(--green)}
+
+/* -------- 儲物箱/工作台/農田面板（避難所畫面） -------- */
+#shelterScreen .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:760px){ #shelterScreen .grid3{grid-template-columns:1fr} }
+
+#toastRoot{position:fixed;top:60px;right:12px;z-index:999998;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.toast{background:rgba(15,20,15,.92);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.4);animation:toastIn .25s ease-out}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+#deathScreen{position:fixed;inset:0;background:rgba(30,4,4,.88);display:none;align-items:center;justify-content:center;flex-direction:column;z-index:900;text-align:center}
+#deathScreen h2{font-size:26px;color:var(--red);margin-bottom:8px}
+#deathScreen p{color:var(--dim);font-size:12.5px;margin-bottom:16px;max-width:320px;line-height:1.6}
+
+.legend{font-size:10.5px;color:var(--dim);line-height:1.8;margin-top:4px}
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+
+  <!-- 主選單 -->
+  <div id="mainMenu">
+    <h1>末日餘生：荒野避難所</h1>
+    <div class="sub">世界崩潰之後，你只剩下一間破舊的避難所。走出去探索、採集、獵殺凶獸、刷寶，再帶著戰利品回家升級裝備——每一次出發，都不知道會遇到什麼。</div>
+    <div class="menuBtns">
+      <button class="b-gold" id="btnNewGame">開始新遊戲</button>
+      <button class="b-green hidden" id="btnContinueGame">繼續遊戲</button>
+      <button class="b-ghost hidden" id="btnResetSave">清除存檔</button>
+    </div>
+  </div>
+
+  <!-- 遊戲畫面 -->
+  <div id="gameRoot" class="hidden">
+    <div id="hud">
+      <div class="flex">
+        <div class="pill"><div class="k">等級</div><div class="v" id="lvlText">Lv.1</div></div>
+        <div class="pill"><div class="k">生命 <span id="hpText"></span></div><div class="barwrap"><div class="fill" id="hpFill"></div></div></div>
+        <div class="pill"><div class="k">經驗 <span id="xpText"></span></div><div class="barwrap"><div class="fill" id="xpFill"></div></div></div>
+        <div class="pill"><div class="k">負重</div><div class="v" id="weightText" style="font-size:12px"></div></div>
+      </div>
+      <div id="quickRes"></div>
+    </div>
+
+    <div id="worldScreen">
+      <div id="worldWrap">
+        <canvas id="gameCanvas" width="900" height="520"></canvas>
+        <div id="interactHint"></div>
+        <div id="burnHint">🔥 燃燒中</div>
+      </div>
+      <div class="flex" style="margin-top:8px">
+        <span id="modeTag">荒野森林 · WASD 移動、空白鍵攻擊/採集、E 開寶箱、I 背包</span>
+        <button class="b-ghost b-sm" id="btnOpenBag">🎒 背包 (I)</button>
+        <button class="b-ghost b-sm" id="btnSaveNow">💾 儲存</button>
+      </div>
+      <div id="touchControls">
+        <div class="dpad">
+          <span></span><button data-dir="up">⬆️</button><span></span>
+          <button data-dir="left">⬅️</button><span></span><button data-dir="right">➡️</button>
+          <span></span><button data-dir="down">⬇️</button><span></span>
+        </div>
+        <div class="actionBtns">
+          <button class="b-blue" id="btnTouchInteract">E</button>
+          <button class="b-red" id="btnTouchAttack">⚔️</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="shelterScreen" class="hidden">
+      <div class="panel">
+        <h2>避難所 · Lv.<span id="shelterLvl">1</span> <span id="shelterName" style="color:var(--gold)"></span></h2>
+        <div class="legend" id="shelterUnlocks"></div>
+        <div class="flex" style="margin-top:8px">
+          <button class="b-gold" id="btnDepositAll">📥 存入所有物資到儲物箱</button>
+          <button class="b-green" id="btnGoExplore">🌲 出發探索荒野森林</button>
+          <button class="b-ghost b-sm" id="btnOpenBag2">🎒 背包</button>
+        </div>
+      </div>
+      <div class="panel" id="shelterUpgradeBox"></div>
+      <div class="grid3">
+        <div class="panel">
+          <h2>📦 儲物箱</h2>
+          <div class="itemGrid" id="storageGrid"></div>
+        </div>
+        <div class="panel">
+          <h2>🔨 工作台</h2>
+          <div id="recipeList"></div>
+        </div>
+        <div class="panel">
+          <h2>🌱 小型農田</h2>
+          <div class="itemGrid" id="farmGrid"></div>
+          <div class="legend">種子可從儲物箱種下，成熟時間即使離線也會持續計算。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 背包/角色 -->
+<div class="modal-mask" id="bagModal">
+  <div class="modal">
+    <div class="tabs">
+      <button class="active" data-tab="bag">背包</button>
+      <button data-tab="char">角色</button>
+    </div>
+    <div id="bagTab">
+      <div class="legend" id="bagWeightLine"></div>
+      <div class="itemGrid" id="bagGrid"></div>
+    </div>
+    <div id="charTab" class="hidden">
+      <div id="charStats"></div>
+    </div>
+    <div style="text-align:right;margin-top:10px"><button class="b-ghost" id="btnCloseBag">關閉</button></div>
+  </div>
+</div>
+
+<!-- 寶箱戰利品 -->
+<div class="modal-mask" id="chestModal">
+  <div class="modal" style="text-align:center">
+    <h2 id="chestTitle">寶箱</h2>
+    <div class="itemGrid" id="chestLootGrid"></div>
+    <div style="text-align:center;margin-top:12px"><button class="b-gold" id="btnCloseChest">收下戰利品</button></div>
+  </div>
+</div>
+
+<div id="toastRoot"></div>
+
+<div id="deathScreen">
+  <h2>你倒下了</h2>
+  <p>裝備得以保留，但部分背包物資掉落在原地。回到避難所重新出發吧。</p>
+  <button class="b-gold" id="btnRespawn">返回避難所</button>
+</div>
+
+<script src="wasteland-shelter/data.js"></script>
+<script src="wasteland-shelter/entities.js"></script>
+<script src="wasteland-shelter/managers.js"></script>
+<script src="wasteland-shelter/world.js"></script>
+<script src="wasteland-shelter/shelter.js"></script>
+<script src="wasteland-shelter/ui.js"></script>
+<script src="wasteland-shelter/main.js"></script>
+</body>
+</html>
