@@ -155,10 +155,19 @@ async function loadGames(){
   grid.innerHTML = '<p style="color:var(--muted);">載入遊戲清單中…</p>';
   try{
     const res = await fetch('/api/games');
+    if(!res.ok) throw new Error('api/games not available');
     GAMES = await res.json();
   }catch(e){
-    grid.innerHTML = '<p style="color:var(--muted);">無法連線到平台伺服器，請透過 <code>npm run platform</code> 啟動後再開啟本頁面。</p>';
-    return;
+    // 沒有 platform-server.js 可用時（例如部署在 GitHub Pages 這類純靜態環境），
+    // 改用 scripts/gen-static-games.js 事先產生好的快照清單，遊戲清單一樣能顯示。
+    try{
+      const res2 = await fetch('games-list.json');
+      if(!res2.ok) throw new Error('games-list.json not found');
+      GAMES = await res2.json();
+    }catch(e2){
+      grid.innerHTML = '<p style="color:var(--muted);">無法連線到平台伺服器，請透過 <code>npm run platform</code> 啟動後再開啟本頁面。</p>';
+      return;
+    }
   }
   document.getElementById('count').textContent = GAMES.length;
   render(activeFilter);
