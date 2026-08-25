@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>手裡劍鍛造師</title>
+<style>
+:root{
+  --bg:#0b0f14; --panel:#141a22; --panel2:#1c2430; --line:#2a3442;
+  --txt:#e9ecff; --dim:#8a95a8; --gold:#ffc84a; --green:#3ddc97; --red:#ff5d73; --blue:#5aa9ff;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(900px 600px at 50% -10%,#241a0f 0%,var(--bg) 55%);
+  color:var(--txt);min-height:100vh;padding:14px 12px 40px;
+  display:flex;flex-direction:column;align-items:center;
+  max-width:100vw;overflow-x:hidden;
+}
+.wrap{max-width:920px;width:100%}
+header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+h1{font-size:20px;letter-spacing:2px;background:linear-gradient(90deg,var(--gold),#ff8a5a,#ffdd7a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:11.5px;color:var(--dim)}
+
+.sa-home-btn{
+  position:fixed; top:12px; right:12px; z-index:999999;
+  width:42px; height:42px; border-radius:50%;
+  background:rgba(11,14,26,.72); border:1px solid rgba(255,255,255,.28);
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; text-decoration:none; color:#fff;
+  box-shadow:0 4px 14px rgba(0,0,0,.35);
+  -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+  cursor:pointer;
+}
+.sa-home-btn:hover{ background:rgba(11,14,26,.92); }
+@media (max-width:480px){ .sa-home-btn{ width:38px; height:38px; font-size:16px; top:8px; right:8px; } }
+
+.statbar{display:flex;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px}
+.statbar .item{display:flex;align-items:center;gap:5px}
+.statbar b{color:var(--gold)}
+.statbar .hp{color:var(--green)}
+
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab-btn{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font:inherit;font-size:14px;cursor:pointer;font-weight:600}
+.tab-btn.active{background:linear-gradient(135deg,#3a2a12,#2a1f10);border-color:var(--gold);color:var(--gold)}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.panel h2{font-size:14px;color:var(--txt);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.panel h2 .cnt{font-size:11px;color:var(--dim);font-weight:400}
+
+.inv-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+@media (max-width:640px){.inv-grid{grid-template-columns:repeat(6,1fr)}}
+.slot{aspect-ratio:1;border-radius:8px;border:1px solid var(--line);background:var(--panel2);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;font-size:16px}
+.slot.empty{opacity:.35;border-style:dashed}
+.slot .qty{position:absolute;bottom:2px;right:4px;font-size:9px;color:var(--gold);font-weight:700}
+.slot .lv{position:absolute;top:2px;left:4px;font-size:8px;color:var(--dim)}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font:inherit;font-size:12.5px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--gold)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:linear-gradient(135deg,#4a3010,#2a1c0c);border-color:var(--gold);color:var(--gold)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+
+.fuse-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);margin-bottom:6px}
+.fuse-row .lbl{font-size:12.5px}
+.fuse-row .lbl .dim{color:var(--dim);font-size:11px}
+.fuse-row.locked{opacity:.5}
+
+.mon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;margin-top:6px}
+.mon-btn{padding:8px 4px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);font:inherit;font-size:11.5px;cursor:pointer;text-align:center}
+.mon-btn:hover{border-color:var(--red)}
+.mon-btn.locked{opacity:.35;cursor:not-allowed}
+.mon-btn b{display:block;font-size:13px;color:var(--red)}
+
+.hpbar-wrap{margin:6px 0}
+.hpbar-wrap .lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);margin-bottom:3px}
+.hpbar{height:12px;border-radius:6px;background:#000;border:1px solid var(--line);overflow:hidden}
+.hpbar .fill{height:100%;transition:width .2s}
+.hpbar .fill.player{background:linear-gradient(90deg,var(--green),#2bb87d)}
+.hpbar .fill.monster{background:linear-gradient(90deg,var(--red),#c73f52)}
+.hpbar .fill.idle{background:linear-gradient(90deg,var(--gold),#c99530)}
+.hpbar .fill.claim{background:linear-gradient(90deg,var(--blue),#3d7fd6)}
+.hpbar .fill.exp{background:linear-gradient(90deg,var(--blue),#8b7bff)}
+
+.qty-btn.active{background:linear-gradient(135deg,#4a3010,#2a1c0c);border-color:var(--gold);color:var(--gold)}
+
+.battle-log{background:#080a12;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:var(--dim);height:110px;overflow-y:auto;margin:10px 0;line-height:1.6;display:flex;flex-direction:column-reverse}
+select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:12.5px}
+
+.note{font-size:11px;color:var(--dim);line-height:1.7;margin-top:4px}
+.reset-link{font-size:10.5px;color:var(--dim);text-decoration:underline;cursor:pointer;margin-top:16px;text-align:center}
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到首頁" aria-label="回到首頁">🏠</a>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>手裡劍鍛造師</h1>
+      <div class="sub">工作台養成 × 手裡劍融合 × 回合制討伐</div>
+    </div>
+  </header>
+
+  <div class="statbar">
+    <div class="item">💰 金幣 <b id="statGold">0</b></div>
+    <div class="item">🛠️ 工作台 Lv.<b id="statWbLv">1</b></div>
+    <div class="item hp">❤️ <span id="statHp">100</span>/<span id="statMaxHp">100</span></div>
+    <div class="item">🎒 背包 <span id="statInvUsed">0</span>/100</div>
+  </div>
+
+  <div class="panel" id="idlePanel">
+    <h2>⏱️ 打工賺錢 <span class="cnt">每分鐘 +50 金幣，累積上限 2000，每日最多領取 1000</span></h2>
+    <div class="hpbar-wrap">
+      <div class="lbl"><span>累積金幣</span><span id="idlePoolText">0/2000</span></div>
+      <div class="hpbar"><div class="fill idle" id="idlePoolFill" style="width:0%"></div></div>
+    </div>
+    <div class="hpbar-wrap">
+      <div class="lbl"><span>今日已領取</span><span id="idleClaimedText">0/1000</span></div>
+      <div class="hpbar"><div class="fill claim" id="idleClaimedFill" style="width:0%"></div></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="claimIdleBtn">💰 領取金幣</button>
+      <span class="note" id="idleCountdown" style="margin:0"></span>
+    </div>
+  </div>
+
+  <div class="panel" id="statsPanel">
+    <h2>🧬 角色屬性</h2>
+    <div class="hpbar-wrap">
+      <div class="lbl"><span>等級 Lv.<b id="statLevel" style="color:var(--gold)">1</b></span><span id="expText">0/100</span></div>
+      <div class="hpbar"><div class="fill exp" id="expFill" style="width:0%"></div></div>
+    </div>
+    <div class="row" style="margin-top:8px;gap:16px">
+      <span>⚔️ 攻擊加成 +<b id="statAtkBonus" style="color:var(--gold)">0</b></span>
+      <span>🛡️ 防禦力 <b id="statDef" style="color:var(--gold)">0</b></span>
+      <span>❤️ 生命上限 <b id="statMaxHpDetail" style="color:var(--gold)">100</b></span>
+    </div>
+    <div class="note">擊敗怪物可獲得經驗值，每升 1 級：攻擊加成 +5、防禦力 +2、生命上限 +15（永久疊加）。</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabWorkbenchBtn">🛠️ 工作台</button>
+    <button class="tab-btn" id="tabAdventureBtn">⚔️ 冒險</button>
+  </div>
+
+  <!-- WORKBENCH VIEW -->
+  <div id="viewWorkbench">
+    <div class="panel">
+      <h2>🎒 背包 <span class="cnt">同種同級物品堆疊為 1 格，上限 100 格</span></h2>
+      <div class="inv-grid" id="invGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>⚗️ 融合 <span class="cnt">3 個同級手裡劍或藥劑 → 1 個高一級的手裡劍或藥劑</span></h2>
+      <div id="fuseList"></div>
+      <div class="note">融合所需工作台等級：融合 Lv.N 物品需工作台 ≥ Lv.N（例：融合 3 把 Lv.2 手裡劍成 Lv.3，需工作台 Lv.2 以上）。</div>
+    </div>
+
+    <div class="panel">
+      <h2>🏪 商店</h2>
+      <div class="row" style="margin-bottom:8px">
+        <span style="font-size:12.5px;color:var(--dim);min-width:110px">🗡️ Lv.1 手裡劍（5💰/把）</span>
+        <button class="btn" data-buy="knife1">買 1</button>
+        <button class="btn" data-buy="knife10">買 10</button>
+        <button class="btn" data-buy="knife50">買 50</button>
+      </div>
+      <div class="row">
+        <span style="font-size:12.5px;color:var(--dim);min-width:110px">🧪 恢復藥劑（30💰/瓶，回50❤️）</span>
+        <button class="btn" data-buy="pot1">買 1</button>
+        <button class="btn" data-buy="pot5">買 5</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>🛠️ 工作台升級</h2>
+      <div class="row">
+        <span style="font-size:12.5px">目前 Lv.<b id="wbLvNow" style="color:var(--gold)">1</b>，效果：生命上限 +20/級、解鎖更高級手裡劍/藥劑融合、解鎖更高級怪物</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" id="upgradeWbBtn">升級至 Lv.<span id="wbNextLv">2</span>（花費 <span id="wbNextCost">1,000</span> 💰）</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADVENTURE VIEW -->
+  <div id="viewAdventure" style="display:none">
+    <div class="panel" id="preBattlePanel">
+      <h2>⚔️ 選擇武器</h2>
+      <select id="knifeSelect"></select>
+      <div class="note" id="noKnifeNote" style="display:none;color:var(--red)">背包裡沒有任何手裡劍了，回工作台購買或融合吧！</div>
+
+      <h2 style="margin-top:14px">👹 選擇怪物等級</h2>
+      <div class="row" style="margin-bottom:4px">
+        <span style="font-size:12.5px;color:var(--dim)">討伐數量：</span>
+        <button class="btn qty-btn active" data-qty="1">x1</button>
+        <button class="btn qty-btn" data-qty="3">x3</button>
+        <button class="btn qty-btn" data-qty="5">x5</button>
+        <button class="btn qty-btn" data-qty="10">x10</button>
+      </div>
+      <div class="mon-grid" id="monGrid"></div>
+      <div class="note">怪物等級越高，血量與攻擊力越高，但擊敗後獲得的金幣與經驗值也越多。選擇討伐數量可一次挑戰多隻同等級怪物，中途死亡會結束本次討伐。灰色代表工作台等級不足，尚未解鎖。</div>
+    </div>
+
+    <div class="panel" id="battlePanel" style="display:none">
+      <h2 id="battleTitle">⚔️ 戰鬥中</h2>
+      <div class="hpbar-wrap">
+        <div class="lbl"><span>你</span><span id="hpPlayerText">100/100</span></div>
+        <div class="hpbar"><div class="fill player" id="hpPlayerFill" style="width:100%"></div></div>
+      </div>
+      <div class="hpbar-wrap">
+        <div class="lbl"><span id="monsterName">怪物</span><span id="hpMonsterText">0/0</span></div>
+        <div class="hpbar"><div class="fill monster" id="hpMonsterFill" style="width:100%"></div></div>
+      </div>
+      <div class="battle-log" id="battleLog"></div>
+      <div class="row">
+        <select id="battleKnifeSelect"></select>
+        <button class="btn primary" id="attackBtn">🗡️ 投擲攻擊</button>
+        <button class="btn" id="usePotionBtn">🧪 使用藥劑 (<span id="potCount">0</span>)</button>
+        <button class="btn danger" id="fleeBtn">🏃 撤退</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="reset-link" id="resetLink">重置存檔</div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const SAVE_KEY = "shurikenForgeSaveV1";
+const SLOT_CAP = 100;
+const POTION_COST = 30;
+const KNIFE_COST = 5;
+
+function baseDamage(lv){ return 10*lv; }
+function potionHeal(lv){ return 50*lv; }
+function knifeIconStyle(lv){
+  const hue = (lv-1)*47 % 360;
+  return `filter:hue-rotate(${hue}deg) saturate(${1+lv*0.08})`;
+}
+
+let state = null;
+let selectedQty = 1;
+
+function expToNext(level){ return 100 + (level-1)*60; }
+function attackBonus(level){ return (level-1)*5; }
+function defenseBonus(level){ return (level-1)*2; }
+function gainExp(amount, log){
+  state.exp += amount;
+  while(state.exp >= expToNext(state.playerLevel)){
+    state.exp -= expToNext(state.playerLevel);
+    state.playerLevel += 1;
+    state.maxHp = maxHpFor(state.wbLevel, state.playerLevel);
+    log.push(`🎉 升級了！等級提升到 Lv.${state.playerLevel}！`);
+  }
+}
+
+const IDLE_RATE_PER_MIN = 50;
+const IDLE_POOL_CAP = 2000;
+const IDLE_DAILY_CAP = 1000;
+function todayKey(){ return new Date().toDateString(); }
+
+function defaultState(){
+  return {
+    gold: 100,
+    wbLevel: 1,
+    hp: 100,
+    maxHp: 100,
+    inv: { "knife_1": 50, "potion_1": 3 },
+    view: "workbench",
+    battle: null, // {monLv, totalN, remaining, monHp, monMaxHp, monAtk, goldReward, totalGold, totalExp, log:[]}
+    playerLevel: 1,
+    exp: 0,
+    idleGold: 0,
+    idleClaimedToday: 0,
+    lastIdleTick: Date.now(),
+    claimDay: todayKey()
+  };
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.inv){
+        if(parsed.inv.potion !== undefined){
+          parsed.inv.potion_1 = (parsed.inv.potion_1||0) + parsed.inv.potion;
+          delete parsed.inv.potion;
+        }
+        if(typeof parsed.playerLevel !== "number") parsed.playerLevel = 1;
+        if(typeof parsed.exp !== "number") parsed.exp = 0;
+        if(typeof parsed.idleGold !== "number") parsed.idleGold = 0;
+        if(typeof parsed.idleClaimedToday !== "number") parsed.idleClaimedToday = 0;
+        if(typeof parsed.lastIdleTick !== "number") parsed.lastIdleTick = Date.now();
+        if(typeof parsed.claimDay !== "string") parsed.claimDay = todayKey();
+        return parsed;
+      }
+    }
+  }catch(e){}
+  return defaultState();
+}
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+function maxHpFor(wbLevel, playerLevel){ return 100 + (wbLevel-1)*20 + (playerLevel-1)*15; }
+function upgradeCost(wbLevel){ return 1000 * Math.pow(2, wbLevel-1); }
+function monsterLevelCap(wbLevel){ return 5*wbLevel; }
+
+function invUsedSlots(){
+  return Object.keys(state.inv).filter(k => (state.inv[k]||0) > 0).length;
+}
+function canAddNewSlot(id){
+  if((state.inv[id]||0) > 0) return true;
+  return invUsedSlots() < SLOT_CAP;
+}
+function addItem(id, qty){
+  if(!canAddNewSlot(id)) return false;
+  state.inv[id] = (state.inv[id]||0) + qty;
+  return true;
+}
+function removeItem(id, qty){
+  if((state.inv[id]||0) < qty) return false;
+  state.inv[id] -= qty;
+  if(state.inv[id] <= 0) delete state.inv[id];
+  return true;
+}
+function levelsOf(prefix){
+  return Object.keys(state.inv)
+    .filter(k => k.startsWith(prefix+"_") && state.inv[k] > 0)
+    .map(k => parseInt(k.split("_")[1],10))
+    .sort((a,b)=>a-b);
+}
+function knifeLevels(){ return levelsOf("knife"); }
+function potionLevels(){ return levelsOf("potion"); }
+
+function fmt(n){ return n.toLocaleString(); }
+
+// ---------- Rendering ----------
+function renderAll(){
+  document.getElementById("statGold").textContent = fmt(state.gold);
+  document.getElementById("statWbLv").textContent = state.wbLevel;
+  document.getElementById("statHp").textContent = state.hp;
+  document.getElementById("statMaxHp").textContent = state.maxHp;
+  document.getElementById("statInvUsed").textContent = invUsedSlots();
+
+  document.getElementById("tabWorkbenchBtn").classList.toggle("active", state.view==="workbench");
+  document.getElementById("tabAdventureBtn").classList.toggle("active", state.view==="adventure");
+  document.getElementById("viewWorkbench").style.display = state.view==="workbench" ? "" : "none";
+  document.getElementById("viewAdventure").style.display = state.view==="adventure" ? "" : "none";
+
+  if(state.view==="workbench") renderWorkbench();
+  else renderAdventure();
+
+  renderIdlePanel();
+  renderStatsPanel();
+}
+
+function renderStatsPanel(){
+  document.getElementById("statLevel").textContent = state.playerLevel;
+  const need = expToNext(state.playerLevel);
+  document.getElementById("expText").textContent = `${state.exp}/${need}`;
+  document.getElementById("expFill").style.width = (state.exp/need*100) + "%";
+  document.getElementById("statAtkBonus").textContent = attackBonus(state.playerLevel);
+  document.getElementById("statDef").textContent = defenseBonus(state.playerLevel);
+  document.getElementById("statMaxHpDetail").textContent = state.maxHp;
+}
+
+// ---------- Idle income ----------
+function tickIdle(){
+  const now = Date.now();
+  const key = todayKey();
+  if(state.claimDay !== key){
+    state.claimDay = key;
+    state.idleClaimedToday = 0;
+  }
+  const minutesPassed = Math.floor((now - state.lastIdleTick) / 60000);
+  if(minutesPassed > 0){
+    state.idleGold = Math.min(IDLE_POOL_CAP, state.idleGold + minutesPassed*IDLE_RATE_PER_MIN);
+    state.lastIdleTick += minutesPassed*60000;
+  }
+}
+
+function renderIdlePanel(){
+  const pool = Math.floor(state.idleGold);
+  document.getElementById("idlePoolText").textContent = `${pool}/${IDLE_POOL_CAP}`;
+  document.getElementById("idlePoolFill").style.width = (state.idleGold/IDLE_POOL_CAP*100) + "%";
+  document.getElementById("idleClaimedText").textContent = `${state.idleClaimedToday}/${IDLE_DAILY_CAP}`;
+  document.getElementById("idleClaimedFill").style.width = (state.idleClaimedToday/IDLE_DAILY_CAP*100) + "%";
+
+  const dailyRemaining = IDLE_DAILY_CAP - state.idleClaimedToday;
+  const claimable = Math.floor(Math.min(state.idleGold, dailyRemaining));
+  const btn = document.getElementById("claimIdleBtn");
+  btn.disabled = claimable < 1;
+  btn.textContent = claimable >= 1 ? `💰 領取 ${fmt(claimable)} 金幣` : "💰 領取金幣";
+
+  const cd = document.getElementById("idleCountdown");
+  if(dailyRemaining <= 0){
+    cd.textContent = "今日領取額度已用完，明天再來吧！";
+  }else if(state.idleGold >= IDLE_POOL_CAP){
+    cd.textContent = "累積已達上限，記得來領取！";
+  }else{
+    const sec = Math.ceil((60000 - ((Date.now()-state.lastIdleTick) % 60000)) / 1000);
+    cd.textContent = `下一筆 +${IDLE_RATE_PER_MIN} 金幣：${sec} 秒後`;
+  }
+}
+
+function claimIdleGold(){
+  tickIdle();
+  const dailyRemaining = IDLE_DAILY_CAP - state.idleClaimedToday;
+  if(dailyRemaining <= 0){
+    alert("今日領取額度已達上限（1000金幣），請明天再來！");
+    renderIdlePanel();
+    return;
+  }
+  const amount = Math.floor(Math.min(state.idleGold, dailyRemaining));
+  if(amount <= 0){
+    alert("目前還沒有可領取的金幣，請稍後再來。");
+    return;
+  }
+  state.gold += amount;
+  state.idleGold -= amount;
+  state.idleClaimedToday += amount;
+  save(); renderAll();
+}
+
+function itemDisplay(id){
+  const [type, lvStr] = id.split("_");
+  const lv = parseInt(lvStr,10);
+  if(type === "potion") return {icon:"🧪", label:"Lv."+lv+" 藥劑", lv, type};
+  return {icon:"🗡️", label:"Lv."+lv+" 手裡劍", lv, type};
+}
+
+function renderWorkbench(){
+  // inventory grid
+  const grid = document.getElementById("invGrid");
+  grid.innerHTML = "";
+  const entries = Object.keys(state.inv)
+    .filter(k=>state.inv[k]>0)
+    .sort((a,b)=>{
+      const da = itemDisplay(a), db = itemDisplay(b);
+      if(da.type !== db.type) return da.type==="potion" ? -1 : 1;
+      return da.lv - db.lv;
+    });
+  for(let i=0;i<SLOT_CAP;i++){
+    const div = document.createElement("div");
+    if(i < entries.length){
+      const id = entries[i];
+      const d = itemDisplay(id);
+      div.className = "slot";
+      div.title = d.label + " x" + state.inv[id];
+      div.innerHTML = `<span style="${d.lv?knifeIconStyle(d.lv):''}">${d.icon}</span>
+        ${d.lv? `<span class="lv">Lv${d.lv}</span>`:''}
+        <span class="qty">${state.inv[id]}</span>`;
+    }else{
+      div.className = "slot empty";
+    }
+    grid.appendChild(div);
+  }
+
+  // fuse list
+  const fuseList = document.getElementById("fuseList");
+  fuseList.innerHTML = "";
+  const fuseTypes = [
+    {prefix:"knife", icon:"🗡️", unit:"把", levels: knifeLevels()},
+    {prefix:"potion", icon:"🧪", unit:"瓶", levels: potionLevels()}
+  ];
+  let any = false;
+  fuseTypes.forEach(t=>{
+    t.levels.forEach(lv=>{
+      const qty = state.inv[t.prefix+"_"+lv]||0;
+      if(qty < 3) return;
+      any = true;
+      const locked = state.wbLevel < lv;
+      const row = document.createElement("div");
+      row.className = "fuse-row" + (locked?" locked":"");
+      row.innerHTML = `<div class="lbl">${t.icon} Lv.${lv} x3 → ${t.icon} Lv.${lv+1} x1 <span class="dim">(擁有 ${qty} ${t.unit})</span></div>
+        <button class="btn" ${locked?"disabled":""} data-fuse-type="${t.prefix}" data-fuse-lv="${lv}">${locked? "需工作台 Lv."+lv : "融合"}</button>`;
+      fuseList.appendChild(row);
+    });
+  });
+  if(!any){
+    fuseList.innerHTML = `<div class="note">目前沒有任何物品達到 3 個以上同級，無法融合。</div>`;
+  }
+
+  document.getElementById("wbLvNow").textContent = state.wbLevel;
+  document.getElementById("wbNextLv").textContent = state.wbLevel+1;
+  const cost = upgradeCost(state.wbLevel);
+  document.getElementById("wbNextCost").textContent = fmt(cost);
+  document.getElementById("upgradeWbBtn").disabled = state.gold < cost;
+}
+
+function renderAdventure(){
+  const inBattle = !!state.battle;
+  document.getElementById("preBattlePanel").style.display = inBattle ? "none" : "";
+  document.getElementById("battlePanel").style.display = inBattle ? "" : "none";
+
+  if(!inBattle){
+    const levels = knifeLevels();
+    const sel = document.getElementById("knifeSelect");
+    sel.innerHTML = "";
+    levels.forEach(lv=>{
+      const opt = document.createElement("option");
+      opt.value = lv;
+      opt.textContent = `Lv.${lv} 手裡劍 (擁有${state.inv["knife_"+lv]}把, 傷害${baseDamage(lv)})`;
+      sel.appendChild(opt);
+    });
+    document.getElementById("noKnifeNote").style.display = levels.length===0 ? "" : "none";
+    sel.disabled = levels.length===0;
+
+    const cap = monsterLevelCap(state.wbLevel);
+    const monGrid = document.getElementById("monGrid");
+    monGrid.innerHTML = "";
+    const maxShow = Math.max(cap+5, 10);
+    for(let L=1; L<=maxShow; L++){
+      const locked = L > cap;
+      const btn = document.createElement("button");
+      btn.className = "mon-btn" + (locked?" locked":"");
+      btn.disabled = locked || levels.length===0;
+      const hp = 30 + L*18, atk = 4 + L*4, gold = 20 + L*20;
+      btn.innerHTML = `<b>Lv.${L}</b>❤${hp}<br>💰~${gold}`;
+      btn.title = locked ? `工作台等級不足（需 Lv.${Math.ceil(L/5)}）` : `血量${hp} 攻擊${atk} 金幣約${gold}`;
+      if(!locked) btn.addEventListener("click", ()=> startBattle(L, selectedQty));
+      monGrid.appendChild(btn);
+    }
+  } else {
+    const b = state.battle;
+    document.getElementById("battleTitle").textContent = `⚔️ 討伐 Lv.${b.monLv} 怪物 (${b.totalN-b.remaining+1}/${b.totalN})`;
+    document.getElementById("monsterName").textContent = `Lv.${b.monLv} 怪物`;
+    document.getElementById("hpPlayerText").textContent = `${state.hp}/${state.maxHp}`;
+    document.getElementById("hpPlayerFill").style.width = Math.max(0,(state.hp/state.maxHp*100)) + "%";
+    document.getElementById("hpMonsterText").textContent = `${Math.max(0,b.monHp)}/${b.monMaxHp}`;
+    document.getElementById("hpMonsterFill").style.width = Math.max(0,(b.monHp/b.monMaxHp*100)) + "%";
+
+    const levels = knifeLevels();
+    const bsel = document.getElementById("battleKnifeSelect");
+    const prevVal = bsel.value;
+    bsel.innerHTML = "";
+    levels.forEach(lv=>{
+      const opt = document.createElement("option");
+      opt.value = lv;
+      opt.textContent = `Lv.${lv} (${state.inv["knife_"+lv]}把)`;
+      bsel.appendChild(opt);
+    });
+    if(levels.map(String).includes(prevVal)) bsel.value = prevVal;
+    document.getElementById("attackBtn").disabled = levels.length===0;
+
+    const potLevels = potionLevels();
+    const totalPotions = potLevels.reduce((s,lv)=>s+state.inv["potion_"+lv],0);
+    document.getElementById("potCount").textContent = totalPotions;
+    document.getElementById("usePotionBtn").disabled = totalPotions===0 || state.hp>=state.maxHp;
+
+    const log = document.getElementById("battleLog");
+    log.innerHTML = b.log.slice(-40).map(l=>`<div>${l}</div>`).reverse().join("");
+  }
+}
+
+// ---------- Actions ----------
+function switchView(v){
+  if(v==="workbench"){
+    state.hp = state.maxHp; // resting at workbench fully heals
+    state.battle = null;
+  }
+  state.view = v;
+  save(); renderAll();
+}
+
+function buyKnife(qty){
+  const cost = KNIFE_COST*qty;
+  if(state.gold < cost) return;
+  if(!canAddNewSlot("knife_1")) { alert("背包已滿，無法購買"); return; }
+  state.gold -= cost;
+  addItem("knife_1", qty);
+  save(); renderAll();
+}
+function buyPotion(qty){
+  const cost = POTION_COST*qty;
+  if(state.gold < cost) return;
+  if(!canAddNewSlot("potion_1")) { alert("背包已滿，無法購買"); return; }
+  state.gold -= cost;
+  addItem("potion_1", qty);
+  save(); renderAll();
+}
+function fuse(prefix, lv){
+  const id = prefix+"_"+lv;
+  const qty = state.inv[id]||0;
+  if(qty < 3) return;
+  if(state.wbLevel < lv) return;
+  const nextId = prefix+"_"+(lv+1);
+  if(!canAddNewSlot(nextId)){ alert("背包已滿，無法融合出新等級的物品"); return; }
+  removeItem(id, 3);
+  addItem(nextId, 1);
+  save(); renderAll();
+}
+function upgradeWorkbench(){
+  const cost = upgradeCost(state.wbLevel);
+  if(state.gold < cost) return;
+  state.gold -= cost;
+  state.wbLevel += 1;
+  state.maxHp = maxHpFor(state.wbLevel, state.playerLevel);
+  state.hp = state.maxHp;
+  save(); renderAll();
+}
+
+function startBattle(monLv, qty){
+  const hp = 30 + monLv*18, atk = 4 + monLv*4, gold = 20 + monLv*20;
+  state.battle = {
+    monLv, totalN: qty, remaining: qty,
+    monHp: hp, monMaxHp: hp, monAtk: atk, goldReward: gold,
+    totalGold: 0, totalExp: 0,
+    log: qty>1 ? [`遭遇了 ${qty} 隻 Lv.${monLv} 怪物的隊伍！`] : [`遭遇了 Lv.${monLv} 的怪物！`]
+  };
+  save(); renderAll();
+}
+
+function handleMonsterDefeated(b){
+  const goldGain = Math.round(b.goldReward * (0.85 + Math.random()*0.3));
+  const expGain = Math.round((15 + b.monLv*10) * (0.85 + Math.random()*0.3));
+  state.gold += goldGain;
+  b.totalGold += goldGain;
+  b.totalExp += expGain;
+  b.log.push(`擊敗了 Lv.${b.monLv} 怪物！獲得 ${goldGain} 金幣、${expGain} 經驗值。`);
+  gainExp(expGain, b.log);
+  b.remaining -= 1;
+  if(b.remaining > 0){
+    b.monHp = b.monMaxHp;
+    b.log.push(`還有 ${b.remaining} 隻，下一隻登場！`);
+  }else{
+    b.log.push(`🏆 全部擊敗！本次共獲得 ${fmt(b.totalGold)} 金幣、${fmt(b.totalExp)} 經驗值！`);
+    state.battle = null;
+  }
+}
+
+function battleAttack(){
+  const b = state.battle;
+  if(!b) return;
+  const bsel = document.getElementById("battleKnifeSelect");
+  const lv = parseInt(bsel.value,10);
+  if(!lv || !(state.inv["knife_"+lv]>0)) return;
+  removeItem("knife_"+lv, 1);
+  const dmg = Math.round((baseDamage(lv) + attackBonus(state.playerLevel)) * (0.9 + Math.random()*0.2));
+  b.monHp -= dmg;
+  b.log.push(`你投出 Lv.${lv} 手裡劍，造成 ${dmg} 傷害！`);
+  if(b.monHp <= 0){
+    handleMonsterDefeated(b);
+    save(); renderAll();
+    return;
+  }
+  const mdmg = Math.max(1, Math.round(b.monAtk * (0.85 + Math.random()*0.3) - defenseBonus(state.playerLevel)));
+  state.hp -= mdmg;
+  b.log.push(`怪物反擊，你受到 ${mdmg} 傷害。`);
+  if(state.hp <= 0){
+    state.hp = 0;
+    b.log.push(`你倒下了……被送回工作台療傷。`);
+    state.battle = null;
+    state.hp = state.maxHp;
+    save(); renderAll();
+    return;
+  }
+  save(); renderAll();
+}
+
+function battleUsePotion(){
+  const b = state.battle;
+  if(!b) return;
+  const potLevels = potionLevels();
+  if(potLevels.length===0) return;
+  if(state.hp >= state.maxHp) return;
+  const lv = potLevels[0]; // use the lowest-tier potion first
+  removeItem("potion_"+lv, 1);
+  const heal = potionHeal(lv);
+  state.hp = Math.min(state.maxHp, state.hp + heal);
+  b.log.push(`喝下 Lv.${lv} 藥劑，恢復 ${heal} 生命！`);
+  const mdmg = Math.max(1, Math.round(b.monAtk * (0.85 + Math.random()*0.3) - defenseBonus(state.playerLevel)));
+  state.hp -= mdmg;
+  b.log.push(`怪物趁機攻擊，你受到 ${mdmg} 傷害。`);
+  if(state.hp <= 0){
+    state.hp = 0;
+    b.log.push(`你倒下了……被送回工作台療傷。`);
+    state.battle = null;
+    state.hp = state.maxHp;
+  }
+  save(); renderAll();
+}
+
+function battleFlee(){
+  state.battle = null;
+  save(); renderAll();
+}
+
+// ---------- Init / events ----------
+function init(){
+  state = load();
+  if(!state.maxHp) state.maxHp = maxHpFor(state.wbLevel, state.playerLevel);
+
+  document.getElementById("tabWorkbenchBtn").addEventListener("click", ()=>switchView("workbench"));
+  document.getElementById("tabAdventureBtn").addEventListener("click", ()=>switchView("adventure"));
+
+  document.querySelectorAll("[data-buy]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const k = btn.getAttribute("data-buy");
+      if(k==="knife1") buyKnife(1);
+      else if(k==="knife10") buyKnife(10);
+      else if(k==="knife50") buyKnife(50);
+      else if(k==="pot1") buyPotion(1);
+      else if(k==="pot5") buyPotion(5);
+    });
+  });
+
+  document.getElementById("fuseList").addEventListener("click", (e)=>{
+    const btn = e.target.closest("[data-fuse-type]");
+    if(!btn) return;
+    fuse(btn.getAttribute("data-fuse-type"), parseInt(btn.getAttribute("data-fuse-lv"),10));
+  });
+
+  document.getElementById("upgradeWbBtn").addEventListener("click", upgradeWorkbench);
+
+  document.querySelectorAll(".qty-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".qty-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedQty = parseInt(btn.getAttribute("data-qty"),10);
+    });
+  });
+
+  document.getElementById("attackBtn").addEventListener("click", battleAttack);
+  document.getElementById("usePotionBtn").addEventListener("click", battleUsePotion);
+  document.getElementById("fleeBtn").addEventListener("click", battleFlee);
+
+  document.getElementById("claimIdleBtn").addEventListener("click", claimIdleGold);
+  tickIdle();
+  save();
+  setInterval(()=>{
+    tickIdle();
+    renderIdlePanel();
+    document.getElementById("statGold").textContent = fmt(state.gold);
+  }, 1000);
+  setInterval(save, 5000);
+
+  document.getElementById("resetLink").addEventListener("click", ()=>{
+    if(confirm("確定要重置存檔嗎？此動作無法復原。")){
+      localStorage.removeItem(SAVE_KEY);
+      state = defaultState();
+      renderAll();
+    }
+  });
+
+  renderAll();
+}
+
+init();
+})();
+</script>
+</body>
+</html>

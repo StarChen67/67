@@ -1,5 +1,14 @@
 {
   "overrides": {
+    "shuriken-forge.html": {
+      "key": "shuriken-forge",
+      "title": "手裡劍鍛造師",
+      "sub": "Shuriken Forge",
+      "emoji": "🗡️",
+      "accent": "#ffc84a",
+      "desc": "工作台養成型遊戲：3把同級手裡劍融合成更高級手裡劍，花金幣升級工作台解鎖更高級融合與怪物，離開工作台回合制討伐怪物，等級越高的怪物獎勵金幣越多。",
+      "tag": "single"
+    },
     "infinite-cards.html": {
       "key": "cards",
       "title": "無限卡牌",
