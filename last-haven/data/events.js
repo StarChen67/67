@@ -1,0 +1,57 @@
+/**
+ * 世界事件（規格十六）。欄位：id / name / icon / desc / trigger / probability / cooldown / duration? / effects / continuous? / choices / defaultChoiceId / expiresIn
+ * trigger.type：'random'（每小時依 balance.event.chancePerHour 抽一個，weight 為權重）或 'condition'（每小時檢查 conditions，成立即觸發）
+ * trigger.location：['shelter','area','travel']；conditions：[{ selector, op, value }]（見 game/selectors.js）
+ * choices[].cost：[{ itemId, qty }] 或 { coins }；effects 為 InstantEffect
+ */
+export const EVENTS = [
+  { id: 'merchant', name: '流浪商人', icon: '🧳', weight: 10, probability: 1, cooldown: 900, expiresIn: 120, defaultChoiceId: 'leave',
+    trigger: { type: 'random', minDay: 2, location: ['shelter'] },
+    desc: '一名背著大包袱的商人敲了敲避難所的門，願意用瓶蓋做交易。',
+    choices: [
+      { id: 'food', label: '買補給包（💰20）：罐頭×4、瓶裝水×4', cost: { coins: 20 }, effects: [{ type: 'grantItem', itemId: 'canned_food', qty: 4 }, { type: 'grantItem', itemId: 'water_bottle', qty: 4 }] },
+      { id: 'meds', label: '買醫療包（💰35）：繃帶×3、止痛藥×2、抗生素×1', cost: { coins: 35 }, effects: [{ type: 'grantItem', itemId: 'bandage', qty: 3 }, { type: 'grantItem', itemId: 'painkillers', qty: 2 }, { type: 'grantItem', itemId: 'antibiotics', qty: 1 }] },
+      { id: 'blueprint', label: '買一張神秘圖紙（💰80）', cost: { coins: 80 }, effects: [{ type: 'grantRandomBlueprint' }] },
+      { id: 'sell', label: '賣掉 10 布料（+💰15）', cost: [{ itemId: 'cloth', qty: 10 }], effects: [{ type: 'grantCoins', value: 15 }] },
+      { id: 'leave', label: '不交易', effects: [] },
+    ] },
+  { id: 'stranger', name: '求助的倖存者', icon: '🙏', weight: 8, probability: 1, cooldown: 720, expiresIn: 90, defaultChoiceId: 'refuse',
+    trigger: { type: 'random', minDay: 1, location: ['shelter'] },
+    desc: '一名衣衫襤褸的倖存者請求一些食物和水。',
+    choices: [
+      { id: 'help', label: '給他罐頭×1、瓶裝水×1（獲得經驗與種子）', cost: [{ itemId: 'canned_food', qty: 1 }, { itemId: 'water_bottle', qty: 1 }], effects: [{ type: 'grantXp', value: 25 }, { type: 'grantItem', itemId: 'seed', qty: 3 }, { type: 'log', text: '倖存者道謝後留下了一小包種子。', kind: 'good' }] },
+      { id: 'refuse', label: '拒絕', effects: [{ type: 'log', text: '倖存者失望地離開了。', kind: 'info' }] },
+    ] },
+  { id: 'supply_drop', name: '空投補給', icon: '🪂', weight: 5, probability: 1, cooldown: 1200,
+    trigger: { type: 'random', minDay: 3, location: ['shelter'] },
+    desc: '一架無人機在避難所附近投下了補給箱！',
+    effects: [{ type: 'grantItem', itemId: 'mre', qty: 2 }, { type: 'grantItem', itemId: 'chest_fine', qty: 1 }, { type: 'log', text: '🪂 空投補給落在門口：軍用口糧與一個精良寶箱。', kind: 'loot' }] },
+  { id: 'night_raiders', name: '夜襲', icon: '🌑', weight: 4, probability: 1, cooldown: 1400,
+    trigger: { type: 'random', minDay: 3, location: ['shelter'] },
+    desc: '黑暗中傳來腳步聲——一群怪物正朝避難所逼近！',
+    effects: [{ type: 'spawnRaid', difficultyMult: 0.8 }] },
+  { id: 'rare_monster_low', name: '稀有怪物出現', icon: '⭐', weight: 6, probability: 1, cooldown: 600,
+    trigger: { type: 'random', minDay: 3, location: ['area'], conditions: [{ selector: 'player.level', op: '>=', value: 4 }, { selector: 'player.level', op: '<', value: 12 }] },
+    desc: '一頭體型異常的頭狼從樹叢竄出！',
+    effects: [{ type: 'spawnCombat', monsterId: 'alpha_hound', count: 1 }] },
+  { id: 'rare_monster_high', name: '稀有怪物出現', icon: '⭐', weight: 6, probability: 1, cooldown: 600,
+    trigger: { type: 'random', minDay: 6, location: ['area'], conditions: [{ selector: 'player.level', op: '>=', value: 12 }] },
+    desc: '地面震動——一隻憎惡撞開了牆壁！',
+    effects: [{ type: 'spawnCombat', monsterId: 'abomination', count: 1 }] },
+  { id: 'boss_rumor', name: 'Boss 出沒傳聞', icon: '👑', weight: 3, probability: 1, cooldown: 1800,
+    trigger: { type: 'random', minDay: 4, location: ['shelter'] },
+    desc: '路過的倖存者提到：森林深處有一頭巨獸守著大量物資……',
+    effects: [{ type: 'flag', key: 'rumor_forest_boss', value: true }, { type: 'log', text: '👑 傳聞：森林第 4 層有 Boss，擊敗牠能得到圖紙。', kind: 'system' }] },
+  { id: 'food_shortage', name: '資源短缺', icon: '⚠️', probability: 1, cooldown: 900,
+    trigger: { type: 'condition', minDay: 1, location: ['shelter'], conditions: [{ selector: 'stock.food', op: '<', value: 2 }, { selector: 'clock.day', op: '>=', value: 2 }] },
+    desc: '倉庫的食物快見底了。',
+    effects: [{ type: 'log', text: '⚠️ 資源短缺：倉庫食物不足 2 份，該去超市或森林補給了。', kind: 'warn' }] },
+  { id: 'water_shortage', name: '飲水短缺', icon: '⚠️', probability: 1, cooldown: 900,
+    trigger: { type: 'condition', minDay: 1, location: ['shelter'], conditions: [{ selector: 'stock.water', op: '<', value: 2 }, { selector: 'clock.day', op: '>=', value: 2 }] },
+    desc: '倉庫的飲水快見底了。',
+    effects: [{ type: 'log', text: '⚠️ 飲水短缺：建造蓄水桶，或到森林收集雨水。', kind: 'warn' }] },
+  { id: 'shelter_damaged', name: '避難所損壞', icon: '🏚️', probability: 1, cooldown: 600,
+    trigger: { type: 'condition', minDay: 1, location: ['shelter'], conditions: [{ selector: 'shelter.hp', op: '<', value: 400 }] },
+    desc: '避難所的牆壁出現裂縫。',
+    effects: [{ type: 'log', text: '🏚️ 避難所損壞嚴重，襲擊來臨前記得用木材修理。', kind: 'warn' }] },
+];

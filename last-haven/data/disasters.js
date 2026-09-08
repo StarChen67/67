@@ -1,0 +1,43 @@
+/**
+ * 天災（規格十二）。全部以資料描述，由 DisasterSystem + EffectRegistry 執行，沒有 if/else 分支。
+ * effects：ContinuousEffect（modifier / perSec）在 active 期間持續；onStart / onEnd：InstantEffect。
+ * duration 秒；cooldown 秒；warningSec 預警秒數；weight 抽選權重；minDay 最早出現天數。
+ */
+export const DISASTERS = [
+  { id: 'rainstorm', name: '暴雨', icon: '🌧️', weight: 25, minDay: 1, duration: [90, 180], cooldown: 600, warningSec: 20,
+    desc: '傾盆大雨，探索與採集速度下降。',
+    effects: [{ type: 'modifier', key: 'exploreSpeed', mult: 0.7 }, { type: 'modifier', key: 'gatherSpeed', mult: 0.85 }],
+    onStart: [{ type: 'log', text: '🌧️ 暴雨傾盆而下，路變得泥濘難行。', kind: 'warn' }] },
+  { id: 'heatwave', name: '熱浪', icon: '🔥', weight: 20, minDay: 1, duration: [120, 200], cooldown: 600, warningSec: 20,
+    desc: '酷熱難耐，口渴上升速度大幅提高；戶外可能中暑。',
+    effects: [{ type: 'modifier', key: 'thirstRate', mult: 1.6 }, { type: 'status', id: 'heat', perSec: 0.02, duration: 30, outdoorOnly: true }],
+    onStart: [{ type: 'log', text: '🔥 熱浪來襲，記得多喝水。', kind: 'warn' }] },
+  { id: 'coldsnap', name: '寒流', icon: '❄️', weight: 20, minDay: 2, duration: [120, 200], cooldown: 600, warningSec: 20,
+    desc: '氣溫驟降，身體消耗更多熱量；戶外可能失溫。',
+    effects: [{ type: 'modifier', key: 'hungerRate', mult: 1.5 }, { type: 'status', id: 'cold', perSec: 0.02, duration: 30, outdoorOnly: true }],
+    onStart: [{ type: 'log', text: '❄️ 寒流籠罩，食物消耗加快。', kind: 'warn' }] },
+  { id: 'earthquake', name: '地震', icon: '🌋', weight: 12, minDay: 2, duration: [10, 20], cooldown: 900, warningSec: 5,
+    desc: '劇烈搖晃，避難所與設施受損。',
+    effects: [],
+    onStart: [{ type: 'damageShelter', value: 120 }, { type: 'damageBuilding', value: 60 }, { type: 'log', text: '🌋 地震！避難所結構受損，記得修理。', kind: 'bad' }] },
+  { id: 'acidrain', name: '酸雨', icon: '🧪', weight: 14, minDay: 3, duration: [100, 160], cooldown: 720, warningSec: 20,
+    desc: '腐蝕性的雨水，在戶外會持續受傷。',
+    effects: [{ type: 'damagePlayer', perSec: 0.8, outdoorOnly: true }, { type: 'modifier', key: 'exploreSpeed', mult: 0.85 }],
+    onStart: [{ type: 'log', text: '🧪 酸雨落下，外出會持續受傷！', kind: 'bad' }] },
+  { id: 'thunderstorm', name: '雷暴', icon: '⛈️', weight: 12, minDay: 3, duration: [60, 120], cooldown: 720, warningSec: 15,
+    desc: '閃電擊中設施，探索速度下降。',
+    effects: [{ type: 'modifier', key: 'exploreSpeed', mult: 0.8 }],
+    onStart: [{ type: 'damageBuilding', value: 80 }, { type: 'log', text: '⛈️ 雷暴！閃電擊中了避難所的設施。', kind: 'bad' }] },
+  { id: 'sandstorm', name: '沙塵暴', icon: '🌪️', weight: 12, minDay: 3, duration: [90, 150], cooldown: 720, warningSec: 20,
+    desc: '能見度極低，探索與採集極慢，口渴加快。',
+    effects: [{ type: 'modifier', key: 'exploreSpeed', mult: 0.6 }, { type: 'modifier', key: 'gatherSpeed', mult: 0.7 }, { type: 'modifier', key: 'thirstRate', mult: 1.3 }],
+    onStart: [{ type: 'log', text: '🌪️ 沙塵暴遮蔽了一切。', kind: 'warn' }] },
+  { id: 'flood', name: '洪水', icon: '🌊', weight: 8, minDay: 5, duration: [120, 200], cooldown: 900, warningSec: 30,
+    desc: '洪水淹沒倉庫與道路，倉庫容量暫時下降。',
+    effects: [{ type: 'modifier', key: 'storageCapacity', mult: 0.8 }, { type: 'modifier', key: 'exploreSpeed', mult: 0.75 }],
+    onStart: [{ type: 'damageShelter', value: 80 }, { type: 'log', text: '🌊 洪水來襲！倉庫部分區域無法使用。', kind: 'bad' }] },
+  { id: 'radstorm', name: '輻射風暴', icon: '☢️', weight: 8, minDay: 4, duration: [90, 150], cooldown: 900, warningSec: 30,
+    desc: '致命的輻射塵，戶外持續受傷並累積輻射。',
+    effects: [{ type: 'damagePlayer', perSec: 1.5, outdoorOnly: true }, { type: 'status', id: 'radiation', perSec: 0.03, duration: 60, outdoorOnly: true }, { type: 'modifier', key: 'exploreSpeed', mult: 0.8 }],
+    onStart: [{ type: 'log', text: '☢️ 輻射風暴！立刻回到避難所！', kind: 'bad' }] },
+];

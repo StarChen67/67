@@ -4,11 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test weiqi/tests/ \"last-haven/tests/*.test.js\"",
     "cards": "node cards-server.js",
     "platform": "node platform-server.js",
     "battle": "node battle-server.js",
-    "realms": "node realms-server.js"
+    "realms": "node realms-server.js",
+    "card-king": "node card-king-server.js",
+    "test:weiqi": "node --test weiqi/tests/",
+    "test:chrono-keep": "node chrono-keep/tests/run.js",
+    "test:last-haven": "node --test \"last-haven/tests/*.test.js\""
   },
   "keywords": [],
   "author": "",

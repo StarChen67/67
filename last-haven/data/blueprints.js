@@ -1,0 +1,85 @@
+/**
+ * 圖紙資料表（規格二十八～四十一）。新增圖紙只需在此加資料，data/index.js 會自動產生對應物品。
+ *  - level：圖紙等級（科技/強度層級）；requiredWorkbenchLevel：使用所需工作台等級（兩者獨立）
+ *  - rarity 與 level 獨立（可有 Lv.2 傳說、Lv.4 普通）
+ *  - unlockedRecipeIds 可為空：此時圖紙用來解鎖建築/避難所升級（由 buildings / shelter-levels 的 requiredBlueprintId 引用）
+ *  - dropLocations 空 = 依區域 blueprintPool 的類型權重通用掉落；有值 = 只在這些區域掉落
+ */
+const BP = (id, name, type, level, rarity, requiredWorkbenchLevel, unlockedRecipeIds, description, extra = {}) => ({ id, name, type, level, rarity, requiredWorkbenchLevel, unlockedRecipeIds, description, dropLocations: [], ...extra });
+
+export const BLUEPRINTS = [
+  // ---------- Lv1：簡單工具、木製武器、基本家具 ----------
+  BP('bp_nails', '釘子', 'tool', 1, 'common', 1, ['r_nails'], '用廢金屬打造釘子，建造用。'),
+  BP('bp_plank', '木板', 'tool', 1, 'common', 1, ['r_plank'], '把木材加工成木板。'),
+  BP('bp_wooden_spear', '木矛', 'weapon', 1, 'common', 1, ['r_wooden_spear'], '削尖的長棍，保持距離的好幫手。'),
+  BP('bp_machete', '砍刀', 'weapon', 1, 'fine', 1, ['r_machete'], '寬刃砍刀的鍛造方法。'),
+  BP('bp_leather_armor', '皮甲', 'armor', 1, 'common', 1, ['r_leather_armor'], '皮革拼接護甲。'),
+  BP('bp_knee_pads', '護膝', 'armor', 1, 'common', 1, ['r_knee_pads'], '簡單的腿部防護。'),
+  BP('bp_backpack', '背包', 'utility', 1, 'common', 1, ['r_backpack'], '增加負重的背包。'),
+  BP('bp_herbal_salve', '草藥膏', 'medicine', 1, 'common', 0, ['r_herbal_salve'], '草藥製藥膏。'),
+  BP('bp_jerky', '肉乾', 'utility', 1, 'common', 0, ['r_jerky'], '把肉醃成耐放的肉乾。'),
+  BP('bp_stew', '燉菜', 'utility', 1, 'fine', 0, ['r_stew'], '把罐頭與野菜煮成熱食。'),
+  BP('bp_water_tank_improved', '改良蓄水桶', 'building', 1, 'common', 1, [], '把蓄水桶升級為金屬蓄水桶（蓄水桶 Lv.2）。'),
+  // ---------- Lv2：金屬工具、基礎槍械、強化牆 ----------
+  BP('bp_iron_sword', '鐵劍', 'weapon', 2, 'fine', 2, ['r_iron_sword'], '鍛造鐵劍。'),
+  BP('bp_bone_dagger', '獠牙匕首', 'weapon', 2, 'fine', 2, ['r_bone_dagger'], '用怪物牙製作的快刀。'),
+  BP('bp_pistol', '手槍', 'weapon', 2, 'rare', 2, ['r_pistol'], '用槍械零件組裝手槍。'),
+  BP('bp_pistol_ammo', '手槍彈', 'weapon', 2, 'common', 2, ['r_pistol_ammo'], '製作 9mm 子彈。'),
+  BP('bp_shotgun_shells', '霰彈', 'weapon', 2, 'common', 2, ['r_shotgun_shells'], '製作霰彈。'),
+  BP('bp_gunpowder', '火藥', 'tool', 2, 'fine', 2, ['r_gunpowder'], '用化學藥劑製作火藥。'),
+  BP('bp_metal_plate', '金屬板', 'tool', 2, 'common', 2, ['r_metal_plate'], '鍛造金屬板。'),
+  BP('bp_iron_armor', '鐵製護甲', 'armor', 2, 'fine', 2, ['r_iron_armor'], '沉重但可靠的鐵甲。'),
+  BP('bp_helmet', '頭盔', 'armor', 2, 'common', 2, ['r_helmet'], '金屬頭盔。'),
+  BP('bp_tactical_pants', '戰術褲', 'armor', 2, 'fine', 2, ['r_tactical_pants'], '多口袋戰術褲。'),
+  BP('bp_big_backpack', '大背包', 'utility', 2, 'fine', 2, ['r_big_backpack'], '更大的背包。'),
+  BP('bp_running_shoes', '跑鞋', 'utility', 2, 'fine', 2, ['r_running_shoes'], '跑得更快、逃得更遠。'),
+  BP('bp_painkillers', '止痛藥', 'medicine', 2, 'common', 0, ['r_painkillers'], '在醫療站合成止痛藥。'),
+  BP('bp_antidote', '解毒劑', 'medicine', 2, 'fine', 0, ['r_antidote'], '在醫療站合成解毒劑。'),
+  BP('bp_first_aid_kit', '急救包', 'medicine', 2, 'fine', 0, ['r_first_aid_kit'], '組裝急救包。'),
+  BP('bp_greenhouse', '溫室', 'building', 2, 'fine', 2, [], '把菜園升級為溫室（農場 Lv.2）。'),
+  BP('bp_warehouse_expansion', '倉庫擴建', 'building', 2, 'common', 2, [], '擴建倉庫（倉庫 Lv.3）。'),
+  BP('bp_cold_storage', '冷藏室', 'building', 2, 'fine', 2, [], '把食物儲藏室升級為冷藏室（食物儲藏室 Lv.3）。'),
+  BP('bp_reinforced_wall', '強化牆', 'defense', 2, 'fine', 2, [], '把防禦牆升級為混凝土強化牆（防禦牆 Lv.3）。'),
+  BP('bp_purifier', '淨水設備', 'utility', 2, 'rare', 2, ['r_purified_water', 'r_rain_to_pure'], '建造淨水器，並可將髒水淨化。'),
+  // ---------- Lv3：進階武器、防具、發電設備 ----------
+  BP('bp_steel_sword', '鋼劍', 'weapon', 3, 'rare', 3, ['r_steel_sword'], '鋼製長劍。'),
+  BP('bp_shotgun', '霰彈槍', 'weapon', 3, 'rare', 3, ['r_shotgun'], '近距離毀滅性武器。', { dropLocations: ['gasstation', 'military', 'city', 'wasteland', 'factory'] }),
+  BP('bp_assault_rifle', '突擊步槍', 'weapon', 3, 'rare', 3, ['r_assault_rifle'], '全自動步槍。', { dropLocations: ['military', 'city', 'lab'] }),
+  BP('bp_chainsaw', '鏈鋸', 'weapon', 3, 'rare', 3, ['r_chainsaw'], '需要燃料的恐怖武器。', { dropLocations: ['factory', 'gasstation', 'city'] }),
+  BP('bp_war_hammer', '戰鎚', 'weapon', 3, 'epic', 3, ['r_war_hammer'], '能穿透護甲的戰鎚。'),
+  BP('bp_rifle_ammo', '步槍彈', 'weapon', 3, 'fine', 3, ['r_rifle_ammo'], '製作 5.56mm 子彈。'),
+  BP('bp_concrete', '混凝土', 'tool', 3, 'common', 3, ['r_concrete'], '用石頭與化學藥劑製作混凝土。'),
+  BP('bp_tactical_vest', '戰術背心', 'armor', 3, 'rare', 3, ['r_tactical_vest'], '防彈背心。'),
+  BP('bp_combat_helmet', '戰術頭盔', 'armor', 3, 'rare', 3, ['r_combat_helmet'], '軍用頭盔。'),
+  BP('bp_hide_armor', '獸皮甲', 'armor', 3, 'rare', 3, ['r_hide_armor'], '怪物皮製成的耐毒護甲。'),
+  BP('bp_armored_legs', '裝甲護腿', 'armor', 3, 'rare', 3, ['r_armored_legs'], '金屬護腿。'),
+  BP('bp_gas_mask', '防毒面具', 'armor', 3, 'rare', 3, ['r_gas_mask'], '抵抗毒氣與輻射。'),
+  BP('bp_military_pack', '軍用行囊', 'utility', 3, 'rare', 3, ['r_military_pack'], '軍規背包。'),
+  BP('bp_antibiotics', '抗生素', 'medicine', 3, 'rare', 0, ['r_antibiotics'], '在高級醫療站合成抗生素。'),
+  BP('bp_anti_rad', '抗輻射藥', 'medicine', 3, 'rare', 0, ['r_anti_rad'], '在高級醫療站合成抗輻射藥。'),
+  BP('bp_generator', '發電機', 'utility', 3, 'rare', 3, [], '建造發電機。', { dropLocations: ['factory', 'gasstation', 'city', 'military', 'lab'] }),
+  BP('bp_hydroponic_farm', '水耕農場', 'building', 3, 'rare', 3, [], '把農場升級為水耕農場（農場 Lv.3）。'),
+  BP('bp_workbench_advanced', '高級工作台設計圖', 'special', 3, 'rare', 3, [], '把工作台升級為高級工作台（工作台 Lv.4）。', { dropLocations: ['factory', 'city', 'military', 'lab'] }),
+  // ---------- Lv4：自動炮塔、高級醫療、強化避難所 ----------
+  BP('bp_turret', '自動炮塔', 'defense', 4, 'epic', 4, [], '建造自動炮塔。', { dropLocations: ['factory', 'city', 'military', 'lab', 'nest'] }),
+  BP('bp_wall_fortified', '要塞城牆', 'defense', 4, 'epic', 4, [], '把防禦牆升級為要塞城牆（防禦牆 Lv.4）。'),
+  BP('bp_sniper_rifle', '狙擊槍', 'weapon', 4, 'epic', 4, ['r_sniper_rifle'], '一擊必殺。', { dropLocations: ['military', 'lab'] }),
+  BP('bp_energy_cell', '能量電池', 'weapon', 4, 'rare', 4, ['r_energy_cell'], '製作電漿武器的能源。', { dropLocations: ['lab', 'military', 'nest'] }),
+  BP('bp_combat_armor', '高級戰鬥護甲', 'armor', 4, 'epic', 4, ['r_combat_armor'], '軍用複合護甲。', { dropLocations: ['military', 'lab', 'nest', 'city'] }),
+  BP('bp_riot_helmet', '防暴頭盔', 'armor', 4, 'epic', 4, ['r_riot_helmet'], '附面罩的防暴頭盔。'),
+  BP('bp_medical_advanced', '高級醫療站', 'medicine', 4, 'epic', 0, ['r_med_kit_adv'], '升級醫療站並製作高級醫療箱。'),
+  BP('bp_stimpack', '興奮劑', 'medicine', 4, 'rare', 0, ['r_stimpack'], '在高級醫療站合成興奮劑。'),
+  BP('bp_regen_serum', '再生血清', 'medicine', 4, 'epic', 0, ['r_regen_serum'], '在手術室合成再生血清。', { dropLocations: ['hospital', 'lab'] }),
+  BP('bp_exo_frame', '外骨骼', 'special', 4, 'epic', 4, ['r_exo_frame'], '動力輔助外骨骼。', { dropLocations: ['lab', 'military', 'factory'] }),
+  BP('bp_radar', '雷達', 'utility', 4, 'epic', 4, [], '建造雷達。', { dropLocations: ['military', 'lab', 'city'] }),
+  BP('bp_shelter_reinforced', '強化避難所結構', 'shelter', 4, 'epic', 3, [], '避難所升級到 Lv.4 所需的結構設計。', { dropLocations: ['city', 'factory', 'military', 'lab', 'nest'] }),
+  BP('bp_workbench_master', '大師工作台設計圖', 'special', 4, 'epic', 4, [], '把工作台升級為大師工作台（工作台 Lv.5）。', { dropLocations: ['lab', 'military', 'nest'] }),
+  // ---------- Lv5：高科技武器、特殊防禦設施、終局科技 ----------
+  BP('bp_plasma_rifle', '電漿步槍', 'weapon', 5, 'legendary', 5, ['r_plasma_rifle'], '研究所的終極武器。', { dropLocations: ['lab', 'nest'] }),
+  BP('bp_power_armor', '動力裝甲', 'armor', 5, 'legendary', 5, ['r_power_armor'], '末日科技的巔峰。', { dropLocations: ['military', 'lab', 'nest'] }),
+  BP('bp_power_helmet', '動力頭盔', 'armor', 5, 'epic', 5, ['r_power_helmet'], '動力裝甲的頭盔。', { dropLocations: ['military', 'lab', 'nest'] }),
+  BP('bp_power_legs', '動力護腿', 'armor', 5, 'epic', 5, ['r_power_legs'], '動力裝甲的腿甲。', { dropLocations: ['military', 'lab', 'nest'] }),
+  BP('bp_turret_advanced', '重型炮塔', 'defense', 5, 'legendary', 5, [], '把炮塔升級為重型炮塔（炮塔 Lv.3）。', { dropLocations: ['lab', 'nest', 'military'] }),
+  BP('bp_shelter_bunker', '地下要塞設計', 'shelter', 5, 'epic', 4, [], '避難所升級到 Lv.5 所需的設計。', { dropLocations: ['lab', 'military', 'nest'] }),
+  BP('bp_shelter_fortress', '最後庇護所藍圖', 'shelter', 5, 'legendary', 5, [], '避難所升級到 Lv.6 的終極藍圖。', { dropLocations: ['lab', 'nest'] }),
+];
