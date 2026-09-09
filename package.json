@@ -12,7 +12,11 @@
     "card-king": "node card-king-server.js",
     "test:weiqi": "node --test weiqi/tests/",
     "test:chrono-keep": "node chrono-keep/tests/run.js",
-    "test:last-haven": "node --test \"last-haven/tests/*.test.js\""
+    "test:last-haven": "node --test \"last-haven/tests/*.test.js\"",
+    "test:raftbound": "node raftbound/tests/run.js",
+    "raftbound": "node static-server.js",
+    "test:bank-tycoon": "node bank-tycoon/tests/run.js",
+    "sim:bank-tycoon": "node bank-tycoon/tests/sim-bot.js"
   },
   "keywords": [],
   "author": "",

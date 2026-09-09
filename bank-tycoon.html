@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no, viewport-fit=cover">
+<title>銀行大亨</title>
+<style>
+:root{
+  --bg:#0a0d14; --panel:#141a26; --panel2:#1a2233; --panel3:#202a3d; --line:#28324a;
+  --txt:#e9ecf5; --dim:#8b95ab; --gold:#e8a33d; --green:#3ddc97; --red:#ff5d73;
+  --blue:#5aa9ff; --amber:#ffc84a; --purple:#c9a6ff; --orange:#ff9d2e; --pink:#ff8fb1;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:radial-gradient(1200px 720px at 78% -14%,#16233a 0%,var(--bg) 58%);
+  color:var(--txt);min-height:100vh;padding:12px 12px 48px;
+  display:flex;flex-direction:column;align-items:center;max-width:100vw;overflow-x:hidden;
+  font-size:14px;line-height:1.5;
+}
+body.compact{font-size:12.5px}
+body.compact .card{padding:9px}
+.wrap{max-width:1400px;width:100%}
+header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding-right:52px}
+h1{font-size:22px;letter-spacing:5px;background:linear-gradient(90deg,#ffd76a,#e8a33d,#5aa9ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-size:20px}h3{font-size:16px;letter-spacing:1px}
+.sub{font-size:11.5px;color:var(--dim)}
+small,.small{font-size:11.5px}
+.block{display:block}
+.dim{color:var(--dim)}.red{color:var(--red)}.green{color:var(--green)}.blue{color:var(--blue)}
+.gold{color:var(--gold)}.amber{color:var(--amber)}.purple{color:var(--purple)}
+.risk-ok{color:var(--green)}.risk-low{color:#a8e06a}.risk-mid{color:var(--amber)}
+.risk-high{color:var(--orange)}.risk-crit{color:var(--red)}
+
+.sa-home-btn{position:fixed;top:12px;right:12px;z-index:999999;width:42px;height:42px;border-radius:50%;
+  background:rgba(11,14,26,.72);border:1px solid rgba(255,255,255,.28);display:flex;align-items:center;
+  justify-content:center;font-size:20px;text-decoration:none;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.35);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);cursor:pointer}
+.sa-home-btn:hover{background:rgba(11,14,26,.92)}
+@media (max-width:480px){.sa-home-btn{width:38px;height:38px;font-size:16px;top:8px;right:8px}}
+
+/* ---------- 狀態列 ---------- */
+.statbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:7px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin-bottom:8px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .k{font-size:10px;color:var(--dim);letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- 時間列 ---------- */
+.timebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(90deg,#1b2434,#141a26);
+  border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin-bottom:8px}
+.timeLeft{min-width:220px;flex:1}
+.dayLabel{font-size:15px;font-weight:700;letter-spacing:1px}
+.phase{font-size:11.5px;color:var(--dim)}
+.phase.boom{color:var(--green)}.phase.recession{color:var(--orange)}.phase.crisis{color:var(--red);font-weight:700}
+.dayProg{flex:0 0 90px;height:5px;background:#0d1220;border-radius:3px;overflow:hidden}
+.dayProg i{display:block;height:100%;background:var(--blue);transition:width .18s linear}
+.timeRight{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.speeds{display:flex;gap:3px}
+
+/* ---------- 警告 ---------- */
+#warnBox{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.warn{border-radius:9px;padding:7px 12px;font-size:12.5px;border:1px solid}
+.warn.warn{background:#2b2110;border-color:#6b4f1c;color:#ffd490}
+.warn.crit{background:#2f1219;border-color:#7d2334;color:#ffb3bd;animation:pulse 1.4s infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 0 rgba(255,93,115,.15)}to{box-shadow:0 0 16px rgba(255,93,115,.45)}}
+
+/* ---------- 分頁 ---------- */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.tabBtn{background:var(--panel2);color:var(--dim);border:1px solid var(--line);border-radius:9px;
+  padding:6px 11px;font-size:12.5px;cursor:pointer;font-family:inherit;transition:.12s;white-space:nowrap}
+.tabBtn:hover{color:var(--txt);border-color:#3b4b5e}
+.tabBtn.sel{background:#1e3350;border-color:var(--blue);color:#cfe6ff;font-weight:700}
+.tabBtn.lock{opacity:.42}
+@media (max-width:720px){.tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}}
+
+/* ---------- 卡片 ---------- */
+#panel{display:grid;grid-template-columns:1fr;gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.card+.card{margin-top:10px}
+.cardTitle{font-size:12.5px;letter-spacing:1.5px;color:var(--amber);margin-bottom:9px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.subTitle{font-size:12px;letter-spacing:1px;color:var(--dim);margin:10px 0 6px}
+.desc{color:var(--dim);font-size:12.5px;margin-bottom:8px}
+.note{color:var(--dim);font-size:11.5px;margin-top:8px;line-height:1.6;border-left:2px solid var(--line);padding-left:8px}
+.note.red{color:#ffb3bd;border-color:#7d2334}.note.amber{color:#ffd490;border-color:#6b4f1c}
+.note.green{color:#9fe8c6;border-color:#1f6b48}
+.split{height:1px;background:var(--line);margin:11px 0}
+.empty{color:var(--dim);font-size:12.5px;padding:14px;text-align:center}
+.bigNum{font-size:26px;font-weight:800;letter-spacing:1px;margin:4px 0 8px}
+.locked-big{font-size:44px;text-align:center;opacity:.4;margin:10px}
+
+/* ---------- 鍵值 ---------- */
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:12.5px;margin:6px 0}
+.kv .k{color:var(--dim)}
+.kv .v{text-align:right;font-variant-numeric:tabular-nums}
+
+/* ---------- 按鈕 ---------- */
+.btn{background:var(--panel3);color:var(--txt);border:1px solid var(--line);border-radius:8px;
+  padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit;transition:.12s;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:#4a5d78;background:#26334a}
+.btn:disabled,.btn.off{opacity:.4;cursor:not-allowed}
+.btn.mini{padding:4px 9px;font-size:11.5px}
+.btn.go{background:#1c4030;border-color:#2f7a56;color:#9fe8c6}
+.btn.go:hover:not(:disabled){background:#245239}
+.btn.warn{background:#3a2a12;border-color:#6b4f1c;color:#ffd490}
+.btn.danger{background:#3a1420;border-color:#7d2334;color:#ffb3bd}
+.btn.ghost{background:transparent}
+.btn.big{width:100%;padding:11px;font-size:14px;font-weight:700;margin-top:8px}
+.btn.sp{padding:5px 10px;font-size:12px}
+.btn.sp.sel{background:#1e3350;border-color:var(--blue);color:#cfe6ff;font-weight:700}
+.btnRow{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.btn.mini.sel{background:#1e3350;border-color:var(--blue);color:#cfe6ff}
+
+/* ---------- 輸入 ---------- */
+.amtRow{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:8px 0}
+input.amt,textarea{background:#0d1220;border:1px solid var(--line);border-radius:8px;color:var(--txt);
+  padding:7px 10px;font-family:inherit;font-size:13px;min-width:130px;flex:1}
+input.amt:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{width:100%;resize:vertical;font-size:11px;font-family:ui-monospace,monospace}
+.rateCtrl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.rateCtrl .bigNum{margin:0;min-width:96px;text-align:center}
+.setRow{margin:9px 0}
+.setRow label{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13px}
+.setRow input{accent-color:var(--blue);width:15px;height:15px}
+
+/* ---------- 進度條 ---------- */
+.bar{position:relative;height:16px;background:#0d1220;border-radius:8px;overflow:hidden;margin:5px 0;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#2f7a56,#3ddc97);transition:width .25s}
+.bar.warn i{background:linear-gradient(90deg,#6b4f1c,#ffc84a)}
+.bar.crit i{background:linear-gradient(90deg,#7d2334,#ff5d73)}
+.bar.ok i{background:linear-gradient(90deg,#2f7a56,#3ddc97)}
+.barLabel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:10.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7);font-variant-numeric:tabular-nums}
+
+/* ---------- 表格 ---------- */
+.tbl{display:flex;flex-direction:column;font-size:12.5px}
+.tr{display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr 1fr 1fr;gap:8px;padding:7px 6px;
+  border-bottom:1px solid #1d2536;align-items:center}
+.tbl .tr:last-child{border-bottom:none}
+.tr.th{color:var(--dim);font-size:11px;letter-spacing:.5px;border-bottom:1px solid var(--line)}
+.tr>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tr>span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.tr.click{cursor:pointer}
+.tr.click:hover{background:#1a2233}
+.tr.sel{background:#1b2c44;border-radius:6px}
+.tr.locked{opacity:.42}
+.tbl.stocks .tr{grid-template-columns:2.4fr .9fr .8fr .9fr 1fr .7fr 1fr}
+@media (max-width:640px){
+  .tr{grid-template-columns:1.6fr 1fr 1fr;font-size:11.5px}
+  .tr>span:nth-child(n+4){display:none}
+  .tbl.stocks .tr{grid-template-columns:1.6fr 1fr 1fr}
+}
+
+/* ---------- 圖表 ---------- */
+.chart{width:100%;display:block;margin:6px 0}
+.chart .grid{stroke:#1d2536;stroke-width:1}
+.chart .zero{stroke:#3b4b5e;stroke-width:1;stroke-dasharray:3 3}
+.chart .axis{fill:var(--dim);font-size:9.5px}
+.chart .chartEmpty{fill:var(--dim);font-size:12px}
+.spark{width:72px;height:22px;display:inline-block;vertical-align:middle}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-top:4px}
+.lg{display:flex;align-items:center;gap:5px}
+.lg i{width:11px;height:3px;border-radius:2px;display:inline-block}
+
+/* ---------- 保全設備 ---------- */
+.devGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:9px}
+.dev{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.dev.owned{border-color:#2f5a44}
+.dev.damaged{border-color:#6b4f1c}
+.devHead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.devName{font-weight:700;font-size:13px}
+.devLv{font-size:11px;color:var(--dim)}
+.devDesc{font-size:11.5px;color:var(--dim);margin:5px 0 7px;line-height:1.5}
+.devNext{display:flex;flex-direction:column;gap:5px}
+.condRow{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+.condRow .bar{flex:1;margin:0}
+
+/* ---------- 金庫視覺 ---------- */
+.vaultViz{margin:8px 0 12px}
+.vaultBar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:#0d1220}
+.vaultBar i.covered{background:linear-gradient(90deg,#2f7a56,#3ddc97)}
+.vaultBar i.exposed{background:linear-gradient(90deg,#7d2334,#ff5d73)}
+.vaultLegend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--dim);margin-top:6px}
+
+/* ---------- 財務報表 ---------- */
+.bsheet{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.bsheet{grid-template-columns:1fr}}
+.bsCol{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px}
+.bsRow{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0;font-variant-numeric:tabular-nums}
+.bsRow.total{border-top:1px solid var(--line);margin-top:5px;padding-top:6px;font-weight:700}
+.netRow{display:flex;justify-content:space-between;align-items:center;margin-top:11px;padding:9px 12px;
+  background:var(--panel3);border-radius:9px;font-size:14px}
+
+/* ---------- 升級 ---------- */
+.reqRow{display:grid;grid-template-columns:22px 1.1fr 1.4fr 1.6fr;gap:8px;align-items:center;
+  font-size:12.5px;padding:5px 0}
+.reqIcon{color:var(--red)}
+.reqRow.ok .reqIcon{color:var(--green)}
+.reqLabel{color:var(--dim)}
+.reqVal{text-align:right;font-variant-numeric:tabular-nums}
+.reqRow .bar{margin:0}
+@media (max-width:560px){.reqRow{grid-template-columns:20px 1fr 1fr}.reqRow .bar{display:none}}
+.featList{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.tag{background:#1e3350;border:1px solid #2f5580;color:#cfe6ff;border-radius:6px;padding:3px 8px;font-size:11px}
+
+/* ---------- 事件 ---------- */
+.evActive{display:flex;gap:10px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);
+  border-radius:9px;padding:9px;margin-bottom:7px}
+.evActive.good{border-color:#2f5a44}.evActive.bad{border-color:#6b4f1c}
+.evActive.danger{border-color:#7d2334}
+.evIcon{font-size:20px}
+.evBody{flex:1;min-width:0}
+.evLeft{font-size:11px;color:var(--dim);white-space:nowrap}
+.evLog{display:flex;flex-direction:column;font-size:12.5px;max-height:460px;overflow-y:auto}
+.evLine{display:grid;grid-template-columns:64px 24px 1fr;gap:6px;padding:5px 3px;border-bottom:1px solid #1d2536;align-items:start}
+.evLine:last-child{border-bottom:none}
+.evDay{color:var(--dim);font-size:11px;font-variant-numeric:tabular-nums}
+.evLine.good{color:#9fe8c6}.evLine.bad{color:#ffd490}.evLine.danger{color:#ffb3bd}
+
+/* ---------- 一般列 ---------- */
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;
+  border-bottom:1px solid #1d2536;font-size:12.5px}
+.row:last-child{border-bottom:none}
+.row.crit{color:#ffb3bd}
+
+/* ---------- Toast ---------- */
+#toastBox{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:99998;
+  display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(92vw,460px)}
+.toast{background:rgba(20,26,38,.96);border:1px solid var(--line);border-radius:9px;padding:8px 14px;
+  font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.45);transition:.35s;max-width:100%}
+.toast.good{border-color:#2f7a56;color:#9fe8c6}
+.toast.bad{border-color:#7d2334;color:#ffb3bd}
+.toast.warn{border-color:#6b4f1c;color:#ffd490}
+.toast.out{opacity:0;transform:translateY(8px)}
+
+/* ---------- 彈窗 ---------- */
+#modalLayer{position:fixed;inset:0;z-index:99999;pointer-events:none}
+.modalBack{position:absolute;inset:0;background:rgba(4,7,14,.74);display:flex;align-items:center;
+  justify-content:center;padding:16px;pointer-events:auto;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;
+  width:min(94vw,460px);max-height:88vh;overflow-y:auto;transform:scale(.94);opacity:0;transition:.18s}
+.modal.in{transform:scale(1);opacity:1}
+.modal.wide{width:min(94vw,560px)}
+.modal h3{margin-bottom:8px}
+.modal h2{margin-bottom:8px;color:var(--red)}
+.modal p{font-size:13px;color:var(--dim);margin-bottom:8px;line-height:1.65}
+.modalFoot{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.evBig{font-size:46px;text-align:center;margin-bottom:4px}
+.detail{margin:8px 0 0 18px;font-size:12.5px;color:var(--amber)}
+.detail li{margin:3px 0}
+.modal.ev-good{border-color:#2f5a44}
+.modal.ev-bad,.modal.ev-danger{border-color:#7d2334}
+.robHead{text-align:center;margin-bottom:8px}
+.robIcon{font-size:44px}
+.robHead.bad h3{color:var(--red)}
+.robHead.good h3{color:var(--green)}
+.lootBox{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px;margin-top:10px}
+.lootRow{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;font-variant-numeric:tabular-nums}
+.modal.over{border-color:#7d2334}
+</style>
+</head>
+<body>
+<a class="sa-home-btn" href="platform.html" title="回到遊樂園">🏠</a>
+<div class="wrap">
+  <header>
+    <h1>銀行大亨</h1>
+    <div class="sub">Bank Tycoon · 收益 vs 風險 vs 安全　｜　空白鍵暫停　1–4 調速　. 推進一天</div>
+  </header>
+  <div id="app"></div>
+</div>
+
+<script src="bank-tycoon/core/util.js"></script>
+<script src="bank-tycoon/core/registry.js"></script>
+<script src="bank-tycoon/config/config.js"></script>
+<script src="bank-tycoon/data/levels.js"></script>
+<script src="bank-tycoon/data/customers.js"></script>
+<script src="bank-tycoon/data/stocks.js"></script>
+<script src="bank-tycoon/data/products.js"></script>
+<script src="bank-tycoon/data/security.js"></script>
+<script src="bank-tycoon/data/robbers.js"></script>
+<script src="bank-tycoon/data/insurance.js"></script>
+<script src="bank-tycoon/data/printer.js"></script>
+<script src="bank-tycoon/data/ratings.js"></script>
+<script src="bank-tycoon/data/events.js"></script>
+<script src="bank-tycoon/systems/economy.js"></script>
+<script src="bank-tycoon/systems/reports.js"></script>
+<script src="bank-tycoon/systems/treasury.js"></script>
+<script src="bank-tycoon/systems/credit.js"></script>
+<script src="bank-tycoon/systems/customers.js"></script>
+<script src="bank-tycoon/systems/deposits.js"></script>
+<script src="bank-tycoon/systems/stocks.js"></script>
+<script src="bank-tycoon/systems/products.js"></script>
+<script src="bank-tycoon/systems/upgrades.js"></script>
+<script src="bank-tycoon/systems/printer.js"></script>
+<script src="bank-tycoon/systems/security.js"></script>
+<script src="bank-tycoon/systems/robbery.js"></script>
+<script src="bank-tycoon/systems/insurance.js"></script>
+<script src="bank-tycoon/systems/events.js"></script>
+<script src="bank-tycoon/systems/bankruptcy.js"></script>
+<script src="bank-tycoon/systems/simulation.js"></script>
+<script src="bank-tycoon/save/state.js"></script>
+<script src="bank-tycoon/save/save.js"></script>
+<script src="bank-tycoon/game.js"></script>
+<script src="bank-tycoon/ui/dom.js"></script>
+<script src="bank-tycoon/ui/chart.js"></script>
+<script src="bank-tycoon/ui/topbar.js"></script>
+<script src="bank-tycoon/ui/panels-bank.js"></script>
+<script src="bank-tycoon/ui/panels-invest.js"></script>
+<script src="bank-tycoon/ui/panels-security.js"></script>
+<script src="bank-tycoon/ui/panels-report.js"></script>
+<script src="bank-tycoon/ui/modals.js"></script>
+<script src="bank-tycoon/ui/app.js"></script>
+<script src="bank-tycoon/main.js"></script>
+<script>window.addEventListener('DOMContentLoaded', function(){ BT.main.boot(); });</script>
+</body>
+</html>
