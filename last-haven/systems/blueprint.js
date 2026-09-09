@@ -43,29 +43,41 @@ export class BlueprintSystem extends System {
     return { ok: true, result: { blueprintId: id, recipeIds: def.unlockedRecipeIds, gates } };
   }
 
-  /** 從背包/倉庫的圖紙物品學習（消耗 1 張） */
-  learnFromItem(uid, container) {
+  /** 在背包／倉庫／地上戰利品堆中找一件物品 */
+  _locate(uid, container) {
     const inv = this.systems.inventory;
-    const found = (container && inv.find(container, uid)) || inv.findAnywhere(uid);
+    const found = (container && container !== 'pile' && inv.find(container, uid)) || inv.findAnywhere(uid);
+    if (found) return found;
+    const pile = inv.lootPile();
+    const inst = pile && pile.find((i) => i.uid === uid);
+    return inst ? { inst, container: 'pile' } : null;
+  }
+  _consume(found, uid) {
+    if (found.container === 'pile') this.systems.inventory.dropLoot(uid);
+    else this.systems.inventory.removeByUid(found.container, uid, 1);
+  }
+
+  /** 從背包/倉庫/地上的圖紙物品學習（消耗 1 張） */
+  learnFromItem(uid, container) {
+    const found = this._locate(uid, container);
     if (!found) return { ok: false, reason: 'notFound' };
     const def = this.registry.item(found.inst.itemId);
     if (!def || def.type !== 'blueprint') return { ok: false, reason: 'notBlueprint' };
     if (this.has(def.blueprintId)) return { ok: false, reason: 'alreadyLearned' };
     const r = this.learn(def.blueprintId);
-    if (r.ok) inv.removeByUid(found.container, uid, 1);
+    if (r.ok) this._consume(found, uid);
     return r;
   }
 
   /** 重複（或不想要的）圖紙拆解為研究點 */
   dismantle(uid, container) {
-    const inv = this.systems.inventory;
-    const found = (container && inv.find(container, uid)) || inv.findAnywhere(uid);
+    const found = this._locate(uid, container);
     if (!found) return { ok: false, reason: 'notFound' };
     const def = this.registry.item(found.inst.itemId);
     if (!def || def.type !== 'blueprint') return { ok: false, reason: 'notBlueprint' };
     const bpDef = this.registry.blueprint(def.blueprintId);
     const value = this.researchValue(bpDef);
-    inv.removeByUid(found.container, uid, 1);
+    this._consume(found, uid);
     this.discover(def.blueprintId);
     this.addResearch(value);
     this.log(`🔬 拆解「${bpDef.name}」圖紙 → 研究點 +${value}（目前 ${this.bp.researchPoints}）`, 'loot');

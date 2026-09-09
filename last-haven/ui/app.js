@@ -132,13 +132,10 @@ export class App {
         <div class="card"><h2>記錄</h2><div id="log">${this.renderLog()}</div></div>
       </div>
       <div id="nav">${this.nav.map((n) => `<button data-action="nav" data-panel="${n.id}" class="${this.panel === n.id ? 'active' : ''}"><span class="ic">${n.ic}</span>${n.label}</button>`).join('')}</div>
-      <div id="toasts"></div>
       ${st.gameOver ? GameOver.render(this) : ''}
       ${this.modal ? this.renderModal() : ''}`;
     if (mod && mod.afterRender) { try { mod.afterRender(this); } catch (err) { console.error(err); } }
-    this._toastRoot = this.root.querySelector('#toasts');
-    for (const t of this._pendingToasts || []) this._toastRoot.appendChild(t);
-    this._pendingToasts = [];
+    this.toastRoot();
   }
   renderHudOnly() {
     const hud = this.root.querySelector('#hud'); if (hud) hud.innerHTML = renderHud(this);
@@ -167,13 +164,23 @@ export class App {
   renderLog() {
     return this.logs.slice(-40).reverse().map((l) => `<div class="${l.kind}"><span class="t">D${l.day} ${String(l.hour).padStart(2, '0')}h</span>${esc(l.text)}</div>`).join('');
   }
+  /** toast 容器掛在 document.body，避免被畫面重繪清掉 */
+  toastRoot() {
+    if (!this._toastEl || !this._toastEl.isConnected) {
+      this._toastEl = document.getElementById('toasts') || document.createElement('div');
+      this._toastEl.id = 'toasts';
+      if (!this._toastEl.isConnected) document.body.appendChild(this._toastEl);
+    }
+    return this._toastEl;
+  }
   toast(text, kind = 'info') {
     const t = document.createElement('div');
     t.className = `toast ${kind}`;
     t.textContent = text;
-    const rootEl = this.root.querySelector('#toasts');
-    if (rootEl) rootEl.appendChild(t); else (this._pendingToasts = this._pendingToasts || []).push(t);
-    setTimeout(() => t.remove(), 2600);
+    const root = this.toastRoot();
+    root.appendChild(t);
+    while (root.childElementCount > 6) root.firstElementChild.remove();
+    setTimeout(() => t.remove(), 3000);
   }
   openModal(m) { this.modal = m; this.dirty = true; this.render(); }
   closeModal() { this.modal = null; this.dirty = true; this.render(); }

@@ -35,7 +35,7 @@ function poiLabel(p) { return { resource: '採集', monster: '戰鬥', chest: '�
 function poiHint(app, p) {
   const R = app.game.registry;
   if (p.kind === 'resource') return `${p.data.minQuantity}–${p.data.maxQuantity} 個 · ${p.data.gatherTime} 秒${p.data.rare ? ' · 稀有' : ''}`;
-  if (p.kind === 'monster') return p.data.enemies.map((e) => `${e.tier === 'boss' ? '👑' : e.tier === 'elite' ? '⭐' : ''}HP ${e.hp} 攻 ${e.attack} 防 ${e.defense}`).join(' · ');
+  if (p.kind === 'monster') return p.data.enemies.map((e) => `${e.tier === 'boss' ? '👑' : e.tier === 'elite' ? '⭐' : ''}HP ${Math.round(e.hp)} 攻 ${e.attack} 防 ${e.defense}`).join(' · ');
   if (p.kind === 'chest') return `${R.chest(p.data.tier)?.name}，可帶回或就地開啟`;
   if (p.kind === 'site') return `搜索 ${p.data.searchTime} 秒，可能找到物資、寶箱或圖紙`;
   if (p.kind === 'path') return '怪物等級 +1，地上的戰利品會留在這層';
@@ -67,7 +67,7 @@ function renderCombat(app) {
       <div id="enemies">${c.enemies.map((e) => `<div class="enemy ${e.uid === c.targetUid ? 'target' : ''}" data-action="intent" data-intent="setTarget" data-uid="${e.uid}">
         <span class="ic">${e.icon}</span>
         <div style="flex:1"><div class="row between"><span class="nm">${e.tier === 'boss' ? '👑 ' : e.tier === 'elite' ? '⭐ ' : ''}${esc(e.name)} <span class="tiny dim">Lv.${e.level} · 攻 ${e.attack} 防 ${e.defense}</span></span><span class="tiny dim">${(e.statusEffects || []).map((s) => g.registry.status(s.id)?.icon || '').join('')}</span></div>
-          <div data-live="ehp:${e.uid}">${bar('enemy', e.hp, e.maxHp, { label: 'HP' })}</div>
+          <div data-live="ehp:${e.uid}">${bar('foe', e.hp, e.maxHp, { label: 'HP' })}</div>
           <div class="cd"><div class="fill" data-live="ecd:${e.uid}" style="width:${Math.max(0, 100 - (Math.max(0, e.cooldown) / (1 / Math.max(0.05, e.attackSpeed))) * 100).toFixed(0)}%"></div></div></div>
       </div>`).join('')}</div>
       <div style="margin-top:8px"><div class="small dim">你的攻擊冷卻</div><div class="cd"><div class="fill" data-live="pcd" style="width:${Math.max(0, 100 - (cd / cdTotal) * 100).toFixed(0)}%"></div></div></div>

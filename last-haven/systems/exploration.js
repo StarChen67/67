@@ -283,11 +283,12 @@ export class ExplorationSystem extends System {
     if (!ex) return { ok: false, reason: 'notExploring' };
     if (ex.phase === 'travelBack') return { ok: false, reason: 'alreadyReturning' };
     const area = this.area();
+    const wasTravellingOut = ex.phase === 'travelOut';   // 先判斷再改 phase
     ex.activeAction = null;
     ex.phase = 'travelBack';
-    ex.travelTotal = area.travelTime;
-    ex.travelLeft = ex.phase === 'travelOut' ? area.travelTime - ex.travelLeft : area.travelTime;
-    if (ex.travelLeft <= 0) ex.travelLeft = 1;
+    // 半路折返：回程 = 已經走過的距離；從區域內返回：走完整段路
+    ex.travelLeft = Math.max(1, wasTravellingOut ? area.travelTime - ex.travelLeft : area.travelTime);
+    ex.travelTotal = ex.travelLeft;
     this.log(`🏠 啟程返回避難所（約 ${this.travelTimeFor(area)} 秒）`, 'system');
     this.bus.emit(EV.EXPLORE_RETURNING, {});
     return { ok: true, result: { travelTime: this.travelTimeFor(area) } };

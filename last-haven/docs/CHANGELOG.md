@@ -68,3 +68,21 @@
 4. modal 內 inline `stopPropagation` 吃掉委派點擊 → 事件/確認對話框按鈕無效 → 改 `data-action="noop"`
 5. 單元測試被隨機天災/襲擊干擾（熱浪渴死玩家）→ 測試 helper 預設關閉排程
 **下一階段**：Phase 6 整合驗收（規格二十四 18 項）、上架、bug hunt
+
+## Phase 6 (2026-09-09) — 整合驗收、上架、bug hunt
+**已完成功能**
+- `tests/acceptance.test.js`：規格二十四 18 項逐條無頭驗收 + 5 天整局 bot 模擬（探索→採集→戰鬥→返回→存倉→吃喝→建造→製作→防守）
+- `tests/regression.test.js`：本階段修復 bug 的回歸測試
+- 上架：`games-catalog.json` 加入 last-haven（平台 `/api/games` 已回報）
+- `README.md`：執行方式、目錄地圖、擴充指引
+- 文件同步：GAME_DESIGN（怪物成長公式、11 區、9 天災、寶箱為物品、襲擊等級公式）、DATA_MODEL（balance.raid）、ARCHITECTURE（固定步長）
+**測試**：119/119 通過
+**瀏覽器實測**：新遊戲→建工作台→帶糧出發→抵達森林→拿寶箱→採集→戰鬥（2 隻）→深入第 2 層→返回→存倉→開寶箱→升級避難所 Lv.2→學圖紙→拆解得研究點；讀取「探索中」存檔直接回到探索畫面；7 個畫面逐一走訪無錯誤
+**發現並修復的 bug**
+1. `.enemy` CSS class 同時用於敵人列與敵人血條 → 血條被套上列樣式（高度/內距/背景全錯）→ 血條改用 `.bar.foe`
+2. toast 容器在重繪區域內 → 每次 render 都把通知清掉（開箱通知看不到）→ 容器改掛 `document.body`，並限制最多 6 則
+3. `BlueprintSystem` 只找背包／倉庫 → 地上戰利品堆裡的圖紙無法學習或拆解（ChestSystem 早已支援）→ 加 `_locate/_consume` 統一三處來源
+4. `returnHome` 先改 `phase` 再判斷 `phase === 'travelOut'` → 半路折返的回程被算成全程（住宅區 10 秒變 35 秒）→ 先取舊 phase，並讓進度條總長 = 回程長度
+5. `damageEnemy` 對傷害 `Math.round()` → 每步 0.1 秒的持續傷害（中毒/流血/炮塔小數 DPS）永遠是 0，狀態異常對怪物完全無效 → 不再四捨五入，顯示端才取整
+**仍存在的問題**：無已知功能性問題。多視角 bug hunt workflow 因用量限制中止，改以人工邊界測試（兩輪共 20 個案例）取代
+**下一階段**：Phase 7（第二階段系統：技能樹、武器改造、陷阱、晝夜效果、任務、成就、難度模式…；資料已預留 Boss/區域/研究點）

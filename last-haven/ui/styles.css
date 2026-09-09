@@ -56,7 +56,7 @@ button:disabled{opacity:.4;cursor:not-allowed}
 .bar.thirst .fill{background:linear-gradient(90deg,#5aa9ff,#3a7fd1)}
 .bar.xp .fill{background:linear-gradient(90deg,#c85dff,#8b5cff)}
 .bar.shelter .fill{background:linear-gradient(90deg,#3ddc97,#22a173)}
-.bar.enemy .fill{background:linear-gradient(90deg,#ff8a5d,#c8402a)}
+.bar.foe .fill{background:linear-gradient(90deg,#ff8a5d,#c8402a)}
 .bar.warn{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 1px var(--red) inset}50%{box-shadow:0 0 6px 2px rgba(255,93,115,.6) inset}}
 .hud-side{display:flex;gap:6px;flex-wrap:wrap;font-size:11.5px}

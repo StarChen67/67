@@ -37,30 +37,14 @@
 - [x] tests: modifier 套用/解除、襲擊流程(牆→建築→核心)、核心 0 → gameover、事件冷卻
 - [x] 實測：警告 60 秒→襲擊→炮塔輸出→勝利獎勵；地震損壞→修理
 
-## Phase 6 — 第一版整合驗收（規格二十四）
-| # | 目標 | 驗證方式 |
-|---|---|---|
-| 1 | 玩家可在避難所活動 | 瀏覽器 |
-| 2 | HP/Atk/Def/Hunger/Thirst | HUD + tests/player |
-| 3 | 飢渴隨時間增加 | tests/survival |
-| 4 | 飢渴 100 → Game Over | tests/survival + 瀏覽器 |
-| 5 | 吃喝 | tests/survival |
-| 6 | 外出探索 | tests/exploration |
-| 7 | 地圖生成資源 | tests/exploration |
-| 8 | 地圖生成怪物 | tests/exploration |
-| 9 | 玩家攻擊怪物 | tests/combat |
-| 10 | 怪物攻擊玩家 | tests/combat |
-| 11 | 怪物死亡掉落資源/寶箱 | tests/loot |
-| 12 | 開寶箱 | tests/chest |
-| 13 | 資源帶回避難所 | tests/inventory (transfer) |
-| 14 | 升級避難所 | tests/shelter |
-| 15 | 隨機天災 | tests/disaster |
-| 16 | 怪物襲擊 | tests/raid |
-| 17 | 存檔/讀檔 | tests/save |
-| 18 | 重開後恢復 | 瀏覽器：reload 後 continue |
-- [ ] 平衡初調（撐過前 3 天的路徑可行）
-- [ ] 上架：games-catalog.json 加 override；package.json test 腳本
-- [ ] Bug hunt workflow（多視角找 bug → 對抗式驗證 → 修）
+## Phase 6 — 第一版整合驗收（規格二十四）✅
+18 項全部通過（見 tests/acceptance.test.js 逐條測試 + docs/CHANGELOG.md 瀏覽器實測步驟）：
+玩家可在避難所活動／五項數值／飢渴隨時間增加／飢渴 100 Game Over／吃喝／外出探索／地圖生成資源／
+地圖生成怪物／玩家攻擊怪物／怪物攻擊玩家／掉落資源或寶箱／開寶箱／資源帶回避難所／升級避難所／
+隨機天災／怪物襲擊／存讀檔／重開後恢復
+- [x] 平衡初調（森林不補血連戰 12 seeds 0 死；第 2 天 Lv.2 防守 10 次 9 勝；4–5 天 bot 模擬存活）
+- [x] 上架 games-catalog.json + npm run test:last-haven
+- [x] Bug hunt（人工兩輪 20 個邊界案例，修復 5 個 bug，全部加回歸測試）
 
 ## Phase 7 — 第二階段（第一版穩定後）
 Boss(巢穴)、技能樹(researchPoints 已預留)、武器改造/防具強化、陷阱、炮塔進階、農場/淨水/發電效果、

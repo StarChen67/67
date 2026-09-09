@@ -110,9 +110,10 @@ export class CombatSystem extends System {
 
   damageEnemy(enemy, amount, { source = 'unknown', ignoreDefense = false } = {}) {
     if (!enemy || enemy.hp <= 0 || !(amount > 0)) return 0;
+    // 不四捨五入：持續傷害（中毒/流血/炮塔）每步不足 1 點時會被抹平
     let dmg = ignoreDefense ? amount : Math.max(this.cfg.minDamage, amount - enemy.defense);
-    dmg = Math.min(enemy.hp, Math.round(dmg));
-    enemy.hp -= dmg;
+    dmg = Math.min(enemy.hp, dmg);
+    enemy.hp = Math.max(0, enemy.hp - dmg);
     if (enemy.hp <= 0) this.onEnemyKilled(enemy, source);
     return dmg;
   }
