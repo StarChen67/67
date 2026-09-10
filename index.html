@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>星辰遊樂園 · Star Arcade</title>
+<!-- 網站首頁：GitHub Pages 這類靜態部署開啟根目錄時會找 index.html，
+     沒有這個檔案就會顯示 404。這裡直接把人送到遊樂園大廳。 -->
+<meta http-equiv="refresh" content="0; url=platform.html">
+<link rel="canonical" href="platform.html">
+<style>
+  html,body{height:100%;margin:0;background:#0b0e1a;color:#e6ebf5;
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;}
+  .box{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  h1{font-size:26px;margin:0;background:linear-gradient(90deg,#ffc84a,#7be07b,#4fd0e0);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  a{color:#5aa9ff}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>星辰遊樂園</h1>
+  <p>正在前往遊戲大廳…</p>
+  <p><a href="platform.html">如果沒有自動跳轉，請點這裡</a></p>
+</div>
+<script>location.replace('platform.html');</script>
+</body>
+</html>

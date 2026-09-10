@@ -19,7 +19,9 @@ function gitShow(file) {
 }
 function gitFileList() {
   const out = execSync(`git ls-tree -r ${REF} --name-only`, { cwd: ROOT, encoding: "utf8" });
-  return out.split("\n").filter((f) => /^[^/]+\.html$/i.test(f) && f.toLowerCase() !== "platform.html");
+  // 大廳本身與導向大廳的首頁都不是遊戲
+  const EXCLUDE = new Set(["platform.html", "index.html"]);
+  return out.split("\n").filter((f) => /^[^/]+\.html$/i.test(f) && !EXCLUDE.has(f.toLowerCase()));
 }
 
 const PALETTE = ["#ff6b6b", "#6c5ce7", "#00b894", "#00cec9", "#e17055", "#fdcb6e", "#0984e3", "#a29bfe", "#fd79a8", "#e84393", "#55efc4", "#b388ff", "#5aa9ff", "#e8a33d", "#d14bff", "#3ddc97", "#37e6e6", "#ff9d2e", "#c85dff", "#ff5d3d"];

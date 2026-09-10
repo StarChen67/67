@@ -11,6 +11,7 @@ const MIME = {
   ".css": "text/css",
   ".json": "application/json",
   ".svg": "image/svg+xml",
+  ".webmanifest": "application/manifest+json",
 };
 
 /* ---- 在線人數統計（心跳式，session 超過 TTL 未回報即視為離線） ---- */
@@ -48,7 +49,8 @@ function readJsonBody(req) {
      並用檔名雜湊挑一個固定色票顏色，自動生成合理預設值
    - games-catalog.json 的 extra 放沒有根目錄檔案、只存在於子資料夾或遠端部署的項目（tamer、mmo） */
 const CATALOG_FILE = path.join(ROOT, "games-catalog.json");
-const EXCLUDE_FILES = new Set(["platform.html"]);
+// platform.html 是大廳本身，index.html 只是導向大廳的首頁，兩個都不是遊戲
+const EXCLUDE_FILES = new Set(["platform.html", "index.html"]);
 const PALETTE = ["#ff6b6b","#6c5ce7","#00b894","#00cec9","#e17055","#fdcb6e","#0984e3","#a29bfe","#fd79a8","#e84393","#55efc4","#b388ff","#5aa9ff","#e8a33d","#d14bff","#3ddc97","#37e6e6","#ff9d2e","#c85dff","#ff5d3d"];
 
 function hashColor(str) {

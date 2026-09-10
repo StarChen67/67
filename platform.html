@@ -159,26 +159,45 @@ const API_BASE = (location.hostname === 'localhost' || location.hostname === '12
   ? ''
   : 'https://star-arcade.onrender.com';
 
-async function loadGames(){
-  grid.innerHTML = '<p style="color:var(--muted);">載入遊戲清單中…</p>';
+// 帶逾時的 fetch：避免 Render 免費方案冷啟動（可能要等 30~60 秒）或跨網域被擋時，
+// 整頁卡在「載入遊戲清單中…」變成一片黑。
+async function fetchJson(url, timeoutMs, opts = {}){
+  const ctrl = new AbortController();
+  const timer = setTimeout(()=>ctrl.abort(), timeoutMs);
   try{
-    const res = await fetch(`${API_BASE}/api/games`);
-    if(!res.ok) throw new Error('api/games not available');
-    GAMES = await res.json();
-  }catch(e){
-    // 沒有 platform-server.js 可用時（例如部署在 GitHub Pages 這類純靜態環境），
-    // 改用 scripts/gen-static-games.js 事先產生好的快照清單，遊戲清單一樣能顯示。
-    try{
-      const res2 = await fetch('games-list.json');
-      if(!res2.ok) throw new Error('games-list.json not found');
-      GAMES = await res2.json();
-    }catch(e2){
-      grid.innerHTML = '<p style="color:var(--muted);">無法連線到平台伺服器，請透過 <code>npm run platform</code> 啟動後再開啟本頁面。</p>';
-      return;
-    }
-  }
+    const res = await fetch(url, { ...opts, signal: ctrl.signal });
+    if(!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
+    return await res.json();
+  } finally { clearTimeout(timer); }
+}
+
+function showGames(list){
+  GAMES = list;
   document.getElementById('count').textContent = GAMES.length;
   render(activeFilter);
+}
+
+async function loadGames(){
+  grid.innerHTML = '<p style="color:var(--muted);">載入遊戲清單中…</p>';
+  let shown = false;
+
+  // 1) 先用同源的靜態快照立刻上畫面。GitHub Pages 這類純靜態環境根本沒有 API，
+  //    而 Render 冷啟動又要等很久，所以不能等 API 回來才 render。
+  //    快照由 scripts/gen-static-games.js 產生。
+  try{
+    const snapshot = await fetchJson('games-list.json', 8000);
+    if(Array.isArray(snapshot) && snapshot.length){ showGames(snapshot); shown = true; }
+  }catch(e){ /* 沒有快照就交給下面的 API */ }
+
+  // 2) 再向平台伺服器要即時清單；成功就換成最新的（新遊戲不必等快照重新產生）。
+  try{
+    const live = await fetchJson(`${API_BASE}/api/games`, shown ? 20000 : 8000);
+    if(Array.isArray(live) && live.length){ showGames(live); shown = true; }
+  }catch(e){ /* 純靜態環境或伺服器沒開，維持靜態快照 */ }
+
+  if(!shown){
+    grid.innerHTML = '<p style="color:var(--muted);">無法載入遊戲清單，請透過 <code>npm run platform</code> 啟動平台伺服器後再開啟本頁面。</p>';
+  }
 }
 
 function showToast(msg){
@@ -256,15 +275,17 @@ function applyStats(stats){
   });
 }
 
+let heartbeatFails = 0;
 async function heartbeat(){
+  if (heartbeatFails >= 3) return; // 純靜態部署或伺服器沒開時就別再一直打了
   try{
-    const res = await fetch(`${API_BASE}/api/heartbeat`, {
+    applyStats(await fetchJson(`${API_BASE}/api/heartbeat`, 6000, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId, game: currentGame }),
-    });
-    if (res.ok) applyStats(await res.json());
-  }catch(e){ /* 平台伺服器未啟動（例如直接開啟本機檔案）時忽略 */ }
+    }));
+    heartbeatFails = 0;
+  }catch(e){ heartbeatFails++; /* 平台伺服器未啟動（例如直接開啟本機檔案）時忽略 */ }
 }
 
 heartbeat();
