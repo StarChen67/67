@@ -5,11 +5,25 @@
 ## 執行
 
 ```bash
-npm run platform          # 靜態伺服器（port 8900），開 http://localhost:8900/last-haven.html
-npm run test:last-haven   # node --test（100+ 測試）
+npm run build:last-haven  # 把 last-haven/ 打包成單檔 ../last-haven.html
+npm run platform          # 靜態伺服器（port 8900）
+npm run test:last-haven   # node --test（119 測試）
 ```
 
-入口：`../last-haven.html` → `main.js`。除錯：瀏覽器主控台 `LH.game`（state / intent / systems）、`LH.app`。
+**兩個入口，用途不同：**
+
+| 檔案 | 用途 | 怎麼開 |
+|---|---|---|
+| `../last-haven.html` | 玩家版。自動產生的單檔（JS 與 CSS 全部內嵌） | 直接雙擊開啟也可以（`file://`），http、GitHub Pages 也都行 |
+| `dev.html` | 開發版。直接載入 ES 模組，改完重整就生效 | 必須用 http：`http://localhost:8900/last-haven/dev.html` |
+
+為什麼要打包：瀏覽器在 `file://` 底下會擋掉 ES 模組（origin 是 null，CORS 直接拒絕），
+所以雙擊模組版的 HTML 只會看到全黑的畫面。打包版沒有任何外部檔案，因此不受限制。
+
+**改完 `last-haven/` 底下的程式後，記得執行 `npm run build:last-haven`**，否則玩家版還是舊的。
+測試讀的是 `last-haven/` 的原始碼，不受打包影響。
+
+除錯：瀏覽器主控台 `LH.game`（state / intent / systems）、`LH.app`。
 
 ## 目錄
 

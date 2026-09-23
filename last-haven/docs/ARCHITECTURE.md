@@ -5,7 +5,8 @@
 | 項目 | 決定 | 理由 |
 |---|---|---|
 | 語言 | 原生 ES Modules (ES2022)，零建置 | 與 repo 其他正式專案（weiqi）一致；瀏覽器與 Node 直接載入同一批檔案 |
-| 入口 | `last-haven.html`（repo 根目錄，平台自動上架）→ `<script type="module" src="last-haven/main.js">` | 平台 `/api/games` 掃描根目錄 `.html` |
+| 入口（開發） | `last-haven/dev.html` → `<script type="module" src="main.js">` | 改完重整即生效，需用 http 開 |
+| 入口（玩家） | `last-haven.html`（repo 根目錄，平台自動上架）由 `scripts/build-last-haven.js` 把全部模組與 CSS 內嵌成單檔 | 平台 `/api/games` 掃描根目錄 `.html`；單檔才能在 `file://` 執行（瀏覽器在 file:// 下拒絕載入 ES 模組） |
 | 測試 | `node --test last-haven/tests/` | 免安裝；`last-haven/package.json` 標 `"type":"module"` |
 | 迴圈 | `setInterval` 100ms ticker → 固定步長 `Game.step(0.1s)` | 預覽窗格凍結 rAF；固定步長讓無頭測試決定性 |
 | 存檔 | `localStorage`（Node 用記憶體 adapter）；3 槽 + 自動存檔槽；版本號 + migration 鏈；匯出/匯入 JSON | 單機需求 |
